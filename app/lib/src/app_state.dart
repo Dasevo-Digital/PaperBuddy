@@ -31,6 +31,7 @@ class AppState extends ChangeNotifier {
   Map<int, Tag> tags = {};
   Map<int, Correspondent> correspondents = {};
   Map<int, DocumentType> documentTypes = {};
+  Map<int, StoragePath> storagePaths = {};
 
   /// Wird erhöht, wenn sich Dokumente geändert haben (z. B. nach einem
   /// Upload), damit Listen neu laden.
@@ -109,6 +110,7 @@ class AppState extends ChangeNotifier {
     tags = {};
     correspondents = {};
     documentTypes = {};
+    storagePaths = {};
     status = SessionStatus.signedOut;
     notifyListeners();
   }
@@ -116,14 +118,16 @@ class AppState extends ChangeNotifier {
   Future<void> refreshLabels() async {
     final c = _client;
     if (c == null) return;
-    final (t, co, dt) = await (
+    final (t, co, dt, sp) = await (
       c.tags(),
       c.correspondents(),
       c.documentTypes(),
+      c.storagePaths(),
     ).wait;
     tags = {for (final x in t) x.id: x};
     correspondents = {for (final x in co) x.id: x};
     documentTypes = {for (final x in dt) x.id: x};
+    storagePaths = {for (final x in sp) x.id: x};
     notifyListeners();
   }
 

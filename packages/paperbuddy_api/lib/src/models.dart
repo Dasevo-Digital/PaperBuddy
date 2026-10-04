@@ -328,6 +328,18 @@ class CurrentUser {
   }
 }
 
+/// Heruntergeladene Datei mit Namen und Typ laut Server.
+class DownloadedFile {
+  const DownloadedFile(this.bytes, this.fileName, this.mimeType);
+  final List<int> bytes;
+  final String fileName;
+  final String mimeType;
+
+  bool get isPdf => mimeType == 'application/pdf';
+  bool get isImage => mimeType.startsWith('image/');
+  bool get isText => mimeType.startsWith('text/');
+}
+
 /// Was der Server beim Verbinden über sich verrät.
 class ServerInfo {
   const ServerInfo({required this.apiVersion, this.serverVersion});

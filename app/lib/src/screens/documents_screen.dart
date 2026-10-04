@@ -10,6 +10,7 @@ import '../documents_controller.dart';
 import '../format.dart';
 import '../widgets/document_tiles.dart';
 import '../widgets/filter_sheet.dart';
+import '../widgets/label_pickers.dart';
 import '../widgets/upload_status.dart';
 import 'document_screen.dart';
 
@@ -116,6 +117,92 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     }
   }
 
+  /// Markierte Dokumente für die Sammelbearbeitung.
+  final _selected = <int>{};
+
+  void _toggle(int id) => setState(
+    () => _selected.contains(id) ? _selected.remove(id) : _selected.add(id),
+  );
+
+  void _tap(Document doc) => _selected.isEmpty ? _open(doc) : _toggle(doc.id);
+
+  Future<void> _bulkAction(_BulkAction action) async {
+    final ids = _selected.toList();
+    final client = _state.client;
+    try {
+      switch (action) {
+        case _BulkAction.addTags || _BulkAction.removeTags:
+          final tags = await pickTags(
+            context,
+            options: _state.tags.values.toList(),
+            selected: {},
+          );
+          if (tags == null || tags.isEmpty) return;
+          await client.bulkEdit(ids, 'modify_tags', {
+            'add_tags': action == _BulkAction.addTags ? tags.toList() : <int>[],
+            'remove_tags': action == _BulkAction.removeTags
+                ? tags.toList()
+                : <int>[],
+          });
+        case _BulkAction.correspondent:
+          final picked = await pickLabel<Correspondent>(
+            context,
+            title: 'Korrespondent setzen',
+            options: _state.correspondents.values.toList(),
+          );
+          if (picked == null) return;
+          await client.bulkEdit(ids, 'set_correspondent', {
+            'correspondent': picked == -1 ? null : picked,
+          });
+        case _BulkAction.documentType:
+          final picked = await pickLabel<DocumentType>(
+            context,
+            title: 'Dokumenttyp setzen',
+            options: _state.documentTypes.values.toList(),
+          );
+          if (picked == null) return;
+          await client.bulkEdit(ids, 'set_document_type', {
+            'document_type': picked == -1 ? null : picked,
+          });
+        case _BulkAction.delete:
+          if (!mounted) return;
+          final ok = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(
+                ids.length == 1
+                    ? '1 Dokument löschen?'
+                    : '${ids.length} Dokumente löschen?',
+              ),
+              content: const Text(
+                'Die Dokumente werden in den Papierkorb des Servers verschoben.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Abbrechen'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Löschen'),
+                ),
+              ],
+            ),
+          );
+          if (ok != true) return;
+          await client.bulkEdit(ids, 'delete');
+      }
+      setState(_selected.clear);
+      await _refresh();
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
+  }
+
   Future<void> _upload() async {
     final picked = await FilePicker.pickFiles(
       type: FileType.custom,
@@ -158,34 +245,44 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         bottom: false,
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.title,
-                      style: theme.textTheme.headlineSmall,
+            if (_selected.isNotEmpty)
+              _SelectionBar(
+                count: _selected.length,
+                onClear: () => setState(_selected.clear),
+                onSelectAll: () => setState(
+                  () => _selected.addAll(_controller.items.map((d) => d.id)),
+                ),
+                onAction: _bulkAction,
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        style: theme.textTheme.headlineSmall,
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: layout == _Layout.list
-                        ? 'Rasteransicht'
-                        : 'Listenansicht',
-                    icon: Icon(
-                      layout == _Layout.list
-                          ? LucideIcons.layoutGrid
-                          : LucideIcons.list,
+                    IconButton(
+                      tooltip: layout == _Layout.list
+                          ? 'Rasteransicht'
+                          : 'Listenansicht',
+                      icon: Icon(
+                        layout == _Layout.list
+                            ? LucideIcons.layoutGrid
+                            : LucideIcons.list,
+                      ),
+                      onPressed: () => setState(
+                        () => _layout = layout == _Layout.list
+                            ? _Layout.grid
+                            : _Layout.list,
+                      ),
                     ),
-                    onPressed: () => setState(
-                      () => _layout = layout == _Layout.list
-                          ? _Layout.grid
-                          : _Layout.list,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: ListenableBuilder(
@@ -321,7 +418,9 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
               itemCount: c.items.length,
               itemBuilder: (context, i) => DocumentGridCard(
                 document: c.items[i],
-                onTap: () => _open(c.items[i]),
+                selected: _selected.contains(c.items[i].id),
+                onLongPress: () => _toggle(c.items[i].id),
+                onTap: () => _tap(c.items[i]),
               ),
             ),
           ),
@@ -338,7 +437,9 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           ? footer
           : DocumentListTile(
               document: c.items[i],
-              onTap: () => _open(c.items[i]),
+              selected: _selected.contains(c.items[i].id),
+              onLongPress: () => _toggle(c.items[i].id),
+              onTap: () => _tap(c.items[i]),
             ),
     );
   }
@@ -443,6 +544,80 @@ class _Message extends StatelessWidget {
             if (action != null) ...[const SizedBox(height: 16), action!],
           ],
         ),
+      ),
+    );
+  }
+}
+
+enum _BulkAction { addTags, removeTags, correspondent, documentType, delete }
+
+/// Ersetzt die Kopfzeile, solange Dokumente markiert sind.
+class _SelectionBar extends StatelessWidget {
+  const _SelectionBar({
+    required this.count,
+    required this.onClear,
+    required this.onSelectAll,
+    required this.onAction,
+  });
+
+  final int count;
+  final VoidCallback onClear;
+  final VoidCallback onSelectAll;
+  final ValueChanged<_BulkAction> onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final user = AppScope.of(context).client.user;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Auswahl aufheben',
+            icon: const Icon(LucideIcons.x),
+            onPressed: onClear,
+          ),
+          Expanded(
+            child: Text('$count ausgewählt', style: theme.textTheme.titleLarge),
+          ),
+          IconButton(
+            tooltip: 'Alle auswählen',
+            icon: const Icon(LucideIcons.listChecks),
+            onPressed: onSelectAll,
+          ),
+          if (user.can('change', 'document'))
+            IconButton(
+              tooltip: 'Tags hinzufügen',
+              icon: const Icon(LucideIcons.tag),
+              onPressed: () => onAction(_BulkAction.addTags),
+            ),
+          PopupMenuButton<_BulkAction>(
+            tooltip: 'Weitere Aktionen',
+            onSelected: onAction,
+            itemBuilder: (context) => [
+              if (user.can('change', 'document')) ...[
+                const PopupMenuItem(
+                  value: _BulkAction.removeTags,
+                  child: Text('Tags entfernen'),
+                ),
+                const PopupMenuItem(
+                  value: _BulkAction.correspondent,
+                  child: Text('Korrespondent setzen'),
+                ),
+                const PopupMenuItem(
+                  value: _BulkAction.documentType,
+                  child: Text('Dokumenttyp setzen'),
+                ),
+              ],
+              if (user.can('delete', 'document'))
+                const PopupMenuItem(
+                  value: _BulkAction.delete,
+                  child: Text('Löschen'),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

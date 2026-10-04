@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import '../app_state.dart';
@@ -23,10 +24,14 @@ class DocumentListTile extends StatelessWidget {
     super.key,
     required this.document,
     required this.onTap,
+    this.onLongPress,
+    this.selected = false,
   });
 
   final Document document;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +41,9 @@ class DocumentListTile extends StatelessWidget {
     final hit = document.searchHit?.highlights ?? '';
     return InkWell(
       onTap: onTap,
-      child: Padding(
+      onLongPress: onLongPress,
+      child: Container(
+        color: selected ? theme.colorScheme.secondaryContainer : null,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,7 +53,15 @@ class DocumentListTile extends StatelessWidget {
               child: SizedBox(
                 width: 56,
                 height: 74,
-                child: DocumentThumbnail(documentId: document.id),
+                child: selected
+                    ? ColoredBox(
+                        color: theme.colorScheme.primary,
+                        child: Icon(
+                          LucideIcons.check,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      )
+                    : DocumentThumbnail(documentId: document.id),
               ),
             ),
             const SizedBox(width: 14),
@@ -107,10 +122,14 @@ class DocumentGridCard extends StatelessWidget {
     super.key,
     required this.document,
     required this.onTap,
+    this.onLongPress,
+    this.selected = false,
   });
 
   final Document document;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -118,12 +137,41 @@ class DocumentGridCard extends StatelessWidget {
     final theme = Theme.of(context);
     final tags = _tags(state, document);
     return Card(
+      color: selected ? theme.colorScheme.secondaryContainer : null,
+      shape: selected
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: theme.colorScheme.primary, width: 2),
+            )
+          : null,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: DocumentThumbnail(documentId: document.id)),
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  DocumentThumbnail(documentId: document.id),
+                  if (selected)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: theme.colorScheme.primary,
+                        child: Icon(
+                          LucideIcons.check,
+                          size: 16,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
               child: Column(

@@ -18,6 +18,8 @@ dependencies:
   lucide_icons_flutter: ^3.1.21
   flutter_localizations:
     sdk: flutter
+  pdfrx: ^2.4.8
+  share_plus: ^13.3.1
 
 dev_dependencies:
   flutter_test:

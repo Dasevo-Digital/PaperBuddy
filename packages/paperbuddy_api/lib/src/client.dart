@@ -272,6 +272,38 @@ class PaperlessClient {
     {if (original) 'original': 'true'},
   );
 
+  /// Wie [download], zusätzlich mit Dateiname und Typ aus den Headern.
+  Future<DownloadedFile> downloadFile(int id, {bool original = false}) async {
+    final r = await _guard(
+      () => _http
+          .get(
+            _resolve(baseUrl, '/api/documents/$id/download/', {
+              if (original) 'original': 'true',
+            }),
+            headers: _headers,
+          )
+          .timeout(_uploadTimeout),
+    );
+    if (r.statusCode != 200) throw _error(r, _decode(r));
+    return DownloadedFile(
+      r.bodyBytes,
+      _fileNameFrom(r.headers['content-disposition']) ?? 'dokument-$id',
+      (r.headers['content-type'] ?? 'application/octet-stream')
+          .split(';')
+          .first
+          .trim(),
+    );
+  }
+
+  static String? _fileNameFrom(String? disposition) {
+    if (disposition == null) return null;
+    final star = RegExp(
+      r"filename\*=(?:UTF-8|utf-8)''([^;]+)",
+    ).firstMatch(disposition);
+    if (star != null) return Uri.decodeComponent(star.group(1)!.trim());
+    return RegExp(r'filename="([^"]+)"').firstMatch(disposition)?.group(1);
+  }
+
   Future<List<Note>> addNote(int documentId, String note) async => [
     for (final n
         in (await _send(
@@ -288,6 +320,14 @@ class PaperlessClient {
     '/api/documents/$documentId/notes/',
     query: {'id': '$noteId'},
   );
+
+  /// Sammelbearbeitung, z. B. `bulkEdit(ids, 'add_tag', {'tag': 3})`.
+  /// Methoden: `set_correspondent`, `set_document_type`, `set_storage_path`,
+  /// `add_tag`, `remove_tag`, `modify_tags`, `delete`.
+  Future<void> bulkEdit(List<int> documents, String method,
+          [Map<String, Object?> parameters = const {}]) =>
+      _send('POST', '/api/documents/bulk_edit/',
+          json: {'documents': documents, 'method': method, 'parameters': parameters});
 
   Future<int> nextArchiveSerialNumber() async =>
       (await _send('GET', '/api/documents/next_asn/')) as int;
@@ -433,6 +473,16 @@ class PaperlessClient {
               'POST',
               '/api/correspondents/',
               json: {'name': name, 'matching_algorithm': 6},
+            ))
+            as Map<String, dynamic>,
+      );
+
+  Future<StoragePath> createStoragePath(String name, String path) async =>
+      StoragePath.fromJson(
+        (await _send(
+              'POST',
+              '/api/storage_paths/',
+              json: {'name': name, 'path': path, 'matching_algorithm': 0},
             ))
             as Map<String, dynamic>,
       );
