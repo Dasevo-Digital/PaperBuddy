@@ -21,6 +21,9 @@ class Config {
     this.emptyTrashDelay = const Duration(days: 30),
     this.email,
     this.publicUrl,
+    this.mailInterval = const Duration(minutes: 10),
+    this.scanners,
+    this.scannerDiscovery = true,
   });
 
   final String host;
@@ -53,6 +56,15 @@ class Config {
 
   /// Öffentliche Adresse für Links in E-Mails und Webhooks (`{doc_url}`).
   final String? publicUrl;
+
+  /// Abstand zwischen zwei Mail-Abrufen; `Duration.zero` = aus.
+  final Duration mailInterval;
+
+  /// Feste eSCL-Scanner: `Name=http://host/eSCL;Name2=…`
+  final String? scanners;
+
+  /// Scanner im Netz per mDNS suchen.
+  final bool scannerDiscovery;
 
   String get databasePath => p.join(dataDir, 'paperbuddy.sqlite3');
 
@@ -92,6 +104,9 @@ class Config {
               startTls: get('EMAIL_USE_TLS') == 'true',
             ),
       publicUrl: get('URL'),
+      mailInterval: Duration(minutes: int.parse(get('MAIL_INTERVAL') ?? '10')),
+      scanners: get('SCANNERS'),
+      scannerDiscovery: (get('SCANNER_DISCOVERY') ?? 'true') != 'false',
       corsOrigins: (get('CORS_ALLOWED_HOSTS') ?? '')
           .split(',')
           .map((s) => s.trim())

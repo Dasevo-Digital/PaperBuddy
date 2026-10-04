@@ -16,6 +16,8 @@ import 'db.dart';
 import 'processing/consume_folder.dart';
 import 'processing/consumer.dart';
 import 'processing/tools.dart';
+import 'mail/mail_service.dart';
+import 'scanners/escl.dart';
 import 'storage.dart';
 import 'trash.dart';
 import 'workflows.dart';
@@ -35,6 +37,8 @@ class PaperbuddyServer {
     required this.handler,
     required this.watcher,
     required this.workflows,
+    required this.mail,
+    required this.scanners,
   });
 
   final Config config;
@@ -47,6 +51,8 @@ class PaperbuddyServer {
   final Handler handler;
   final ConsumeFolderWatcher? watcher;
   final WorkflowEngine workflows;
+  final MailService mail;
+  final ScannerService scanners;
   HttpServer? _http;
   Timer? _trainTimer;
 
@@ -72,6 +78,20 @@ class PaperbuddyServer {
       publicUrl: config.publicUrl,
     );
     consumer.hooks = workflows;
+    final mail = MailService(
+      db: db,
+      access: access,
+      consumer: consumer,
+      workDir: p.join(config.dataDir, 'work'),
+      interval: config.mailInterval,
+    );
+    final scanners = ScannerService(
+      access: access,
+      consumer: consumer,
+      workDir: p.join(config.dataDir, 'work'),
+      configured: ScannerService.parseConfig(config.scanners),
+      discover: config.scannerDiscovery,
+    );
     final api = PaperlessApi(
       db: db,
       auth: auth,
@@ -81,7 +101,7 @@ class PaperbuddyServer {
       tools: tools,
       trash: trash,
       customFields: customFields,
-      extraRoutes: [workflows.mount],
+      extraRoutes: [workflows.mount, mail.mount, scanners.mount],
       onDocumentUpdated: workflows.documentUpdated,
       corsOrigins: config.corsOrigins,
     );
@@ -99,6 +119,8 @@ class PaperbuddyServer {
       handler: api.handler,
       watcher: watcher,
       workflows: workflows,
+      mail: mail,
+      scanners: scanners,
     );
   }
 
@@ -117,6 +139,7 @@ class PaperbuddyServer {
     watcher?.start();
     trash.startAutoEmpty();
     workflows.startScheduler();
+    if (config.mailInterval > Duration.zero) mail.start();
     // Wie Paperless-ngx: das lernende Matching stündlich nachtrainieren.
     consumer.classifier.trainIfNeeded();
     _trainTimer = Timer.periodic(const Duration(hours: 1), (_) => consumer.classifier.trainIfNeeded());
@@ -133,6 +156,8 @@ class PaperbuddyServer {
     watcher?.stop();
     trash.stop();
     workflows.stop();
+    mail.stop();
+    scanners.close();
     _trainTimer?.cancel();
     await _http?.close();
     db.close();

@@ -214,6 +214,41 @@ const _migrations = <String>[
   );
   CREATE INDEX workflow_runs_lookup ON workflow_runs(workflow_id, document_id);
   ''',
+  // 4: Mail-Abruf
+  '''
+  CREATE TABLE mail_accounts (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    imap_server TEXT NOT NULL,
+    imap_port INTEGER,
+    imap_security INTEGER NOT NULL DEFAULT 2,
+    username TEXT NOT NULL,
+    password TEXT NOT NULL,
+    character_set TEXT NOT NULL DEFAULT 'UTF-8',
+    owner INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
+  CREATE TABLE mail_rules (
+    id INTEGER PRIMARY KEY,
+    account_id INTEGER NOT NULL REFERENCES mail_accounts(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    data TEXT NOT NULL,
+    owner INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
+  CREATE TABLE mail_processed (
+    id INTEGER PRIMARY KEY,
+    rule_id INTEGER NOT NULL REFERENCES mail_rules(id) ON DELETE CASCADE,
+    folder TEXT NOT NULL,
+    uid INTEGER NOT NULL,
+    message_id TEXT,
+    subject TEXT,
+    received TEXT,
+    processed TEXT NOT NULL,
+    status TEXT NOT NULL,
+    error TEXT
+  );
+  CREATE INDEX mail_processed_lookup ON mail_processed(rule_id, folder, uid);
+  ''',
 ];
 
 Database openDatabase(String path) {
