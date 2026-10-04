@@ -19,6 +19,8 @@ class Config {
     required this.adminPassword,
     required this.corsOrigins,
     this.emptyTrashDelay = const Duration(days: 30),
+    this.email,
+    this.publicUrl,
   });
 
   final String host;
@@ -46,6 +48,12 @@ class Config {
   /// So lange bleiben gelöschte Dokumente im Papierkorb.
   final Duration emptyTrashDelay;
 
+  /// SMTP für Workflow-E-Mails; `null` = kein Versand.
+  final EmailSettings? email;
+
+  /// Öffentliche Adresse für Links in E-Mails und Webhooks (`{doc_url}`).
+  final String? publicUrl;
+
   String get databasePath => p.join(dataDir, 'paperbuddy.sqlite3');
 
   factory Config.fromEnvironment([Map<String, String>? env]) {
@@ -72,6 +80,18 @@ class Config {
       adminUser: get('ADMIN_USER'),
       adminPassword: get('ADMIN_PASSWORD'),
       emptyTrashDelay: Duration(days: int.parse(get('EMPTY_TRASH_DELAY') ?? '30')),
+      email: get('EMAIL_HOST') == null
+          ? null
+          : EmailSettings(
+              host: get('EMAIL_HOST')!,
+              port: int.parse(get('EMAIL_PORT') ?? '25'),
+              username: get('EMAIL_HOST_USER'),
+              password: get('EMAIL_HOST_PASSWORD'),
+              from: get('EMAIL_FROM') ?? get('EMAIL_HOST_USER') ?? 'paperbuddy@localhost',
+              ssl: get('EMAIL_USE_SSL') == 'true',
+              startTls: get('EMAIL_USE_TLS') == 'true',
+            ),
+      publicUrl: get('URL'),
       corsOrigins: (get('CORS_ALLOWED_HOSTS') ?? '')
           .split(',')
           .map((s) => s.trim())
@@ -79,4 +99,24 @@ class Config {
           .toList(),
     );
   }
+}
+
+class EmailSettings {
+  const EmailSettings({
+    required this.host,
+    required this.port,
+    required this.from,
+    this.username,
+    this.password,
+    this.ssl = false,
+    this.startTls = false,
+  });
+
+  final String host;
+  final int port;
+  final String from;
+  final String? username;
+  final String? password;
+  final bool ssl;
+  final bool startTls;
 }

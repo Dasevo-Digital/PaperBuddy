@@ -32,6 +32,7 @@ class PaperlessApi {
     required this.consumer,
     required this.tools,
     required this.trash,
+    required this.customFields,
     this.extraRoutes = const [],
     this.onDocumentUpdated,
     this.corsOrigins = const [],
@@ -50,7 +51,7 @@ class PaperlessApi {
   final List<void Function(void Function(String method, String path, Function handler) route)> extraRoutes;
   final Future<void> Function(int documentId)? onDocumentUpdated;
 
-  late final customFields = CustomFieldsResource(db, access);
+  final CustomFieldsResource customFields;
   final _taxonomies = <String, TaxonomyResource>{};
 
   static const _public = {'api/token/', 'api/token'};

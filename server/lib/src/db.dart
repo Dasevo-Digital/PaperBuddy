@@ -186,6 +186,34 @@ const _migrations = <String>[
     owner INTEGER REFERENCES users(id) ON DELETE CASCADE
   );
   ''',
+  // 3: Workflows
+  '''
+  CREATE TABLE workflows (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    enabled INTEGER NOT NULL DEFAULT 1
+  );
+  CREATE TABLE workflow_triggers (
+    id INTEGER PRIMARY KEY,
+    workflow_id INTEGER NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
+    data TEXT NOT NULL
+  );
+  CREATE TABLE workflow_actions (
+    id INTEGER PRIMARY KEY,
+    workflow_id INTEGER NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    data TEXT NOT NULL
+  );
+  CREATE TABLE workflow_runs (
+    id INTEGER PRIMARY KEY,
+    workflow_id INTEGER NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
+    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    trigger_type INTEGER NOT NULL,
+    run_at TEXT NOT NULL
+  );
+  CREATE INDEX workflow_runs_lookup ON workflow_runs(workflow_id, document_id);
+  ''',
 ];
 
 Database openDatabase(String path) {

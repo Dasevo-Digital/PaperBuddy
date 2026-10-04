@@ -8,6 +8,7 @@ import 'package:shelf/shelf_io.dart' as io;
 import 'package:sqlite3/sqlite3.dart';
 
 import 'access.dart';
+import 'api/custom_fields.dart';
 import 'api/paperless_api.dart';
 import 'auth.dart';
 import 'config.dart';
@@ -17,6 +18,7 @@ import 'processing/consumer.dart';
 import 'processing/tools.dart';
 import 'storage.dart';
 import 'trash.dart';
+import 'workflows.dart';
 
 final _log = Logger('server');
 
@@ -32,6 +34,7 @@ class PaperbuddyServer {
     required this.trash,
     required this.handler,
     required this.watcher,
+    required this.workflows,
   });
 
   final Config config;
@@ -43,6 +46,7 @@ class PaperbuddyServer {
   final Trash trash;
   final Handler handler;
   final ConsumeFolderWatcher? watcher;
+  final WorkflowEngine workflows;
   HttpServer? _http;
   Timer? _trainTimer;
 
@@ -58,6 +62,16 @@ class PaperbuddyServer {
     store ??= LocalBlobStore(config.mediaDir);
     final consumer = Consumer(db: db, store: store, tools: tools, workDir: p.join(config.dataDir, 'work'));
     final trash = Trash(db, store, access, delay: config.emptyTrashDelay);
+    final customFields = CustomFieldsResource(db, access);
+    final workflows = WorkflowEngine(
+      db: db,
+      access: access,
+      store: store,
+      customFields: customFields,
+      email: config.email,
+      publicUrl: config.publicUrl,
+    );
+    consumer.hooks = workflows;
     final api = PaperlessApi(
       db: db,
       auth: auth,
@@ -66,6 +80,9 @@ class PaperbuddyServer {
       consumer: consumer,
       tools: tools,
       trash: trash,
+      customFields: customFields,
+      extraRoutes: [workflows.mount],
+      onDocumentUpdated: workflows.documentUpdated,
       corsOrigins: config.corsOrigins,
     );
     final watcher = config.consumeDir == null
@@ -81,6 +98,7 @@ class PaperbuddyServer {
       trash: trash,
       handler: api.handler,
       watcher: watcher,
+      workflows: workflows,
     );
   }
 
@@ -98,6 +116,7 @@ class PaperbuddyServer {
     }
     watcher?.start();
     trash.startAutoEmpty();
+    workflows.startScheduler();
     // Wie Paperless-ngx: das lernende Matching stündlich nachtrainieren.
     consumer.classifier.trainIfNeeded();
     _trainTimer = Timer.periodic(const Duration(hours: 1), (_) => consumer.classifier.trainIfNeeded());
@@ -113,6 +132,7 @@ class PaperbuddyServer {
   Future<void> close() async {
     watcher?.stop();
     trash.stop();
+    workflows.stop();
     _trainTimer?.cancel();
     await _http?.close();
     db.close();

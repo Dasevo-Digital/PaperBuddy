@@ -69,6 +69,10 @@ class ConsumeOverrides {
   /// Custom Fields, die das Dokument bekommt (Wert `null` = leer).
   final Map<int, Object?> customFieldValues;
 
+  /// Titel-Vorlage aus Workflows, z. B. `{correspondent} {created_year}`;
+  /// wird nach dem Anlegen mit den endgültigen Daten ausgefüllt.
+  String? titleTemplate;
+
   /// Freigaben aus Workflows.
   final viewUsers = <int>{};
   final viewGroups = <int>{};
@@ -86,6 +90,9 @@ abstract interface class ConsumeHooks {
     required ConsumeOverrides overrides,
     int? mailRule,
   });
+
+  /// Füllt eine Titel-Vorlage mit den Daten des Dokuments.
+  String renderTitle(String template, int documentId);
 
   /// Nachdem das Dokument angelegt wurde.
   Future<void> documentAdded(int documentId, {required ConsumeSource source, required String fileName, int? mailRule});
@@ -195,6 +202,11 @@ class Consumer {
       hooks?.consumptionStarted(
           fileName: originalName, path: sourcePath, source: source, overrides: o, mailRule: mailRule);
       final id = await _consume(staged, originalName, o, scratch);
+      final template = o.titleTemplate;
+      if (template != null && hooks != null) {
+        final title = hooks!.renderTitle(template, id).trim();
+        if (title.isNotEmpty) db.execute('UPDATE documents SET title = ? WHERE id = ?', [title, id]);
+      }
       await hooks?.documentAdded(id, source: source, fileName: originalName, mailRule: mailRule);
       _setTask(taskId, 'SUCCESS', result: 'Success. New document id $id created', document: id);
       _log.info('$originalName → Dokument #$id');
