@@ -20,6 +20,9 @@ dependencies:
     sdk: flutter
   pdfrx: ^2.4.8
   share_plus: ^13.3.1
+  cunning_document_scanner: ^3.0.3
+  pdf: ^3.13.1
+  image: ^4.10.1
 
 dev_dependencies:
   flutter_test:

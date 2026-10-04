@@ -7,6 +7,12 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>PaperBuddy nutzt die Kamera, um Dokumente zu scannen.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>PaperBuddy kann Fotos aus deiner Mediathek als Dokument übernehmen.</string>
+	<key>CFBundleAllowMixedLocalizations</key>
+	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>PaperBuddy verbindet sich mit deinem Dokumentenserver im lokalen Netzwerk.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>

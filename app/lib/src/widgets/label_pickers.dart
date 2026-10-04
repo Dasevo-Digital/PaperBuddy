@@ -261,3 +261,104 @@ String nextTagColor(int existingCount) {
 
 /// Für Tests und Anzeige: Farbwert eines Tags.
 Color tagColor(Tag t) => Color(parseHexColor(t.color));
+
+/// Formularfeld, das beim Antippen [pickLabel] öffnet.
+class LabelField<T extends Label> extends StatelessWidget {
+  const LabelField({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.options,
+    required this.value,
+    required this.onChanged,
+    this.onCreate,
+  });
+
+  final String label;
+  final IconData icon;
+  final Map<int, T> options;
+  final int? value;
+  final ValueChanged<int?> onChanged;
+  final Future<T> Function(String name)? onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(4),
+      onTap: () async {
+        final picked = await pickLabel<T>(
+          context,
+          title: label,
+          options: options.values.toList(),
+          selected: value,
+          onCreate: onCreate,
+        );
+        if (picked != null) onChanged(picked == -1 ? null : picked);
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
+        child: Text(value == null ? '–' : (options[value]?.name ?? '#$value')),
+      ),
+    );
+  }
+}
+
+/// Tag-Auswahl mit Chips zum Entfernen.
+class TagsField extends StatelessWidget {
+  const TagsField({
+    super.key,
+    required this.tags,
+    required this.selected,
+    required this.onChanged,
+    this.onCreate,
+  });
+
+  final Map<int, Tag> tags;
+  final Set<int> selected;
+  final ValueChanged<Set<int>> onChanged;
+  final Future<Tag> Function(String name)? onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text('Tags', style: theme.textTheme.titleMedium)),
+            TextButton.icon(
+              icon: const Icon(LucideIcons.tags),
+              label: const Text('Auswählen'),
+              onPressed: () async {
+                final picked = await pickTags(
+                  context,
+                  options: tags.values.toList(),
+                  selected: selected,
+                  onCreate: onCreate,
+                );
+                if (picked != null) onChanged(picked);
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (selected.isEmpty)
+          Text('Keine Tags', style: theme.textTheme.bodyMedium)
+        else
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final id in selected)
+                if (tags[id] case final tag?)
+                  InputChip(
+                    label: TagChip(tag: tag),
+                    onDeleted: () => onChanged({...selected}..remove(id)),
+                  ),
+            ],
+          ),
+      ],
+    );
+  }
+}

@@ -3,6 +3,31 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 enum UploadState { uploading, processing, done, failed }
 
+/// Eine Datei samt optionaler Metadaten für `post_document`.
+class UploadRequest {
+  const UploadRequest(
+    this.fileName,
+    this.bytes, {
+    this.title,
+    this.created,
+    this.correspondent,
+    this.documentType,
+    this.storagePath,
+    this.tags = const [],
+    this.archiveSerialNumber,
+  });
+
+  final String fileName;
+  final Uint8List bytes;
+  final String? title;
+  final DateTime? created;
+  final int? correspondent;
+  final int? documentType;
+  final int? storagePath;
+  final List<int> tags;
+  final int? archiveSerialNumber;
+}
+
 class UploadJob {
   UploadJob(this.fileName);
   final String fileName;
@@ -25,25 +50,34 @@ class UploadQueue extends ChangeNotifier {
   int get failedCount =>
       jobs.where((j) => j.state == UploadState.failed).length;
 
-  Future<void> add(
-    PaperlessClient client,
-    List<({String name, Uint8List bytes})> files,
-  ) async {
-    final batch = [for (final f in files) (UploadJob(f.name), f.bytes)];
+  Future<void> add(PaperlessClient client, List<UploadRequest> requests) async {
+    final batch = [
+      for (final r in requests) (UploadJob(r.title ?? r.fileName), r),
+    ];
     jobs.addAll(batch.map((b) => b.$1));
     notifyListeners();
-    for (final (job, bytes) in batch) {
-      await _run(client, job, bytes);
+    for (final (job, request) in batch) {
+      await _run(client, job, request);
     }
   }
 
   Future<void> _run(
     PaperlessClient client,
     UploadJob job,
-    Uint8List bytes,
+    UploadRequest r,
   ) async {
     try {
-      final taskId = await client.uploadDocument(bytes, job.fileName);
+      final taskId = await client.uploadDocument(
+        r.bytes,
+        r.fileName,
+        title: r.title,
+        created: r.created,
+        correspondent: r.correspondent,
+        documentType: r.documentType,
+        storagePath: r.storagePath,
+        tags: r.tags,
+        archiveSerialNumber: r.archiveSerialNumber,
+      );
       job.state = UploadState.processing;
       notifyListeners();
       final task = await client.waitForTask(taskId);

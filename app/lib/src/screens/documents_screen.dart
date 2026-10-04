@@ -12,7 +12,10 @@ import '../widgets/document_tiles.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/label_pickers.dart';
 import '../widgets/upload_status.dart';
+import '../scan/scan_service.dart';
+import '../upload_queue.dart';
 import 'document_screen.dart';
+import 'upload_screen.dart';
 
 /// Dokumentliste mit Suche, Filtern und Upload.
 ///
@@ -203,7 +206,56 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     }
   }
 
+  /// Auf dem Telefon: Scannen oder Datei; sonst direkt die Datei-Auswahl.
   Future<void> _upload() async {
+    if (!ScanService.available) return _pickFiles();
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(LucideIcons.scanLine),
+              title: const Text('Dokument scannen'),
+              subtitle: const Text('Mit Kantenerkennung, mehrere Seiten'),
+              onTap: () => Navigator.pop(context, 'scan'),
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.folderOpen),
+              title: const Text('Datei auswählen'),
+              subtitle: const Text('PDF, Bild oder Text'),
+              onTap: () => Navigator.pop(context, 'file'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (choice == 'scan') await _scan();
+    if (choice == 'file') await _pickFiles();
+  }
+
+  Future<void> _scan() async {
+    try {
+      final pages = await ScanService.scanPages();
+      if (pages == null || !mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<bool>(
+          builder: (_) => UploadScreen.scan(pages: pages),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Scanner nicht verfügbar: $e')));
+      }
+    }
+  }
+
+  /// Eine Datei: mit Metadaten-Bildschirm. Mehrere: direkt in die Warteschlange.
+  Future<void> _pickFiles() async {
     final picked = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const [
@@ -221,7 +273,21 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     final files = [
       for (final f in picked) (name: f.name, bytes: await f.readAsBytes()),
     ];
-    _state.uploads.add(_state.client, files);
+    if (!mounted) return;
+    if (files.length == 1) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<bool>(
+          builder: (_) => UploadScreen.file(
+            fileName: files.single.name,
+            fileBytes: files.single.bytes,
+          ),
+        ),
+      );
+      return;
+    }
+    _state.uploads.add(_state.client, [
+      for (final f in files) UploadRequest(f.name, f.bytes),
+    ]).ignore();
   }
 
   @override
@@ -237,8 +303,10 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
               // Mehrere Listen liegen gleichzeitig im IndexedStack.
               heroTag: 'upload-${widget.title}',
               onPressed: _upload,
-              icon: const Icon(LucideIcons.upload),
-              label: const Text('Hochladen'),
+              icon: Icon(
+                ScanService.available ? LucideIcons.plus : LucideIcons.upload,
+              ),
+              label: Text(ScanService.available ? 'Neu' : 'Hochladen'),
             )
           : null,
       body: SafeArea(

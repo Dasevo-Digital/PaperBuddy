@@ -5,7 +5,6 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 import '../app_state.dart';
 import '../format.dart';
 import '../widgets/label_pickers.dart';
-import '../widgets/tag_chip.dart';
 
 /// Metadaten eines Dokuments bearbeiten. Liefert das gespeicherte Dokument.
 class DocumentEditScreen extends StatefulWidget {
@@ -139,41 +138,6 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
     final theme = Theme.of(context);
     final changed = _changes.isNotEmpty;
 
-    Widget labelField<T extends Label>({
-      required String label,
-      required IconData icon,
-      required Map<int, T> options,
-      required int? value,
-      required ValueChanged<int?> onChanged,
-      Future<T> Function(String)? onCreate,
-    }) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(4),
-          onTap: () async {
-            final picked = await pickLabel<T>(
-              context,
-              title: label,
-              options: options.values.toList(),
-              selected: value,
-              onCreate: onCreate,
-            );
-            if (picked != null) onChanged(picked == -1 ? null : picked);
-          },
-          child: InputDecorator(
-            decoration: InputDecoration(
-              labelText: label,
-              prefixIcon: Icon(icon),
-            ),
-            child: Text(
-              value == null ? '–' : (options[value]?.name ?? '#$value'),
-            ),
-          ),
-        ),
-      );
-    }
-
     return PopScope(
       canPop: !changed || _saving,
       onPopInvokedWithResult: (didPop, _) async {
@@ -209,14 +173,12 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                     constraints: const BoxConstraints(maxWidth: 640),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
+                      spacing: 16,
                       children: [
                         if (_error != null)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: Text(
-                              _error!,
-                              style: TextStyle(color: theme.colorScheme.error),
-                            ),
+                          Text(
+                            _error!,
+                            style: TextStyle(color: theme.colorScheme.error),
                           ),
                         TextFormField(
                           controller: _title,
@@ -228,7 +190,6 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                               ? 'Bitte einen Titel angeben'
                               : null,
                         ),
-                        const SizedBox(height: 16),
                         InkWell(
                           borderRadius: BorderRadius.circular(4),
                           onTap: _pickDate,
@@ -240,8 +201,7 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                             child: Text(formatDay(_created)),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        labelField<Correspondent>(
+                        LabelField<Correspondent>(
                           label: 'Korrespondent',
                           icon: LucideIcons.user,
                           options: state.correspondents,
@@ -251,7 +211,7 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                               ? client.createCorrespondent
                               : null,
                         ),
-                        labelField<DocumentType>(
+                        LabelField<DocumentType>(
                           label: 'Dokumenttyp',
                           icon: LucideIcons.fileType,
                           options: state.documentTypes,
@@ -261,7 +221,7 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                               ? client.createDocumentType
                               : null,
                         ),
-                        labelField<StoragePath>(
+                        LabelField<StoragePath>(
                           label: 'Speicherpfad',
                           icon: LucideIcons.folderTree,
                           options: state.storagePaths,
@@ -289,58 +249,20 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                                 : null;
                           },
                         ),
-                        const SizedBox(height: 24),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Tags',
-                                style: theme.textTheme.titleMedium,
-                              ),
-                            ),
-                            TextButton.icon(
-                              icon: const Icon(LucideIcons.tags),
-                              label: const Text('Auswählen'),
-                              onPressed: () async {
-                                final picked = await pickTags(
-                                  context,
-                                  options: state.tags.values.toList(),
-                                  selected: _tags,
-                                  onCreate: client.user.can('add', 'tag')
-                                      ? (name) => client.createTag(
-                                          name,
-                                          color: nextTagColor(
-                                            state.tags.length,
-                                          ),
-                                        )
-                                      : null,
-                                );
-                                if (picked != null) {
-                                  setState(() => _tags = picked);
-                                  state.refreshLabels().ignore();
-                                }
-                              },
-                            ),
-                          ],
+                        TagsField(
+                          tags: state.tags,
+                          selected: _tags,
+                          onChanged: (v) {
+                            setState(() => _tags = v);
+                            state.refreshLabels().ignore();
+                          },
+                          onCreate: client.user.can('add', 'tag')
+                              ? (name) => client.createTag(
+                                  name,
+                                  color: nextTagColor(state.tags.length),
+                                )
+                              : null,
                         ),
-                        const SizedBox(height: 8),
-                        if (_tags.isEmpty)
-                          Text('Keine Tags', style: theme.textTheme.bodyMedium)
-                        else
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: [
-                              for (final id in _tags)
-                                if (state.tags[id] case final tag?)
-                                  InputChip(
-                                    label: TagChip(tag: tag),
-                                    onDeleted: () => setState(
-                                      () => _tags = {..._tags}..remove(id),
-                                    ),
-                                  ),
-                            ],
-                          ),
                       ],
                     ),
                   ),
