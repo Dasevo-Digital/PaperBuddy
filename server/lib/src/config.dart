@@ -1,0 +1,77 @@
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
+
+/// Laufzeitkonfiguration, ausschließlich über Umgebungsvariablen.
+///
+/// Die Namen orientieren sich an Paperless-ngx (`PAPERLESS_*`), damit
+/// bestehende Setups leicht umziehen können.
+class Config {
+  Config({
+    required this.host,
+    required this.port,
+    required this.dataDir,
+    required this.mediaDir,
+    required this.consumeDir,
+    required this.consumePollInterval,
+    required this.ocrLanguage,
+    required this.adminUser,
+    required this.adminPassword,
+    required this.corsOrigins,
+  });
+
+  final String host;
+  final int port;
+
+  /// Datenbank und interne Dateien.
+  final String dataDir;
+
+  /// Originale, Archiv-PDFs und Vorschaubilder.
+  final String mediaDir;
+
+  /// Eingangsordner, z. B. per SMB für Netzwerkscanner freigegeben.
+  final String? consumeDir;
+  final Duration consumePollInterval;
+
+  /// Tesseract-Sprachen, z. B. `deu+eng`.
+  final String ocrLanguage;
+
+  /// Wird beim ersten Start angelegt, falls noch kein Benutzer existiert.
+  final String? adminUser;
+  final String? adminPassword;
+
+  final List<String> corsOrigins;
+
+  String get databasePath => p.join(dataDir, 'paperbuddy.sqlite3');
+
+  factory Config.fromEnvironment([Map<String, String>? env]) {
+    env ??= Platform.environment;
+    String? get(String name) {
+      final value = env!['PAPERBUDDY_$name'] ?? env['PAPERLESS_$name'];
+      return (value == null || value.isEmpty) ? null : value;
+    }
+
+    final dataDir = p.absolute(get('DATA_DIR') ?? 'data');
+    final consume = get('CONSUMPTION_DIR') ?? get('CONSUME_DIR');
+    return Config(
+      host: get('BIND_ADDR') ?? '0.0.0.0',
+      port: int.parse(get('PORT') ?? '8000'),
+      dataDir: dataDir,
+      mediaDir: p.absolute(get('MEDIA_ROOT') ?? p.join(dataDir, 'media')),
+      consumeDir: consume == null || consume == 'off'
+          ? null
+          : p.absolute(consume),
+      consumePollInterval: Duration(
+        seconds: int.parse(get('CONSUMER_POLLING') ?? '5'),
+      ),
+      ocrLanguage: get('OCR_LANGUAGE') ?? 'deu+eng',
+      adminUser: get('ADMIN_USER'),
+      adminPassword: get('ADMIN_PASSWORD'),
+      corsOrigins: (get('CORS_ALLOWED_HOSTS') ?? '')
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList(),
+    );
+  }
+}

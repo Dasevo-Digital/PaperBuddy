@@ -1,0 +1,5 @@
+.env
+data/
+consume/
+.DS_Store
+AGENTS.md

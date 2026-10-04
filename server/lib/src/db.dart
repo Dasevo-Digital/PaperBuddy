@@ -1,0 +1,160 @@
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
+import 'package:sqlite3/sqlite3.dart';
+
+/// Schema-Migrationen. Neue Migrationen nur anhängen, nie ändern.
+const _migrations = <String>[
+  '''
+  CREATE TABLE users (
+    id INTEGER PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    first_name TEXT NOT NULL DEFAULT '',
+    last_name TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
+    is_superuser INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    date_joined TEXT NOT NULL
+  );
+  CREATE TABLE tokens (
+    key TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created TEXT NOT NULL
+  );
+  CREATE TABLE correspondents (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    match TEXT NOT NULL DEFAULT '',
+    matching_algorithm INTEGER NOT NULL DEFAULT 6,
+    is_insensitive INTEGER NOT NULL DEFAULT 1,
+    owner INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
+  CREATE TABLE document_types (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    match TEXT NOT NULL DEFAULT '',
+    matching_algorithm INTEGER NOT NULL DEFAULT 6,
+    is_insensitive INTEGER NOT NULL DEFAULT 1,
+    owner INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
+  CREATE TABLE storage_paths (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    path TEXT NOT NULL DEFAULT '',
+    match TEXT NOT NULL DEFAULT '',
+    matching_algorithm INTEGER NOT NULL DEFAULT 6,
+    is_insensitive INTEGER NOT NULL DEFAULT 1,
+    owner INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
+  CREATE TABLE tags (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    color TEXT NOT NULL DEFAULT '#a6cee3',
+    is_inbox_tag INTEGER NOT NULL DEFAULT 0,
+    match TEXT NOT NULL DEFAULT '',
+    matching_algorithm INTEGER NOT NULL DEFAULT 6,
+    is_insensitive INTEGER NOT NULL DEFAULT 1,
+    owner INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
+  CREATE TABLE documents (
+    id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL DEFAULT '',
+    correspondent_id INTEGER REFERENCES correspondents(id) ON DELETE SET NULL,
+    document_type_id INTEGER REFERENCES document_types(id) ON DELETE SET NULL,
+    storage_path_id INTEGER REFERENCES storage_paths(id) ON DELETE SET NULL,
+    created TEXT NOT NULL,
+    modified TEXT NOT NULL,
+    added TEXT NOT NULL,
+    archive_serial_number INTEGER UNIQUE,
+    original_filename TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    checksum TEXT NOT NULL UNIQUE,
+    original_path TEXT NOT NULL,
+    archive_path TEXT,
+    thumbnail_path TEXT,
+    page_count INTEGER,
+    owner INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
+  CREATE TABLE document_tags (
+    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (document_id, tag_id)
+  );
+  CREATE TABLE notes (
+    id INTEGER PRIMARY KEY,
+    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    note TEXT NOT NULL,
+    created TEXT NOT NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
+  CREATE TABLE tasks (
+    id INTEGER PRIMARY KEY,
+    task_id TEXT NOT NULL UNIQUE,
+    task_file_name TEXT,
+    date_created TEXT NOT NULL,
+    date_done TEXT,
+    status TEXT NOT NULL,
+    result TEXT,
+    acknowledged INTEGER NOT NULL DEFAULT 0,
+    related_document INTEGER REFERENCES documents(id) ON DELETE SET NULL,
+    owner INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
+  CREATE TABLE ui_settings (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    settings TEXT NOT NULL DEFAULT '{}'
+  );
+  CREATE VIRTUAL TABLE documents_fts USING fts5(
+    title, content, content='documents', content_rowid='id',
+    tokenize='unicode61 remove_diacritics 2'
+  );
+  CREATE TRIGGER documents_ai AFTER INSERT ON documents BEGIN
+    INSERT INTO documents_fts(rowid, title, content)
+    VALUES (new.id, new.title, new.content);
+  END;
+  CREATE TRIGGER documents_ad AFTER DELETE ON documents BEGIN
+    INSERT INTO documents_fts(documents_fts, rowid, title, content)
+    VALUES ('delete', old.id, old.title, old.content);
+  END;
+  CREATE TRIGGER documents_au AFTER UPDATE OF title, content ON documents BEGIN
+    INSERT INTO documents_fts(documents_fts, rowid, title, content)
+    VALUES ('delete', old.id, old.title, old.content);
+    INSERT INTO documents_fts(rowid, title, content)
+    VALUES (new.id, new.title, new.content);
+  END;
+  ''',
+];
+
+Database openDatabase(String path) {
+  Directory(p.dirname(path)).createSync(recursive: true);
+  final db = sqlite3.open(path);
+  db.execute('PRAGMA journal_mode = WAL;');
+  db.execute('PRAGMA foreign_keys = ON;');
+  migrate(db);
+  return db;
+}
+
+Database openInMemoryDatabase() {
+  final db = sqlite3.openInMemory();
+  db.execute('PRAGMA foreign_keys = ON;');
+  migrate(db);
+  return db;
+}
+
+void migrate(Database db) {
+  final version = db.select('PRAGMA user_version;').first.columnAt(0) as int;
+  for (var i = version; i < _migrations.length; i++) {
+    db.execute('BEGIN;');
+    try {
+      db.execute(_migrations[i]);
+      db.execute('PRAGMA user_version = ${i + 1};');
+      db.execute('COMMIT;');
+    } catch (_) {
+      db.execute('ROLLBACK;');
+      rethrow;
+    }
+  }
+}
+
+String nowIso() => DateTime.now().toUtc().toIso8601String();

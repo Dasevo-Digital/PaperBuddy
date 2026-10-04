@@ -1,0 +1,36 @@
+# paperbuddy mit SMB-Freigabe für Netzwerkscanner.
+#
+#   cp .env.example .env   # Passwörter anpassen
+#   docker compose up -d
+#
+# Danach im Scanner als Ziel einrichten: \\<host>\scans  (Benutzer: scanner)
+services:
+  paperbuddy:
+    build: ./server
+    image: paperbuddy:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      PAPERBUDDY_ADMIN_USER: ${PAPERBUDDY_ADMIN_USER:-admin}
+      PAPERBUDDY_ADMIN_PASSWORD: ${PAPERBUDDY_ADMIN_PASSWORD:?PAPERBUDDY_ADMIN_PASSWORD in .env setzen}
+      PAPERBUDDY_OCR_LANGUAGE: ${PAPERBUDDY_OCR_LANGUAGE:-deu+eng}
+    volumes:
+      - ./data:/data
+      - ./consume:/consume
+
+  # Optional: Freigabe des Eingangsordners für Scanner (SMB2/3).
+  samba:
+    image: ghcr.io/servercontainers/samba:latest
+    restart: unless-stopped
+    ports:
+      - "445:445"
+    environment:
+      ACCOUNT_scanner: ${SCANNER_PASSWORD:?SCANNER_PASSWORD in .env setzen}
+      UID_scanner: "1000"
+      SAMBA_VOLUME_CONFIG_scans: >-
+        [scans]; path=/shares/scans; valid users = scanner;
+        guest ok = no; read only = no; browseable = yes;
+        force user = scanner; create mask = 0664
+    volumes:
+      - ./consume:/shares/scans
