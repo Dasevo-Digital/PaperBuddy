@@ -3,26 +3,40 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import '../access.dart';
 import '../auth.dart';
 import '../db.dart';
 import '../processing/consumer.dart';
 import '../processing/matching.dart';
 import '../storage.dart';
+import '../trash.dart';
+import 'custom_fields.dart';
 import 'http_utils.dart';
-import 'taxonomy.dart';
 
-/// `/api/documents/…` inklusive Upload, Downloads, Notizen und Bulk-Edit.
+/// `/api/documents/…` inklusive Upload, Downloads, Notizen, Bulk-Edit und
+/// Papierkorb, mit Modell- und Objektrechten.
 class DocumentsResource {
   DocumentsResource({
     required this.db,
     required this.store,
     required this.consumer,
+    required this.access,
+    required this.customFields,
+    required this.trash,
+    this.onUpdated,
   });
 
   final Database db;
   final BlobStore store;
   final Consumer consumer;
+  final Access access;
+  final CustomFieldsResource customFields;
+  final Trash trash;
 
+  /// Wird nach jeder Änderung an einem Dokument aufgerufen (Workflows).
+  final Future<void> Function(int documentId)? onUpdated;
+
+  static const _model = 'document';
   static const _select = '''
     SELECT d.*,
       (SELECT group_concat(tag_id) FROM document_tags WHERE document_id = d.id) AS tag_ids
@@ -30,8 +44,25 @@ class DocumentsResource {
 
   Row? _row(int id) => db.select('$_select WHERE d.id = ?', [id]).firstOrNull;
 
-  Row _require(Request request) =>
-      _row(int.parse(request.params['id']!)) ?? (throw ApiError.notFound());
+  User _user(Request r) => r.context['user'] as User;
+
+  /// Sichtbares Dokument aus der URL; Dokumente im Papierkorb gelten als
+  /// nicht vorhanden.
+  Row _require(Request request) {
+    final user = _user(request);
+    final row = db.select(
+      '$_select WHERE d.id = ? AND d.deleted_at IS NULL AND ${access.visibleSql(user, _model, 'd')}',
+      [int.parse(request.params['id']!)],
+    ).firstOrNull;
+    return row ?? (throw ApiError.notFound());
+  }
+
+  void _requireChange(User user, Row row) {
+    access.require(user, 'change', _model);
+    if (!access.canChange(user, _model, row['id'] as int, row['owner'] as int?)) {
+      throw Access.forbidden();
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // Serialisierung
@@ -58,23 +89,20 @@ class DocumentsResource {
       },
   ];
 
-  Map<String, dynamic> serialize(
-    Row row,
-    Request request, {
-    Map<String, dynamic>? searchHit,
-  }) {
+  Map<String, dynamic> serialize(Row row, Request request, {Map<String, dynamic>? searchHit}) {
     final q = request.url.queryParameters;
+    final user = _user(request);
+    final id = row['id'] as int;
+    final owner = row['owner'] as int?;
     final created = row['created'] as String;
     var content = row['content'] as String;
     if (asBool(q['truncate_content']) && content.length > 300) {
       content = content.substring(0, 300);
     }
-    final tags =
-        (row['tag_ids'] as String?)?.split(',').map(int.parse).toList() ??
-        <int>[];
+    final tags = (row['tag_ids'] as String?)?.split(',').map(int.parse).toList() ?? <int>[];
     final archivePath = row['archive_path'] as String?;
     final out = <String, dynamic>{
-      'id': row['id'],
+      'id': id,
       'correspondent': row['correspondent_id'],
       'document_type': row['document_type_id'],
       'storage_path': row['storage_path_id'],
@@ -86,21 +114,21 @@ class DocumentsResource {
       'created_date': created,
       'modified': row['modified'],
       'added': row['added'],
-      'deleted_at': null,
+      'deleted_at': row['deleted_at'],
       'archive_serial_number': row['archive_serial_number'],
       'original_file_name': row['original_filename'],
       'archived_file_name': archivePath == null
           ? null
           : '${p.basenameWithoutExtension(row['original_filename'] as String)}.pdf',
-      'owner': row['owner'],
-      'user_can_change': true,
-      'is_shared_by_requester': false,
-      'notes': _notes(row['id'] as int),
-      'custom_fields': <Object>[],
+      'owner': owner,
+      'user_can_change': access.canChange(user, _model, id, owner),
+      'is_shared_by_requester': owner == user.id && access.hasShares(_model, id),
+      'notes': access.has(user, 'view', 'note') ? _notes(id) : <Object>[],
+      'custom_fields': customFields.valuesOf(id),
       'page_count': row['page_count'],
       'mime_type': row['mime_type'],
     };
-    if (asBool(q['full_perms'])) out['permissions'] = emptyPermissions;
+    if (asBool(q['full_perms'])) out['permissions'] = access.permissionsJson(_model, id);
     if (searchHit != null) out['__search_hit__'] = searchHit;
     final fields = q['fields'];
     if (fields != null && fields.isNotEmpty) {
@@ -119,23 +147,19 @@ class DocumentsResource {
     'created': 'd.created',
     'added': 'd.added',
     'modified': 'd.modified',
+    'deleted_at': 'd.deleted_at',
     'archive_serial_number': 'd.archive_serial_number',
     'page_count': 'd.page_count',
     'mime_type': 'd.mime_type',
-    'correspondent__name':
-        '(SELECT name FROM correspondents WHERE id = d.correspondent_id) COLLATE NOCASE',
-    'document_type__name':
-        '(SELECT name FROM document_types WHERE id = d.document_type_id) COLLATE NOCASE',
-    'storage_path__name':
-        '(SELECT name FROM storage_paths WHERE id = d.storage_path_id) COLLATE NOCASE',
+    'owner': 'd.owner',
+    'correspondent__name': '(SELECT name FROM correspondents WHERE id = d.correspondent_id) COLLATE NOCASE',
+    'document_type__name': '(SELECT name FROM document_types WHERE id = d.document_type_id) COLLATE NOCASE',
+    'storage_path__name': '(SELECT name FROM storage_paths WHERE id = d.storage_path_id) COLLATE NOCASE',
     'num_notes': '(SELECT COUNT(*) FROM notes WHERE document_id = d.id)',
   };
 
-  Response list(Request request) {
-    final q = request.url.queryParameters;
-    final where = <String>[];
-    final args = <Object?>[];
-
+  /// Baut die WHERE-Bedingungen aus den Query-Parametern (ohne Sichtbarkeit).
+  void _filters(Map<String, String> q, List<String> where, List<Object?> args) {
     void fk(String param, String column) {
       if (q.containsKey('${param}__id')) {
         where.add('d.$column = ?');
@@ -145,29 +169,26 @@ class DocumentsResource {
       if (inIds.isNotEmpty) where.add('d.$column IN (${inIds.join(',')})');
       final noneIds = asIntList(q['${param}__id__none']);
       if (noneIds.isNotEmpty) {
-        where.add(
-          '(d.$column IS NULL OR d.$column NOT IN (${noneIds.join(',')}))',
-        );
+        where.add('(d.$column IS NULL OR d.$column NOT IN (${noneIds.join(',')}))');
       }
       if (q.containsKey('${param}__isnull')) {
-        where.add(
-          asBool(q['${param}__isnull'])
-              ? 'd.$column IS NULL'
-              : 'd.$column IS NOT NULL',
-        );
+        where.add(asBool(q['${param}__isnull']) ? 'd.$column IS NULL' : 'd.$column IS NOT NULL');
       }
     }
 
     fk('correspondent', 'correspondent_id');
     fk('document_type', 'document_type_id');
     fk('storage_path', 'storage_path_id');
+    fk('owner', 'owner');
 
-    const hasTag =
-        'EXISTS (SELECT 1 FROM document_tags dt WHERE dt.document_id = d.id AND dt.tag_id';
-    for (final id in [
-      ...asIntList(q['tags__id__all']),
-      ?asInt(q['tags__id']),
-    ]) {
+    final sharedBy = asInt(q['shared_by__id']);
+    if (sharedBy != null) {
+      where.add("d.owner = $sharedBy AND EXISTS (SELECT 1 FROM object_permissions op "
+          "WHERE op.object_type = 'document' AND op.object_id = d.id)");
+    }
+
+    const hasTag = 'EXISTS (SELECT 1 FROM document_tags dt WHERE dt.document_id = d.id AND dt.tag_id';
+    for (final id in [...asIntList(q['tags__id__all']), ?asInt(q['tags__id'])]) {
       where.add('$hasTag = $id)');
     }
     final anyTags = asIntList(q['tags__id__in']);
@@ -175,17 +196,41 @@ class DocumentsResource {
     final noTags = asIntList(q['tags__id__none']);
     if (noTags.isNotEmpty) where.add('NOT $hasTag IN (${noTags.join(',')}))');
     if (q.containsKey('is_tagged')) {
-      where.add(
-        asBool(q['is_tagged'])
-            ? 'EXISTS (SELECT 1 FROM document_tags dt WHERE dt.document_id = d.id)'
-            : 'NOT EXISTS (SELECT 1 FROM document_tags dt WHERE dt.document_id = d.id)',
-      );
+      const tagged = 'EXISTS (SELECT 1 FROM document_tags dt WHERE dt.document_id = d.id)';
+      where.add(asBool(q['is_tagged']) ? tagged : 'NOT $tagged');
     }
     if (q.containsKey('is_in_inbox')) {
-      final inbox =
-          'EXISTS (SELECT 1 FROM document_tags dt JOIN tags t ON t.id = dt.tag_id '
+      const inbox = 'EXISTS (SELECT 1 FROM document_tags dt JOIN tags t ON t.id = dt.tag_id '
           'WHERE dt.document_id = d.id AND t.is_inbox_tag = 1)';
       where.add(asBool(q['is_in_inbox']) ? inbox : 'NOT $inbox');
+    }
+
+    // Custom Fields
+    const hasField = 'EXISTS (SELECT 1 FROM document_custom_fields cf WHERE cf.document_id = d.id';
+    for (final id in asIntList(q['custom_fields__id__all'])) {
+      where.add('$hasField AND cf.field_id = $id)');
+    }
+    final anyFields = asIntList(q['custom_fields__id__in']);
+    if (anyFields.isNotEmpty) where.add('$hasField AND cf.field_id IN (${anyFields.join(',')}))');
+    final noFields = asIntList(q['custom_fields__id__none']);
+    if (noFields.isNotEmpty) where.add('NOT $hasField AND cf.field_id IN (${noFields.join(',')}))');
+    if (q.containsKey('has_custom_fields')) {
+      where.add(asBool(q['has_custom_fields']) ? '$hasField)' : 'NOT $hasField)');
+    }
+    final cfText = q['custom_fields__icontains'];
+    if (cfText != null && cfText.isNotEmpty) {
+      where.add("$hasField AND CAST(json_extract(cf.value, '\$') AS TEXT) LIKE ?)");
+      args.add('%$cfText%');
+    }
+    final cfQuery = q['custom_field_query'];
+    if (cfQuery != null && cfQuery.isNotEmpty) {
+      Object? parsed;
+      try {
+        parsed = jsonDecodeLenient(cfQuery);
+      } on FormatException {
+        throw ApiError.badRequest({'custom_field_query': ['Invalid JSON.']});
+      }
+      where.add(customFields.queryToSql(parsed, args));
     }
 
     void text(String param, String sql) {
@@ -206,18 +251,11 @@ class DocumentsResource {
       args.add(asInt(q['archive_serial_number']));
     }
     if (q.containsKey('archive_serial_number__isnull')) {
-      where.add(
-        asBool(q['archive_serial_number__isnull'])
-            ? 'd.archive_serial_number IS NULL'
-            : 'd.archive_serial_number IS NOT NULL',
-      );
+      where.add(asBool(q['archive_serial_number__isnull'])
+          ? 'd.archive_serial_number IS NULL'
+          : 'd.archive_serial_number IS NOT NULL');
     }
-    for (final (op, sql) in [
-      ('gt', '>'),
-      ('gte', '>='),
-      ('lt', '<'),
-      ('lte', '<='),
-    ]) {
+    for (final (op, sql) in [('gt', '>'), ('gte', '>='), ('lt', '<'), ('lte', '<=')]) {
       final asnValue = q['archive_serial_number__$op'];
       if (asnValue != null) {
         where.add('d.archive_serial_number $sql ?');
@@ -240,6 +278,20 @@ class DocumentsResource {
       where.add('d.mime_type = ?');
       args.add(q['mime_type']);
     }
+  }
+
+  Response list(Request request) => _list(request, trashed: false);
+
+  Response _list(Request request, {required bool trashed}) {
+    final user = _user(request);
+    access.require(user, 'view', _model);
+    final q = request.url.queryParameters;
+    final where = <String>[
+      trashed ? 'd.deleted_at IS NOT NULL' : 'd.deleted_at IS NULL',
+      trashed ? access.changeableSql(user, _model, 'd') : access.visibleSql(user, _model, 'd'),
+    ];
+    final args = <Object?>[];
+    _filters(q, where, args);
 
     // Volltextsuche über FTS5.
     final query = (q['query'] ?? '').trim();
@@ -248,27 +300,24 @@ class DocumentsResource {
     var select = 'd.id';
     if (ftsQuery != null) {
       from = 'documents d JOIN documents_fts ON documents_fts.rowid = d.id';
-      select =
-          'd.id, bm25(documents_fts) AS score, '
+      select = 'd.id, bm25(documents_fts) AS score, '
           "snippet(documents_fts, 1, '<span class=\"match\">', '</span>', ' … ', 24) AS highlights";
       where.add('documents_fts MATCH ?');
       args.add(ftsQuery);
     }
 
-    var ordering = q['ordering'] ?? (ftsQuery != null ? 'score' : '-created');
+    var ordering = q['ordering'] ?? (ftsQuery != null ? 'score' : (trashed ? '-deleted_at' : '-created'));
     final desc = ordering.startsWith('-');
     ordering = ordering.replaceFirst('-', '');
     final String orderSql;
     if (ordering == 'score' && ftsQuery != null) {
       orderSql = 'score ${desc ? 'DESC' : 'ASC'}';
     } else {
-      orderSql =
-          '${_orderings[ordering] ?? 'd.created'} ${desc ? 'DESC' : 'ASC'}';
+      orderSql = '${_orderings[ordering] ?? 'd.created'} ${desc ? 'DESC' : 'ASC'}';
     }
 
-    final whereSql = where.isEmpty ? '' : 'WHERE ${where.join(' AND ')}';
     final hits = db.select(
-      'SELECT $select FROM $from $whereSql ORDER BY $orderSql, d.id DESC',
+      'SELECT $select FROM $from WHERE ${where.join(' AND ')} ORDER BY $orderSql, d.id DESC',
       args,
     );
 
@@ -292,16 +341,28 @@ class DocumentsResource {
     }, allIds: [for (final h in hits) h['id'] as int]);
   }
 
-  Response get(Request request) => json(serialize(_require(request), request));
+  Response get(Request request) {
+    access.require(_user(request), 'view', _model);
+    return json(serialize(_require(request), request));
+  }
 
   // ---------------------------------------------------------------------------
   // Ändern / Löschen
 
   Future<Response> update(Request request) async {
+    final user = _user(request);
     final row = _require(request);
+    _requireChange(user, row);
     final id = row['id'] as int;
     final body = await readBody(request);
+    final owner = row['owner'] as int?;
+    final isOwner = user.isSuperuser || owner == null || owner == user.id;
+    if (!isOwner) body.remove('owner');
     _applyChanges(id, body);
+    if (isOwner && body.containsKey('set_permissions')) {
+      access.setPermissions(_model, id, body['set_permissions']);
+    }
+    await onUpdated?.call(id);
     return json(serialize(_row(id)!, request));
   }
 
@@ -325,31 +386,22 @@ class DocumentsResource {
     };
     final values = <String, Object?>{};
     columns.forEach((field, convert) {
-      if (body.containsKey(field)) {
-        values[dbColumn[field] ?? field] = convert(body[field]);
-      }
+      if (body.containsKey(field)) values[dbColumn[field] ?? field] = convert(body[field]);
     });
-    if (values.containsKey('created') && values['created'] == null) {
-      values.remove('created');
-    }
+    if (values.containsKey('created') && values['created'] == null) values.remove('created');
 
     db.execute('BEGIN;');
     try {
       if (values.isNotEmpty) {
         final cols = values.keys.toList();
         db.execute(
-          'UPDATE documents SET ${cols.map((c) => '$c = ?').join(', ')}, modified = ? '
-          'WHERE id = ?',
+          'UPDATE documents SET ${cols.map((c) => '$c = ?').join(', ')}, modified = ? WHERE id = ?',
           [for (final c in cols) values[c], nowIso(), id],
         );
       }
       if (body.containsKey('tags')) {
         db.execute('DELETE FROM document_tags WHERE document_id = ?', [id]);
         _addTags([id], asIntList(body['tags']));
-        db.execute('UPDATE documents SET modified = ? WHERE id = ?', [
-          nowIso(),
-          id,
-        ]);
       }
       if (asBool(body['remove_inbox_tags'])) {
         db.execute(
@@ -358,18 +410,16 @@ class DocumentsResource {
           [id],
         );
       }
+      if (body.containsKey('custom_fields')) customFields.replaceValues(id, body['custom_fields']);
+      db.execute('UPDATE documents SET modified = ? WHERE id = ?', [nowIso(), id]);
       db.execute('COMMIT;');
     } on SqliteException catch (e) {
       db.execute('ROLLBACK;');
       if (e.extendedResultCode == 2067) {
-        throw ApiError.badRequest({
-          'archive_serial_number': ['Document with this ASN already exists.'],
-        });
+        throw ApiError.badRequest({'archive_serial_number': ['Document with this ASN already exists.']});
       }
       if (e.extendedResultCode == 787) {
-        throw ApiError.badRequest({
-          'non_field_errors': ['Invalid reference.'],
-        });
+        throw ApiError.badRequest({'non_field_errors': ['Invalid reference.']});
       }
       rethrow;
     } catch (_) {
@@ -380,8 +430,7 @@ class DocumentsResource {
 
   void _addTags(List<int> documents, List<int> tags) {
     final stmt = db.prepare(
-      'INSERT OR IGNORE INTO document_tags (document_id, tag_id) '
-      'SELECT ?, id FROM tags WHERE id = ?',
+      'INSERT OR IGNORE INTO document_tags (document_id, tag_id) SELECT ?, id FROM tags WHERE id = ?',
     );
     for (final d in documents) {
       for (final t in tags) {
@@ -391,84 +440,127 @@ class DocumentsResource {
     stmt.close();
   }
 
-  Future<Response> delete(Request request) async {
+  /// Löschen verschiebt in den Papierkorb.
+  Response delete(Request request) {
+    final user = _user(request);
     final row = _require(request);
-    await _deleteDocument(row);
+    access.require(user, 'delete', _model);
+    if (!access.canChange(user, _model, row['id'] as int, row['owner'] as int?)) {
+      throw Access.forbidden();
+    }
+    trash.moveToTrash([row['id'] as int]);
     return Response(204);
   }
 
-  Future<void> _deleteDocument(Row row) async {
-    db.execute('DELETE FROM documents WHERE id = ?', [row['id']]);
-    for (final key in [
-      row['original_path'],
-      row['archive_path'],
-      row['thumbnail_path'],
-    ]) {
-      if (key is String && key.isNotEmpty) await store.delete(key);
-    }
-  }
-
   Future<Response> bulkEdit(Request request) async {
+    final user = _user(request);
     final body = await readBody(request);
     final ids = asIntList(body['documents']);
     final method = body['method'] as String?;
     final params = (body['parameters'] as Map?)?.cast<String, dynamic>() ?? {};
     if (ids.isEmpty || method == null) {
-      throw ApiError.badRequest({
-        'documents': ['This field is required.'],
-      });
+      throw ApiError.badRequest({'documents': ['This field is required.']});
+    }
+    access.require(user, method == 'delete' ? 'delete' : 'change', _model);
+    // Alle Dokumente müssen sichtbar und änderbar sein.
+    final rows = db.select(
+      'SELECT id, owner FROM documents d WHERE d.id IN (${ids.join(',')}) AND d.deleted_at IS NULL '
+      'AND ${access.visibleSql(user, _model, 'd')}',
+    );
+    if (rows.length != ids.toSet().length) throw ApiError.badRequest({'documents': ['Some documents do not exist.']});
+    for (final r in rows) {
+      if (!access.canChange(user, _model, r['id'] as int, r['owner'] as int?)) throw Access.forbidden();
     }
     final idList = ids.join(',');
-    void touch() => db.execute(
-      'UPDATE documents SET modified = ? WHERE id IN ($idList)',
-      [nowIso()],
-    );
+    void touch() => db.execute('UPDATE documents SET modified = ? WHERE id IN ($idList)', [nowIso()]);
 
     switch (method) {
-      case 'set_correspondent':
-      case 'set_document_type':
-      case 'set_storage_path':
+      case 'set_correspondent' || 'set_document_type' || 'set_storage_path':
         final column = '${method.substring(4)}_id';
-        db.execute('UPDATE documents SET $column = ? WHERE id IN ($idList)', [
-          asInt(params[method.substring(4)]),
-        ]);
+        db.execute('UPDATE documents SET $column = ? WHERE id IN ($idList)', [asInt(params[method.substring(4)])]);
         touch();
       case 'add_tag':
         _addTags(ids, [asInt(params['tag'])!]);
         touch();
       case 'remove_tag':
-        db.execute(
-          'DELETE FROM document_tags WHERE tag_id = ? AND document_id IN ($idList)',
-          [asInt(params['tag'])],
-        );
+        db.execute('DELETE FROM document_tags WHERE tag_id = ? AND document_id IN ($idList)', [asInt(params['tag'])]);
         touch();
       case 'modify_tags':
         final remove = asIntList(params['remove_tags']);
         if (remove.isNotEmpty) {
-          db.execute(
-            'DELETE FROM document_tags WHERE document_id IN ($idList) '
-            'AND tag_id IN (${remove.join(',')})',
-          );
+          db.execute('DELETE FROM document_tags WHERE document_id IN ($idList) AND tag_id IN (${remove.join(',')})');
         }
         _addTags(ids, asIntList(params['add_tags']));
         touch();
-      case 'delete':
+      case 'modify_custom_fields':
         for (final id in ids) {
-          final row = _row(id);
-          if (row != null) await _deleteDocument(row);
+          customFields.addValues(id, params['add_custom_fields']);
+          customFields.removeFields(id, asIntList(params['remove_custom_fields']));
+        }
+        touch();
+      case 'set_permissions':
+        for (final r in rows) {
+          final owner = r['owner'] as int?;
+          if (!(user.isSuperuser || owner == null || owner == user.id)) throw Access.forbidden();
+          if (params.containsKey('owner')) {
+            db.execute('UPDATE documents SET owner = ? WHERE id = ?', [asInt(params['owner']), r['id']]);
+          }
+          access.setPermissions(_model, r['id'] as int, params['set_permissions'], merge: asBool(params['merge']));
+        }
+      case 'delete':
+        trash.moveToTrash(ids);
+      case 'reprocess':
+        for (final id in ids) {
+          await consumer.reprocess(id);
         }
       default:
-        throw ApiError.badRequest({
-          'method': ['Unsupported method: $method'],
-        });
+        throw ApiError.badRequest({'method': ['Unsupported method: $method']});
+    }
+    if (method != 'delete') {
+      for (final id in ids) {
+        await onUpdated?.call(id);
+      }
     }
     return json({'result': 'OK'});
+  }
+
+  // ---------------------------------------------------------------------------
+  // Papierkorb
+
+  Response trashList(Request request) => _list(request, trashed: true);
+
+  Future<Response> trashAction(Request request) async {
+    final user = _user(request);
+    access.require(user, 'delete', _model);
+    final body = await readBody(request);
+    final action = body['action'] as String?;
+    final requested = asIntList(body['documents']);
+    final allowed = [
+      for (final r in db.select(
+        'SELECT id FROM documents d WHERE d.deleted_at IS NOT NULL AND ${access.changeableSql(user, _model, 'd')}'
+        '${requested.isEmpty ? '' : ' AND d.id IN (${requested.join(',')})'}',
+      ))
+        r['id'] as int,
+    ];
+    if (requested.isNotEmpty && allowed.length != requested.toSet().length) {
+      throw ApiError.badRequest({'documents': ['Some documents are not in the trash.']});
+    }
+    switch (action) {
+      case 'restore':
+        trash.restore(allowed);
+      case 'empty':
+        await trash.purge(allowed);
+      default:
+        throw ApiError.badRequest({'action': ['Expected "restore" or "empty".']});
+    }
+    return json({'result': 'OK', 'doc_ids': allowed});
   }
 
   // ---------------------------------------------------------------------------
   // Dateien
 
   Future<Response> download(Request request, {bool inline = false}) async {
+    access.require(_user(request), 'view', _model);
     final row = _require(request);
     final wantOriginal = asBool(request.url.queryParameters['original']);
     final archive = row['archive_path'] as String?;
@@ -476,25 +568,17 @@ class DocumentsResource {
     if (!wantOriginal && archive != null) {
       final file = await store.get(archive);
       if (file != null) {
-        return sendFile(
-          file,
-          'application/pdf',
-          filename: '${p.basenameWithoutExtension(original)}.pdf',
-          inline: inline,
-        );
+        return sendFile(file, 'application/pdf',
+            filename: '${p.basenameWithoutExtension(original)}.pdf', inline: inline);
       }
     }
     final file = await store.get(row['original_path'] as String);
     if (file == null) throw ApiError(404, 'File not found.');
-    return sendFile(
-      file,
-      row['mime_type'] as String,
-      filename: original,
-      inline: inline,
-    );
+    return sendFile(file, row['mime_type'] as String, filename: original, inline: inline);
   }
 
   Future<Response> thumb(Request request) async {
+    access.require(_user(request), 'view', _model);
     final row = _require(request);
     final key = row['thumbnail_path'] as String?;
     final file = key == null ? null : await store.get(key);
@@ -510,6 +594,7 @@ class DocumentsResource {
   }
 
   Future<Response> metadata(Request request) async {
+    access.require(_user(request), 'view', _model);
     final row = _require(request);
     final original = await store.get(row['original_path'] as String);
     final archiveKey = row['archive_path'] as String?;
@@ -531,9 +616,10 @@ class DocumentsResource {
   }
 
   Response suggestions(Request request) {
+    access.require(_user(request), 'view', _model);
     final row = _require(request);
     final content = row['content'] as String;
-    final m = matchContent(db, content);
+    final m = matchContent(db, content, classifier: consumer.classifier);
     final date = findDate(content);
     return json({
       'correspondents': [?m.correspondent],
@@ -547,31 +633,37 @@ class DocumentsResource {
   // ---------------------------------------------------------------------------
   // Notizen
 
-  Response notes(Request request) =>
-      json(_notes(_require(request)['id'] as int));
+  Response notes(Request request) {
+    final user = _user(request);
+    access.require(user, 'view', _model);
+    access.require(user, 'view', 'note');
+    return json(_notes(_require(request)['id'] as int));
+  }
 
   Future<Response> addNote(Request request) async {
-    final id = _require(request)['id'] as int;
+    final user = _user(request);
+    access.require(user, 'add', 'note');
+    final row = _require(request);
+    final id = row['id'] as int;
     final note = (await readBody(request))['note']?.toString().trim() ?? '';
-    if (note.isEmpty) {
-      throw ApiError.badRequest({
-        'note': ['This field is required.'],
-      });
-    }
+    if (note.isEmpty) throw ApiError.badRequest({'note': ['This field is required.']});
     db.execute(
       'INSERT INTO notes (document_id, note, created, user_id) VALUES (?, ?, ?, ?)',
-      [id, note, nowIso(), (request.context['user'] as User).id],
+      [id, note, nowIso(), user.id],
     );
     return json(_notes(id));
   }
 
   Response deleteNote(Request request) {
+    final user = _user(request);
+    access.require(user, 'delete', 'note');
     final id = _require(request)['id'] as int;
     final noteId = asInt(request.url.queryParameters['id']);
-    db.execute('DELETE FROM notes WHERE id = ? AND document_id = ?', [
-      noteId,
-      id,
-    ]);
+    final note = db.select('SELECT user_id FROM notes WHERE id = ? AND document_id = ?', [noteId, id]).firstOrNull;
+    if (note == null) throw ApiError(404, 'Not found.');
+    // Fremde Notizen löschen nur Superuser.
+    if (!user.isSuperuser && note['user_id'] != null && note['user_id'] != user.id) throw Access.forbidden();
+    db.execute('DELETE FROM notes WHERE id = ?', [noteId]);
     return json(_notes(id));
   }
 
@@ -579,27 +671,21 @@ class DocumentsResource {
   // Upload
 
   Future<Response> postDocument(Request request) async {
-    if (!(request.headers['content-type'] ?? '').startsWith(
-      'multipart/form-data',
-    )) {
-      throw ApiError(
-        415,
-        'Unsupported media type, multipart/form-data expected.',
-      );
+    final user = _user(request);
+    access.require(user, 'add', _model);
+    if (!(request.headers['content-type'] ?? '').startsWith('multipart/form-data')) {
+      throw ApiError(415, 'Unsupported media type, multipart/form-data expected.');
     }
     final form = await readMultipart(request);
     final upload = form.files['document'];
-    if (upload == null) {
-      throw ApiError.badRequest({
-        'document': ['No file was submitted.'],
-      });
-    }
+    if (upload == null) throw ApiError.badRequest({'document': ['No file was submitted.']});
     try {
       final f = form.fields;
       final created = asDate(f['created']);
       final taskId = await consumer.submit(
         upload.file,
         originalName: upload.filename,
+        source: ConsumeSource.api,
         overrides: ConsumeOverrides(
           title: f['title'] as String?,
           created: created == null ? null : DateTime.parse(created),
@@ -608,7 +694,8 @@ class DocumentsResource {
           storagePath: asInt(f['storage_path']),
           tags: asIntList(f['tags']),
           archiveSerialNumber: asInt(f['archive_serial_number']),
-          owner: (request.context['user'] as User).id,
+          owner: user.id,
+          customFields: f['custom_fields'] == null ? null : asIntList(f['custom_fields']),
         ),
       );
       return json(taskId);
@@ -620,22 +707,19 @@ class DocumentsResource {
   }
 
   Response nextAsn(Request request) {
-    final max =
-        db
-                .select('SELECT MAX(archive_serial_number) AS m FROM documents')
-                .first['m']
-            as int?;
+    access.require(_user(request), 'view', _model);
+    final max = db.select('SELECT MAX(archive_serial_number) AS m FROM documents').first['m'] as int?;
     return json((max ?? 0) + 1);
   }
 
-  void mount(
-    void Function(String method, String path, Function handler) route,
-  ) {
+  void mount(void Function(String method, String path, Function handler) route) {
     const doc = '/api/documents/<id|[0-9]+>';
     route('GET', '/api/documents/', list);
     route('POST', '/api/documents/post_document/', postDocument);
     route('POST', '/api/documents/bulk_edit/', bulkEdit);
     route('GET', '/api/documents/next_asn/', nextAsn);
+    route('GET', '/api/trash/', trashList);
+    route('POST', '/api/trash/', trashAction);
     route('GET', '$doc/', get);
     route('PUT', '$doc/', update);
     route('PATCH', '$doc/', update);

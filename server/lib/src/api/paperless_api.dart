@@ -5,13 +5,19 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import '../access.dart';
 import '../auth.dart';
 import '../processing/consumer.dart';
 import '../processing/tools.dart';
 import '../storage.dart';
+import '../trash.dart';
+import 'custom_fields.dart';
+import 'saved_views.dart';
+import 'users.dart';
 import 'documents.dart';
 import 'http_utils.dart';
 import 'taxonomy.dart';
+
 
 final _log = Logger('api');
 
@@ -21,18 +27,31 @@ class PaperlessApi {
   PaperlessApi({
     required this.db,
     required this.auth,
+    required this.access,
     required this.store,
     required this.consumer,
     required this.tools,
+    required this.trash,
+    this.extraRoutes = const [],
+    this.onDocumentUpdated,
     this.corsOrigins = const [],
   });
 
   final Database db;
   final AuthService auth;
+  final Access access;
   final BlobStore store;
   final Consumer consumer;
   final ExternalTools tools;
+  final Trash trash;
   final List<String> corsOrigins;
+
+  /// Weitere Ressourcen (Workflows, Mail, Scanner …) hängen sich hier ein.
+  final List<void Function(void Function(String method, String path, Function handler) route)> extraRoutes;
+  final Future<void> Function(int documentId)? onDocumentUpdated;
+
+  late final customFields = CustomFieldsResource(db, access);
+  final _taxonomies = <String, TaxonomyResource>{};
 
   static const _public = {'api/token/', 'api/token'};
 
@@ -52,50 +71,67 @@ class PaperlessApi {
     route('GET', '/api/', _root);
     route('GET', '/api/ui_settings/', _uiSettings);
     route('POST', '/api/ui_settings/', _saveUiSettings);
-    route('GET', '/api/profile/', _profile);
-    route('GET', '/api/users/', _users);
-    route('GET', '/api/users/<id|[0-9]+>/', _user);
-    route('GET', '/api/groups/', (Request r) => emptyPage());
     route('GET', '/api/tasks/', _tasks);
     route('POST', '/api/tasks/acknowledge/', _acknowledgeTasks);
     route('GET', '/api/statistics/', _statistics);
     route(
       'GET',
       '/api/remote_version/',
-      (Request r) => json({
-        'version': PaperlessCompat.serverVersion,
-        'update_available': false,
-      }),
+      (Request r) => json({'version': PaperlessCompat.serverVersion, 'update_available': false}),
     );
     route('GET', '/api/status/', _status);
     route('GET', '/api/search/autocomplete/', _autocomplete);
+    route('POST', '/api/bulk_edit_objects/', _bulkEditObjects);
 
     // Noch nicht umgesetzt; leere Listen, damit Clients nicht abbrechen.
-    for (final path in [
-      'saved_views',
-      'custom_fields',
-      'share_links',
-      'workflows',
-      'workflow_triggers',
-      'workflow_actions',
-      'mail_accounts',
-      'mail_rules',
-    ]) {
+    for (final path in ['share_links']) {
       route('GET', '/api/$path/', (Request r) => emptyPage());
     }
 
-    DocumentsResource(db: db, store: store, consumer: consumer).mount(route);
-
-    TaxonomyResource(
+    UsersResource(db, auth, access).mount(route);
+    customFields.mount(route);
+    SavedViewsResource(db, access).mount(route);
+    DocumentsResource(
       db: db,
-      table: 'tags',
-      documentCountSql:
-          'SELECT COUNT(*) FROM document_tags WHERE tag_id = x.id',
+      store: store,
+      consumer: consumer,
+      access: access,
+      customFields: customFields,
+      trash: trash,
+      onUpdated: onDocumentUpdated,
+    ).mount(route);
+
+    void taxonomy(
+      String path,
+      String table,
+      String model,
+      String countSql, {
+      Map<String, Object? Function(Object?)> extraFields = const {},
+      void Function(Row row, Map<String, dynamic> out, User user)? extraSerializer,
+    }) {
+      final resource = TaxonomyResource(
+        db: db,
+        access: access,
+        table: table,
+        model: model,
+        documentCountSql: countSql,
+        extraFields: extraFields,
+        extraSerializer: extraSerializer,
+      )..mount(path, route);
+      _taxonomies[path] = resource;
+    }
+
+    taxonomy(
+      'tags',
+      'tags',
+      'tag',
+      'SELECT COUNT(*) FROM document_tags dt JOIN documents d ON d.id = dt.document_id '
+          'WHERE dt.tag_id = x.id AND {visible}',
       extraFields: {
         'color': (v) => v?.toString() ?? '#a6cee3',
         'is_inbox_tag': (v) => asBool(v) ? 1 : 0,
       },
-      extraSerializer: (row, out) {
+      extraSerializer: (row, out, user) {
         final color = row['color'] as String;
         out['color'] = color;
         out['text_color'] = textColorFor(color);
@@ -103,36 +139,38 @@ class PaperlessApi {
         out['parent'] = null;
         out['children'] = <Object>[];
       },
-    ).mount(router, 'tags', route);
-
-    TaxonomyResource(
-      db: db,
-      table: 'correspondents',
-      documentCountSql:
-          'SELECT COUNT(*) FROM documents WHERE correspondent_id = x.id',
-      extraSerializer: (row, out) {
+    );
+    taxonomy(
+      'correspondents',
+      'correspondents',
+      'correspondent',
+      'SELECT COUNT(*) FROM documents d WHERE d.correspondent_id = x.id AND {visible}',
+      extraSerializer: (row, out, user) {
         out['last_correspondence'] = db.select(
-          'SELECT MAX(created) AS m FROM documents WHERE correspondent_id = ?',
+          'SELECT MAX(created) AS m FROM documents d WHERE d.correspondent_id = ? AND d.deleted_at IS NULL '
+          'AND ${access.visibleSql(user, 'document', 'd')}',
           [row['id']],
         ).first['m'];
       },
-    ).mount(router, 'correspondents', route);
-
-    TaxonomyResource(
-      db: db,
-      table: 'document_types',
-      documentCountSql:
-          'SELECT COUNT(*) FROM documents WHERE document_type_id = x.id',
-    ).mount(router, 'document_types', route);
-
-    TaxonomyResource(
-      db: db,
-      table: 'storage_paths',
-      documentCountSql:
-          'SELECT COUNT(*) FROM documents WHERE storage_path_id = x.id',
+    );
+    taxonomy(
+      'document_types',
+      'document_types',
+      'documenttype',
+      'SELECT COUNT(*) FROM documents d WHERE d.document_type_id = x.id AND {visible}',
+    );
+    taxonomy(
+      'storage_paths',
+      'storage_paths',
+      'storagepath',
+      'SELECT COUNT(*) FROM documents d WHERE d.storage_path_id = x.id AND {visible}',
       extraFields: {'path': (v) => v?.toString() ?? ''},
-      extraSerializer: (row, out) => out['path'] = row['path'],
-    ).mount(router, 'storage_paths', route);
+      extraSerializer: (row, out, user) => out['path'] = row['path'],
+    );
+
+    for (final extra in extraRoutes) {
+      extra(route);
+    }
 
     return const Pipeline()
         .addMiddleware(_errors)
@@ -258,6 +296,10 @@ class PaperlessApi {
         'custom_fields',
         'ui_settings',
         'profile',
+        'trash',
+        'workflows',
+        'mail_accounts',
+        'mail_rules',
         'statistics',
         'remote_version',
         'status',
@@ -266,49 +308,9 @@ class PaperlessApi {
     });
   }
 
-  Map<String, dynamic> _serializeUser(Row u) => {
-    'id': u['id'],
-    'username': u['username'],
-    'email': u['email'],
-    'first_name': u['first_name'],
-    'last_name': u['last_name'],
-    'date_joined': u['date_joined'],
-    'is_staff': u['is_superuser'] == 1,
-    'is_active': u['is_active'] == 1,
-    'is_superuser': u['is_superuser'] == 1,
-    'groups': <int>[],
-    'user_permissions': <String>[],
-    'inherited_permissions': <String>[],
-    'is_mfa_enabled': false,
-  };
-
-  Row _userRow(User user) =>
-      db.select('SELECT * FROM users WHERE id = ?', [user.id]).first;
-
-  static const _models = [
-    'document',
-    'tag',
-    'correspondent',
-    'documenttype',
-    'storagepath',
-    'savedview',
-    'paperlesstask',
-    'uisettings',
-    'note',
-    'customfield',
-    'sharelink',
-    'workflow',
-    'mailaccount',
-    'mailrule',
-    'user',
-    'group',
-    'history',
-    'appconfig',
-  ];
-
   Response _uiSettings(Request request) {
     final user = request.context['user'] as User;
-    final row = _userRow(user);
+    final row = db.select('SELECT * FROM users WHERE id = ?', [user.id]).first;
     final stored = db.select(
       'SELECT settings FROM ui_settings WHERE user_id = ?',
       [user.id],
@@ -320,9 +322,9 @@ class PaperlessApi {
       'user': {
         'id': user.id,
         'username': user.username,
-        'is_staff': user.isSuperuser,
+        'is_staff': row['is_staff'] == 1,
         'is_superuser': user.isSuperuser,
-        'groups': <int>[],
+        'groups': access.groupIds(user),
         'first_name': row['first_name'],
         'last_name': row['last_name'],
       },
@@ -332,12 +334,7 @@ class PaperlessApi {
         'trash_delay': 30,
         ...settings,
       },
-      // Solange es nur Einzelbenutzer-Rechte gibt, darf jeder alles.
-      'permissions': [
-        for (final model in _models)
-          for (final action in ['view', 'add', 'change', 'delete'])
-            '${action}_$model',
-      ],
+      'permissions': (access.permissions(user).toList()..sort()),
     });
   }
 
@@ -350,39 +347,6 @@ class PaperlessApi {
       [user.id, jsonEncode(body['settings'] ?? {})],
     );
     return json({'success': true});
-  }
-
-  Response _profile(Request request) {
-    final row = _userRow(request.context['user'] as User);
-    return json({
-      'email': row['email'],
-      'password': '**********',
-      'first_name': row['first_name'],
-      'last_name': row['last_name'],
-      'auth_token': auth.tokenFor(request.context['user'] as User),
-      'social_accounts': <Object>[],
-      'has_usable_password': true,
-      'is_mfa_enabled': false,
-    });
-  }
-
-  Response _users(Request request) {
-    final rows = db.select('SELECT * FROM users ORDER BY username');
-    return paginated(
-      request,
-      (limit, offset) => [
-        for (final r in rows.skip(offset).take(limit)) _serializeUser(r),
-      ],
-      allIds: [for (final r in rows) r['id'] as int],
-    );
-  }
-
-  Response _user(Request request) {
-    final row = db.select('SELECT * FROM users WHERE id = ?', [
-      int.parse(request.params['id']!),
-    ]).firstOrNull;
-    if (row == null) throw ApiError(404, 'Not found.');
-    return json(_serializeUser(row));
   }
 
   Map<String, dynamic> _serializeTask(Row t) => {
@@ -402,8 +366,10 @@ class PaperlessApi {
 
   /// Paperless liefert hier eine einfache Liste, keine Paginierung.
   Response _tasks(Request request) {
+    final user = request.context['user'] as User;
+    access.require(user, 'view', 'paperlesstask');
     final q = request.url.queryParameters;
-    final where = <String>[];
+    final where = <String>[if (!user.isSuperuser) 'owner = ${user.id}'];
     final args = <Object?>[];
     if (q['task_id'] != null) {
       where.add('task_id = ?');
@@ -426,43 +392,61 @@ class PaperlessApi {
   }
 
   Future<Response> _acknowledgeTasks(Request request) async {
+    final user = request.context['user'] as User;
+    access.require(user, 'change', 'paperlesstask');
     final ids = asIntList((await readBody(request))['tasks']);
     if (ids.isNotEmpty) {
       db.execute(
-        'UPDATE tasks SET acknowledged = 1 WHERE id IN (${ids.join(',')})',
+        'UPDATE tasks SET acknowledged = 1 WHERE id IN (${ids.join(',')})'
+        '${user.isSuperuser ? '' : ' AND owner = ${user.id}'}',
       );
     }
     return json({'result': ids.length});
   }
 
   Response _statistics(Request request) {
+    final user = request.context['user'] as User;
+    final visible = 'd.deleted_at IS NULL AND ${access.visibleSql(user, 'document', 'd')}';
     int count(String sql) => db.select(sql).first.columnAt(0) as int? ?? 0;
     final inboxTags = [
-      for (final r in db.select('SELECT id FROM tags WHERE is_inbox_tag = 1'))
+      for (final r in db.select('SELECT id FROM tags x WHERE is_inbox_tag = 1 AND ${access.visibleSql(user, 'tag', 'x')}'))
         r['id'] as int,
     ];
     return json({
-      'documents_total': count('SELECT COUNT(*) FROM documents'),
+      'documents_total': count('SELECT COUNT(*) FROM documents d WHERE $visible'),
       'documents_inbox': inboxTags.isEmpty
           ? null
           : count(
-              'SELECT COUNT(DISTINCT document_id) FROM document_tags '
-              'WHERE tag_id IN (${inboxTags.join(',')})',
+              'SELECT COUNT(DISTINCT dt.document_id) FROM document_tags dt JOIN documents d ON d.id = dt.document_id '
+              'WHERE dt.tag_id IN (${inboxTags.join(',')}) AND $visible',
             ),
       'inbox_tag': inboxTags.firstOrNull,
       'inbox_tags': inboxTags,
       'document_file_type_counts': [
         for (final r in db.select(
-          'SELECT mime_type, COUNT(*) AS c FROM documents GROUP BY mime_type ORDER BY c DESC',
+          'SELECT mime_type, COUNT(*) AS c FROM documents d WHERE $visible GROUP BY mime_type ORDER BY c DESC',
         ))
           {'mime_type': r['mime_type'], 'mime_type_count': r['c']},
       ],
-      'character_count': count('SELECT SUM(LENGTH(content)) FROM documents'),
-      'tag_count': count('SELECT COUNT(*) FROM tags'),
-      'correspondent_count': count('SELECT COUNT(*) FROM correspondents'),
-      'document_type_count': count('SELECT COUNT(*) FROM document_types'),
-      'storage_path_count': count('SELECT COUNT(*) FROM storage_paths'),
+      'character_count': count('SELECT SUM(LENGTH(content)) FROM documents d WHERE $visible'),
+      'tag_count': count('SELECT COUNT(*) FROM tags x WHERE ${access.visibleSql(user, 'tag', 'x')}'),
+      'correspondent_count':
+          count('SELECT COUNT(*) FROM correspondents x WHERE ${access.visibleSql(user, 'correspondent', 'x')}'),
+      'document_type_count':
+          count('SELECT COUNT(*) FROM document_types x WHERE ${access.visibleSql(user, 'documenttype', 'x')}'),
+      'storage_path_count':
+          count('SELECT COUNT(*) FROM storage_paths x WHERE ${access.visibleSql(user, 'storagepath', 'x')}'),
+      'current_asn': db.select('SELECT MAX(archive_serial_number) AS m FROM documents').first['m'] ?? 0,
     });
+  }
+
+  Future<Response> _bulkEditObjects(Request request) async {
+    final user = request.context['user'] as User;
+    final body = await readBody(request);
+    final resource = _taxonomies[body['object_type']] ??
+        (throw ApiError.badRequest({'object_type': ['Invalid object type.']}));
+    resource.bulk(user, asIntList(body['objects']), body['operation']?.toString() ?? '', body);
+    return json({'result': 'OK'});
   }
 
   Future<Response> _status(Request request) async {
@@ -489,9 +473,11 @@ class PaperlessApi {
     if (ftsQuery == null) return json(<String>[]);
     final counts = <String, int>{};
     final wordRe = RegExp(r'[\p{L}\p{N}]+', unicode: true);
+    final user = request.context['user'] as User;
     for (final row in db.select(
       'SELECT d.content FROM documents d JOIN documents_fts ON documents_fts.rowid = d.id '
-      'WHERE documents_fts MATCH ? LIMIT 200',
+      'WHERE documents_fts MATCH ? AND d.deleted_at IS NULL '
+      'AND ${access.visibleSql(user, 'document', 'd')} LIMIT 200',
       [ftsQuery],
     )) {
       for (final m in wordRe.allMatches(

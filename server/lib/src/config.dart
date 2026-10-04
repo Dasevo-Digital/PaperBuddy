@@ -18,6 +18,7 @@ class Config {
     required this.adminUser,
     required this.adminPassword,
     required this.corsOrigins,
+    this.emptyTrashDelay = const Duration(days: 30),
   });
 
   final String host;
@@ -41,6 +42,9 @@ class Config {
   final String? adminPassword;
 
   final List<String> corsOrigins;
+
+  /// So lange bleiben gelöschte Dokumente im Papierkorb.
+  final Duration emptyTrashDelay;
 
   String get databasePath => p.join(dataDir, 'paperbuddy.sqlite3');
 
@@ -67,6 +71,7 @@ class Config {
       ocrLanguage: get('OCR_LANGUAGE') ?? 'deu+eng',
       adminUser: get('ADMIN_USER'),
       adminPassword: get('ADMIN_PASSWORD'),
+      emptyTrashDelay: Duration(days: int.parse(get('EMPTY_TRASH_DELAY') ?? '30')),
       corsOrigins: (get('CORS_ALLOWED_HOSTS') ?? '')
           .split(',')
           .map((s) => s.trim())

@@ -1,5 +1,7 @@
 import 'package:sqlite3/sqlite3.dart';
 
+import 'classifier.dart';
+
 /// Matching-Algorithmen wie in Paperless-ngx.
 abstract final class MatchingAlgorithm {
   static const none = 0;
@@ -56,40 +58,29 @@ class MatchResult {
   final tags = <int>{};
 }
 
-MatchResult matchContent(Database db, String content) {
+/// Zuordnung nach den Regeln der Labels. Labels mit „Auto“ entscheidet der
+/// [classifier], sofern einer übergeben wird.
+MatchResult matchContent(Database db, String content, {DocumentClassifier? classifier}) {
   final result = MatchResult();
-  int? first(String table) {
-    for (final row in db.select(
-      'SELECT id, match, matching_algorithm, is_insensitive FROM $table',
-    )) {
-      if (matches(
-        content,
-        row['match'] as String,
-        row['matching_algorithm'] as int,
-        row['is_insensitive'] == 1,
-      )) {
+  int? first(String table, int? Function(String)? predict) {
+    for (final row in db.select('SELECT id, match, matching_algorithm, is_insensitive FROM $table')) {
+      if (matches(content, row['match'] as String, row['matching_algorithm'] as int, row['is_insensitive'] == 1)) {
         return row['id'] as int;
       }
     }
-    return null;
+    return predict?.call(content);
   }
 
-  result.correspondent = first('correspondents');
-  result.documentType = first('document_types');
-  result.storagePath = first('storage_paths');
-  for (final row in db.select(
-    'SELECT id, match, matching_algorithm, is_insensitive, is_inbox_tag FROM tags',
-  )) {
+  result.correspondent = first('correspondents', classifier?.predictCorrespondent);
+  result.documentType = first('document_types', classifier?.predictDocumentType);
+  result.storagePath = first('storage_paths', classifier?.predictStoragePath);
+  for (final row in db.select('SELECT id, match, matching_algorithm, is_insensitive, is_inbox_tag FROM tags')) {
     if (row['is_inbox_tag'] == 1 ||
-        matches(
-          content,
-          row['match'] as String,
-          row['matching_algorithm'] as int,
-          row['is_insensitive'] == 1,
-        )) {
+        matches(content, row['match'] as String, row['matching_algorithm'] as int, row['is_insensitive'] == 1)) {
       result.tags.add(row['id'] as int);
     }
   }
+  if (classifier != null) result.tags.addAll(classifier.predictTags(content));
   return result;
 }
 

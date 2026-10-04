@@ -230,3 +230,6 @@ String slugify(String name) => name
     .replaceAll('ß', 'ss')
     .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
     .replaceAll(RegExp(r'^-+|-+$'), '');
+
+/// JSON aus einem Query-Parameter.
+Object? jsonDecodeLenient(String raw) => jsonDecode(raw);

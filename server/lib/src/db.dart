@@ -124,6 +124,68 @@ const _migrations = <String>[
     VALUES (new.id, new.title, new.content);
   END;
   ''',
+  // 2: Mehrbenutzer, Objektrechte, Papierkorb, Custom Fields, gespeicherte Ansichten
+  '''
+  ALTER TABLE users ADD COLUMN is_staff INTEGER NOT NULL DEFAULT 0;
+  UPDATE users SET is_staff = 1 WHERE is_superuser = 1;
+  CREATE TABLE groups (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE
+  );
+  CREATE TABLE user_groups (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, group_id)
+  );
+  CREATE TABLE user_permissions (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    permission TEXT NOT NULL,
+    PRIMARY KEY (user_id, permission)
+  );
+  CREATE TABLE group_permissions (
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    permission TEXT NOT NULL,
+    PRIMARY KEY (group_id, permission)
+  );
+  CREATE TABLE object_permissions (
+    object_type TEXT NOT NULL,
+    object_id INTEGER NOT NULL,
+    permission TEXT NOT NULL CHECK (permission IN ('view', 'change')),
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
+    CHECK ((user_id IS NULL) <> (group_id IS NULL))
+  );
+  CREATE INDEX object_permissions_lookup ON object_permissions(object_type, object_id);
+  ALTER TABLE documents ADD COLUMN deleted_at TEXT;
+  CREATE INDEX documents_deleted ON documents(deleted_at);
+  CREATE TABLE custom_fields (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    data_type TEXT NOT NULL,
+    extra_data TEXT NOT NULL DEFAULT '{}',
+    created TEXT NOT NULL
+  );
+  CREATE TABLE document_custom_fields (
+    id INTEGER PRIMARY KEY,
+    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    field_id INTEGER NOT NULL REFERENCES custom_fields(id) ON DELETE CASCADE,
+    value TEXT,
+    UNIQUE (document_id, field_id)
+  );
+  CREATE TABLE saved_views (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    show_on_dashboard INTEGER NOT NULL DEFAULT 0,
+    show_in_sidebar INTEGER NOT NULL DEFAULT 0,
+    sort_field TEXT,
+    sort_reverse INTEGER NOT NULL DEFAULT 0,
+    filter_rules TEXT NOT NULL DEFAULT '[]',
+    page_size INTEGER,
+    display_mode TEXT,
+    display_fields TEXT,
+    owner INTEGER REFERENCES users(id) ON DELETE CASCADE
+  );
+  ''',
 ];
 
 Database openDatabase(String path) {

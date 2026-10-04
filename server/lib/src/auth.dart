@@ -84,11 +84,28 @@ class AuthService {
 
   int createUser(String username, String password, {bool superuser = false}) {
     db.execute(
-      'INSERT INTO users (username, password_hash, is_superuser, date_joined) '
-      'VALUES (?, ?, ?, ?)',
-      [username, PasswordHasher.hash(password), superuser ? 1 : 0, nowIso()],
+      'INSERT INTO users (username, password_hash, is_superuser, is_staff, date_joined) '
+      'VALUES (?, ?, ?, ?, ?)',
+      [username, PasswordHasher.hash(password), superuser ? 1 : 0, superuser ? 1 : 0, nowIso()],
     );
     return db.lastInsertRowId;
+  }
+
+  /// Hash im Hintergrund berechnen (PBKDF2 ist absichtlich langsam).
+  Future<String> hashPassword(String password) =>
+      Isolate.run(() => PasswordHasher.hash(password));
+
+  Future<void> setPassword(int userId, String password) async {
+    final hash = await hashPassword(password);
+    db.execute('UPDATE users SET password_hash = ? WHERE id = ?', [hash, userId]);
+    // Alte Basic-Auth-Anmeldungen nicht weiter gelten lassen.
+    _basicCache.removeWhere((_, v) => v.$1 == userId);
+  }
+
+  /// Ersetzt den Token eines Benutzers (`generate_auth_token`).
+  String regenerateToken(User user) {
+    db.execute('DELETE FROM tokens WHERE user_id = ?', [user.id]);
+    return tokenFor(user);
   }
 
   bool get hasUsers => db.select('SELECT 1 FROM users LIMIT 1').isNotEmpty;
