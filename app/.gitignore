@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Optionale lokale Signatur (tool/dev.sh, AppInfo.xcconfig)
+macos/Runner/Configs/Signing.xcconfig
+build.noindex/

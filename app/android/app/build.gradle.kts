@@ -25,6 +25,24 @@ android {
         versionName = flutter.versionName
     }
 
+    buildFeatures {
+        resValues = true
+    }
+
+    // prod = PaperBuddy, dev = eigene App daneben (tool/dev.sh android).
+    flavorDimensions += "env"
+    productFlavors {
+        create("prod") {
+            dimension = "env"
+            resValue("string", "app_name", "PaperBuddy")
+        }
+        create("dev") {
+            dimension = "env"
+            applicationIdSuffix = ".dev"
+            resValue("string", "app_name", "PaperBuddy Dev")
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.

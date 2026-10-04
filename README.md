@@ -69,9 +69,13 @@ und mit Benutzername/Passwort anmelden.
 
 ```bash
 cd app
-flutter run -d macos                                  # oder ios, android, chrome …
-flutter run -d macos --dart-define=PAPERBUDDY_ENV=dev # Dev-Variante mit eigenem Schlüsselbund-Eintrag
+tool/dev.sh macos        # „PaperBuddy Dev“: eigene Bundle-ID, eigener Schlüsselbund-Eintrag
+tool/dev.sh ios          # bzw. android, web
+flutter run -d macos     # normale App (Android: --flavor prod)
 ```
+
+Für Tests und Probe-Builds immer die Dev-Variante nehmen, damit die installierte
+App und ihre Anmeldung unberührt bleiben.
 
 Die App verbindet sich mit PaperBuddy und mit Paperless-ngx. Der Token liegt im
 Schlüsselspeicher des Systems; im Browser nur bis zum Schließen der Seite. Für die

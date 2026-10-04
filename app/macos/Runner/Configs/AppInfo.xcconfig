@@ -1,14 +1,27 @@
 // Application-level settings for the Runner target.
+
+// Name and bundle identifier. tool/dev.sh overrides the PAPERBUDDY_* values
+// ("PaperBuddy Dev", own data and keychain entry) through
+// FLUTTER_XCODE_PAPERBUDDY_*, which – unlike PRODUCT_NAME – leaves the
+// plugin targets alone.
+PAPERBUDDY_APP_NAME = PaperBuddy
+PAPERBUDDY_BUNDLE_ID = de.status403.paperbuddy
+
+PRODUCT_NAME = $(PAPERBUDDY_APP_NAME)
+PRODUCT_BUNDLE_IDENTIFIER = $(PAPERBUDDY_BUNDLE_ID)
 //
 // This may be replaced with something auto-generated from metadata (e.g., pubspec.yaml) in the
 // future. If not, the values below would default to using the project name when this becomes a
 // 'flutter create' template.
 
-// The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = PaperBuddy
 
-// The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = de.status403.paperbuddy
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 de.status403. All rights reserved.
+
+// Optional signing of this Mac's builds (not part of the repository), so the
+// keychain keeps "Immer erlauben" across builds:
+//   CODE_SIGN_STYLE = Manual
+//   CODE_SIGN_IDENTITY = Apple Development
+//   DEVELOPMENT_TEAM = <team id>
+#include? "Signing.xcconfig"

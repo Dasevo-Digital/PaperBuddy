@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+
 /// Welche PaperBuddy-Variante dieser Build ist: die normale App oder der
 /// Entwicklungs-Build (`--dart-define=PAPERBUDDY_ENV=dev`), der daneben
 /// mit eigenem Namen und eigenem Schlüsselbund-Eintrag läuft.
@@ -6,7 +8,9 @@ abstract final class AppEnv {
     'PAPERBUDDY_ENV',
     defaultValue: 'prod',
   );
-  static const isDev = name == 'dev';
+
+  /// Auch die Android-Variante (`--flavor dev`).
+  static const isDev = name == 'dev' || appFlavor == 'dev';
 
   /// Auf macOS teilen sich alle Builds den Anmelde-Schlüsselbund, darum
   /// braucht jede Variante einen eigenen Eintrag.
