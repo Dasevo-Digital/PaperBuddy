@@ -1,4 +1,4 @@
-# paperbuddy
+# PaperBuddy
 
 Selbst gehostete Dokumentenverwaltung in Dart/Flutter, inspiriert von Paperless-ngx.
 Der Server spricht die **REST-API von Paperless-ngx**, dadurch funktionieren vorhandene
@@ -9,7 +9,8 @@ Apps wie Swift Paperless (iOS) oder Paperless Mobile direkt.
 | Ordner | Inhalt |
 |---|---|
 | `server/` | Dart-Server: API, Verarbeitung (OCR), Eingangsordner, SQLite |
-| `app/` | *(folgt)* Flutter-Client für Web, Desktop und Mobil |
+| `app/` | Flutter-Client für iOS, Android, macOS, Windows, Linux und Web |
+| `packages/paperbuddy_api/` | Gemeinsamer API-Client und Modelle (reines Dart) |
 | `docs/` | Architektur und Roadmap |
 
 ## Server starten
@@ -64,8 +65,23 @@ Weitere Admins anlegen: `dart run bin/manage.dart createsuperuser`
 In Swift Paperless bzw. Paperless Mobile als Server-URL `http://<host>:8000` eintragen
 und mit Benutzername/Passwort anmelden.
 
+## App starten
+
+```bash
+cd app
+flutter run -d macos                                  # oder ios, android, chrome …
+flutter run -d macos --dart-define=PAPERBUDDY_ENV=dev # Dev-Variante mit eigenem Schlüsselbund-Eintrag
+```
+
+Die App verbindet sich mit PaperBuddy und mit Paperless-ngx. Der Token liegt im
+Schlüsselspeicher des Systems; im Browser nur bis zum Schließen der Seite. Für die
+Web-Version muss der Server die Herkunft erlauben, z. B.
+`PAPERBUDDY_CORS_ALLOWED_HOSTS=http://localhost:8080`.
+
 ## Tests
 
 ```bash
 cd server && dart test
+cd packages/paperbuddy_api && dart test   # Client gegen den echten Server
+cd app && flutter test                    # App-Logik und Oberfläche gegen den echten Server
 ```

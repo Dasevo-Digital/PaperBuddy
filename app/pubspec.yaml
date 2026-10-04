@@ -1,0 +1,30 @@
+name: paperbuddy
+description: "PaperBuddy – Dokumente verwalten"
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+dependencies:
+  flutter:
+    sdk: flutter
+  paperbuddy_api:
+    path: ../packages/paperbuddy_api
+  http: ^1.6.0
+  flutter_secure_storage: ^11.2.0
+  shared_preferences: ^2.5.5
+  intl: ^0.20.2
+  file_picker: ^13.1.0
+  lucide_icons_flutter: ^3.1.21
+  flutter_localizations:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  paperbuddy_server:
+    path: ../server
+  shelf: ^1.4.2
+flutter:
+  uses-material-design: true

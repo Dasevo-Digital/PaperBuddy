@@ -36,6 +36,27 @@ OCR läuft über externe Programme (`ocrmypdf`/Tesseract, Poppler).
 | `api/documents.dart` | Dokumente: Liste/Filter/Suche, Upload, Download, Vorschau, Notizen, Bulk-Edit |
 | `api/taxonomy.dart` | CRUD für Tags, Korrespondenten, Dokumenttypen, Speicherpfade |
 
+## Client (`packages/paperbuddy_api`, `app/`)
+
+`paperbuddy_api` ist reines Dart und spricht ausschließlich die Paperless-API. Beim
+Verbinden fragt der Client ohne Versionsangabe an, liest `X-Api-Version` und nutzt
+danach `min(Server, 9)`. Dadurch funktioniert er auch mit älteren Paperless-ngx-Servern.
+
+Die Flutter-App nutzt wie Famio keinen State-Management-Rahmen: `AppState`
+(`ChangeNotifier`) hält Sitzung und Stammdaten, Screens greifen über `AppScope` darauf zu.
+
+| Datei | Aufgabe |
+|---|---|
+| `app_state.dart` | Anmelden, Sitzung wiederherstellen, Stammdaten, Upload-Warteschlange |
+| `session_store.dart` | Token im Schlüsselspeicher, ein einziger Eintrag je Variante (prod/dev) |
+| `documents_controller.dart` | Seitenweises Laden der Liste für einen Filter, verwirft veraltete Antworten |
+| `thumbnail_cache.dart` | Vorschaubilder über den API-Client (im Browser schickt `Image.network` keine Auth-Header) |
+| `upload_queue.dart` | Uploads nacheinander, Verarbeitung über `/api/tasks/` verfolgen |
+| `screens/` | Anmeldung, Navigation (unten bzw. seitlich ab 840 px), Liste, Detail, Einstellungen |
+
+Die Tests in `app/test` und `packages/paperbuddy_api/test` laufen gegen den echten
+Server im selben Prozess (ohne Netzwerk, über einen Shelf-Handler).
+
 ## Paperless-Kompatibilität
 
 Der Server meldet `X-Api-Version: 9` und `X-Version: 2.18.0` und akzeptiert
@@ -59,8 +80,8 @@ geliefert, ab 9 als Datum.
 
 1. **MVP-Server** *(dieser Stand)*: API-Kern, Upload, Eingangsordner, OCR, Suche
 2. **Test mit echten Apps**: Swift Paperless und Paperless Mobile gegen den Server, Lücken schließen
-3. **Flutter-Client** (`app/`): Web/Desktop zum Verwalten, Mobil mit Dokumentenscanner
-   (VisionKit/ML Kit), gemeinsames Paket für Modelle und API-Client
+3. **Flutter-Client** (`app/`): Anmeldung, Liste, Suche, Filter, Upload *(erledigt)*;
+   Bearbeiten, PDF-Ansicht, mobiles Scannen (VisionKit/ML Kit) folgen
 4. **Automatik**: lernendes Matching (`auto`), Workflows, Gespeicherte Ansichten, Custom Fields
 5. **Mehrbenutzer und Rechte**, Papierkorb, Freigabelinks
 6. **Speicher-Backends** (S3, WebDAV/Nextcloud), Backup/Export, Import aus Paperless-ngx
