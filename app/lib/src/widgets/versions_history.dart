@@ -225,7 +225,9 @@ class _HistorySectionState extends State<HistorySection> {
       title: Text('Verlauf', style: theme.textTheme.titleMedium),
       onExpansionChanged: (open) {
         if (open && _entries == null) {
-          setState(() => _entries = state.client.history(widget.documentId));
+          setState(() {
+            _entries = state.client.history(widget.documentId);
+          });
         }
       },
       children: [

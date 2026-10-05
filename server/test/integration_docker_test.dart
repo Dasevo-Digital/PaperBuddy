@@ -214,5 +214,22 @@ void main() {
       final processed = await env.json('GET', '/api/processed_mail/');
       expect(processed['results'][0]['status'], 'SUCCESS');
     });
+
+    test('OAuth-Konto ruft per XOAUTH2 ab', () async {
+      final env = await TestEnv.create();
+      addTearDown(env.close);
+      final mailbox = 'oauth${DateTime.now().millisecondsSinceEpoch}@localhost';
+      await _sendMail(mailbox, 'Beleg', 'Anbei', attachmentName: 'beleg.txt', attachment: utf8.encode('Beleg Nummer 42'));
+      env.server.db.execute(
+        'INSERT INTO mail_accounts (name, imap_server, imap_port, imap_security, username, password, account_type, '
+        'refresh_token, expiration) VALUES (?, ?, 3143, 1, ?, ?, 2, ?, ?)',
+        ['Gmail', 'localhost', mailbox, 'zugangstoken', 'erneuern', DateTime.now().add(const Duration(hours: 1)).toUtc().toIso8601String()],
+      );
+      final account = env.server.db.lastInsertRowId;
+      await env.json('POST', '/api/mail_rules/', body: {'name': 'Alles', 'account': account, 'action': 3}, status: 201);
+      expect((await env.json('POST', '/api/mail_accounts/$account/process/'))['consumed'], 1);
+      await env.server.consumer.idle();
+      expect((await env.json('GET', '/api/documents/?query=beleg'))['count'], 1);
+    });
   }, skip: _enabled ? false : 'PAPERBUDDY_IT=1 setzen');
 }

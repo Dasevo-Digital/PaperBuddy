@@ -46,7 +46,7 @@ class PdfActionsMenu extends StatelessWidget {
               : '1–${document.pageCount}, z. B. 2, 4-5',
         );
         if (text == null || !context.mounted) return;
-        final pages = _parsePages(text);
+        final pages = parsePages(text);
         if (pages.isEmpty) {
           return showError(context, 'Keine gültigen Seitenzahlen');
         }
@@ -98,7 +98,7 @@ class PdfActionsMenu extends StatelessWidget {
     onDone();
   }
 
-  static List<int> _parsePages(String text) => {
+  static List<int> parsePages(String text) => {
     for (final part in text.split(RegExp(r'[,\s]+')).where((s) => s.isNotEmpty))
       ...switch (RegExp(r'^(\d+)-(\d+)$').firstMatch(part)) {
         final m? => [

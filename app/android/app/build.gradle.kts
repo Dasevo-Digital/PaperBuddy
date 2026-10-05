@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "de.status403.paperbuddy"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

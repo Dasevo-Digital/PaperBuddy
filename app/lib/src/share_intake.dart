@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
@@ -25,21 +26,34 @@ class ShareIntake {
   static bool get supported =>
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.android);
+          defaultTargetPlatform == TargetPlatform.android) &&
+      // In Widget-Tests gibt es kein natives Plugin.
+      !Platform.environment.containsKey('FLUTTER_TEST');
 
   void start() {
     if (!supported) return;
     state.addListener(_onState);
-    _sub = ReceiveSharingIntent.instance.getMediaStream().listen(
-      _handle,
-      onError: (Object e) {
-        debugPrint('Teilen fehlgeschlagen: $e');
-      },
-    );
-    ReceiveSharingIntent.instance.getInitialMedia().then((files) {
-      _handle(files);
-      ReceiveSharingIntent.instance.reset();
-    });
+    try {
+      _sub = ReceiveSharingIntent.instance.getMediaStream().listen(
+        _handle,
+        onError: (Object e) => debugPrint('Teilen nicht verfügbar: $e'),
+      );
+    } on MissingPluginException catch (e) {
+      debugPrint('Teilen nicht verfügbar: $e');
+      return;
+    }
+    _initial();
+  }
+
+  /// Dateien, mit denen die App gestartet wurde.
+  Future<void> _initial() async {
+    try {
+      final files = await ReceiveSharingIntent.instance.getInitialMedia();
+      await ReceiveSharingIntent.instance.reset();
+      await _handle(files);
+    } catch (e) {
+      debugPrint('Teilen nicht verfügbar: $e');
+    }
   }
 
   Future<void> _handle(List<SharedMediaFile> shared) async {

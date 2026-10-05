@@ -153,7 +153,7 @@ void main() {
     final config = await env.json('GET', '/api/config/') as List;
     expect(config.single['id'], 1);
     final root = await env.call('GET', '/api/');
-    expect(root.headers['x-api-version'], '9');
+    expect(root.headers['x-api-version'], '10');
     expect(root.headers['x-version'], isNotEmpty);
     await env.uploadText('t.txt', 'x');
     final tasks = await env.json('GET', '/api/tasks/') as List;

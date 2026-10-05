@@ -43,12 +43,14 @@ für Netzwerkscanner.
 
 ## Funktionen
 
-- **Erfassen:** Upload (App, Web, API), Eingangsordner über SMB/FTP, E-Mail-Abruf per IMAP,
+- **Erfassen:** Upload (App, Web, API, Teilen-Menü), Eingangsordner über SMB/FTP, E-Mail-Abruf per IMAP (auch Gmail/Outlook per OAuth),
   Netzwerkscanner über eSCL/AirScan, Dokumentenscanner in der App (iOS VisionKit, Android ML Kit)
 - **Verarbeiten:** OCR (ocrmypdf/Tesseract), Archiv-PDF, Vorschaubild, Datumserkennung,
   Zuordnung per Regel oder lernend, Workflows (Zuweisen, Entfernen, E-Mail, Webhook, zeitgesteuert)
-- **Ordnen:** Tags, Korrespondenten, Dokumenttypen, Speicherpfade, Custom Fields, Notizen,
-  Archivnummern, gespeicherte Ansichten, Volltextsuche
+- **Ordnen:** Tags, Korrespondenten, Dokumenttypen, Speicherpfade (auch als Ordnerstruktur),
+  Custom Fields, Notizen, Archivnummern, gespeicherte Ansichten, Volltextsuche
+- **Bearbeiten:** PDF-Seiten drehen und löschen, Dokumente zusammenführen und teilen,
+  neue Versionen hochladen, Änderungsverlauf
 - **Teilen:** Mehrbenutzer mit Gruppen, Modell- und Objektrechten, Freigabelinks ohne Anmeldung
 - **Sicherheit:** Papierkorb mit Frist, Export/Backup im Paperless-Format, Import aus Paperless-ngx
 - **Speicher:** lokal, S3-kompatibel (AWS, MinIO, RustFS …) oder WebDAV (z. B. Nextcloud)
@@ -77,6 +79,10 @@ Umgebungsvariablen mit Präfix `PAPERBUDDY_`. Die `PAPERLESS_`-Namen werden eben
 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_PREFIX`, `S3_PATH_STYLE` | – | S3-Speicher (Bucket wird bei Bedarf angelegt) |
 | `WEBDAV_URL`, `WEBDAV_USER`, `WEBDAV_PASSWORD` | – | WebDAV-Speicher |
 | `STORAGE_CACHE_MB` | `500` | lokaler Zwischenspeicher bei S3/WebDAV |
+| `FILENAME_FORMAT` | – | Ablage in Ordnern, z. B. `{{ created_year }}/{{ correspondent }}/{{ title }}` (Speicherpfade gehen vor) |
+| `OAUTH_CALLBACK_BASE_URL` | `URL` | öffentliche Adresse für den OAuth-Rückruf |
+| `GMAIL_OAUTH_CLIENT_ID`, `GMAIL_OAUTH_CLIENT_SECRET` | – | Gmail-Postfächer per OAuth verbinden |
+| `OUTLOOK_OAUTH_CLIENT_ID`, `OUTLOOK_OAUTH_CLIENT_SECRET` | – | Outlook-Postfächer per OAuth verbinden |
 | `DEBUG` | – | `1` = jede Anfrage loggen |
 
 ## Verwaltung auf der Kommandozeile
@@ -86,6 +92,7 @@ dart run bin/manage.dart createsuperuser
 dart run bin/manage.dart export /pfad/zum/backup
 dart run bin/manage.dart import /pfad/zum/paperless-export
 dart run bin/manage.dart import-paperless https://paperless.example.org <api-token>
+dart run bin/manage.dart rename-files     # nach Änderung von FILENAME_FORMAT
 ```
 
 Im Container: `docker compose exec paperbuddy manage <befehl>`.

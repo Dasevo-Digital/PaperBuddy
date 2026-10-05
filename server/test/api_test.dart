@@ -136,7 +136,7 @@ void main() {
       },
     );
     expect(basic.statusCode, 200);
-    expect(basic.headers['x-api-version'], '9');
+    expect(basic.headers['x-api-version'], '10');
   });
 
   test('ui_settings enthält Benutzer und Berechtigungen', () async {

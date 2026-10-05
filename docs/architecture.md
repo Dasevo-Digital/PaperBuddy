@@ -69,6 +69,10 @@ Server im selben Prozess (ohne Netzwerk, über einen Shelf-Handler).
 | `scanners/escl.dart` | eSCL/AirScan: Suche per mDNS, Fähigkeiten, Scanaufträge |
 | `storage_remote.dart` | S3 (SigV4) und WebDAV mit lokalem Zwischenspeicher |
 | `transfer.dart` | Export/Import im Paperless-Format, Direktübernahme per API |
+| `processing/pdf_ops.dart` | Drehen, Seiten löschen, Zusammenführen, Teilen (qpdf) |
+| `filenames.dart` | Ablage nach Vorlage, Verschieben bei Änderungen |
+| `history.dart` | Änderungsverlauf je Dokument |
+| `mail/oauth.dart` | OAuth-Ablauf für Gmail/Outlook, Token-Erneuerung |
 | `api/users.dart`, `custom_fields.dart`, `saved_views.dart`, `share_links.dart` | weitere Endpunkte |
 
 ## Paperless-Kompatibilität
@@ -85,9 +89,14 @@ Dokumenttypen/Speicherpfade, Custom Fields, gespeicherte Ansichten, Benutzer, Gr
 Papierkorb, Workflows, Mailkonten und -regeln, Freigabelinks, `bulk_edit_objects`,
 `ui_settings`, `statistics`, `status`, `config`, `remote_version`, `search/autocomplete`.
 
-Nicht umgesetzt: PDF-Bearbeitung per Bulk-Edit (`rotate`, `merge`, `split`, `delete_pages`),
-Dokumentversionen/History, Speicherpfade als Ordnerstruktur auf der Platte, OAuth für Mailkonten,
-API v10 (Paperless 3.x).
+Außerdem: PDF-Bearbeitung per Bulk-Edit (`rotate`, `delete_pages`, `merge`, `split`, über qpdf),
+Änderungsverlauf (`/history/`), Versionen (`update_version`, `?version=`), Ablage nach
+`FILENAME_FORMAT`/Speicherpfaden, OAuth für Gmail/Outlook (XOAUTH2) und API v10
+(Paperless-ngx 3: Aufgaben paginiert, Sichtbarkeit von Ansichten in `ui_settings`, `text`-Suche).
+Die eigene App nutzt weiterhin API v9.
+
+Nicht umgesetzt: `edit_pdf` (Seiten neu anordnen in einem Schritt), Export von Versionen und
+Verlauf, eigene Freigabelink-Seiten mit Vorschau.
 
 ## Roadmap
 
