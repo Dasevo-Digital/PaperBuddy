@@ -10,6 +10,7 @@ import '../format.dart';
 import '../widgets/custom_field_inputs.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/document_thumbnail.dart';
+import '../widgets/pdf_actions.dart';
 import '../widgets/share_links_sheet.dart';
 import '../widgets/share_sheet.dart';
 import '../widgets/tag_chip.dart';
@@ -405,6 +406,16 @@ class _DocumentScreenState extends State<DocumentScreen> {
                 onPressed: _busy ? null : () => _share(anchor),
               ),
             ),
+            if (canChange)
+              PdfActionsMenu(
+                document: _doc,
+                onDone: () {
+                  final state = AppScope.read(context);
+                  state.thumbnails.evict(_doc.id);
+                  _changed = true;
+                  _load();
+                },
+              ),
             if (user.can('view', 'sharelink'))
               IconButton(
                 tooltip: 'Freigabelinks',

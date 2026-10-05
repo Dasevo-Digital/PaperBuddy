@@ -8,6 +8,7 @@ import '../auth.dart';
 import '../db.dart';
 import '../processing/consumer.dart';
 import '../processing/matching.dart';
+import '../processing/pdf_ops.dart';
 import '../storage.dart';
 import '../trash.dart';
 import 'custom_fields.dart';
@@ -23,6 +24,7 @@ class DocumentsResource {
     required this.access,
     required this.customFields,
     required this.trash,
+    this.pdf,
     this.onUpdated,
   });
 
@@ -32,6 +34,7 @@ class DocumentsResource {
   final Access access;
   final CustomFieldsResource customFields;
   final Trash trash;
+  final PdfOperations? pdf;
 
   /// Wird nach jeder Änderung an einem Dokument aufgerufen (Workflows).
   final Future<void> Function(int documentId)? onUpdated;
@@ -428,6 +431,8 @@ class DocumentsResource {
     }
   }
 
+  PdfOperations get _pdf => pdf ?? (throw ApiError(501, 'PDF editing is not available.'));
+
   void _addTags(List<int> documents, List<int> tags) {
     final stmt = db.prepare(
       'INSERT OR IGNORE INTO document_tags (document_id, tag_id) SELECT ?, id FROM tags WHERE id = ?',
@@ -513,6 +518,24 @@ class DocumentsResource {
         for (final id in ids) {
           await consumer.reprocess(id);
         }
+      case 'rotate':
+        await _pdf.rotate(ids, asInt(params['degrees']) ?? 90);
+      case 'delete_pages':
+        if (ids.length != 1) throw ApiError.badRequest({'documents': ['Exactly one document is required.']});
+        await _pdf.deletePages(ids.single, asIntList(params['pages']));
+      case 'merge':
+        access.require(user, 'add', _model);
+        final task = await _pdf.merge(ids,
+            metadataDocument: asInt(params['metadata_document_id']),
+            deleteOriginals: asBool(params['delete_originals']),
+            trash: trash.moveToTrash);
+        return json({'result': 'OK', 'task_id': task});
+      case 'split':
+        access.require(user, 'add', _model);
+        if (ids.length != 1) throw ApiError.badRequest({'documents': ['Exactly one document is required.']});
+        final tasks = await _pdf.split(ids.single, PdfOperations.parseRanges(params['pages']),
+            deleteOriginal: asBool(params['delete_originals']), trash: trash.moveToTrash);
+        return json({'result': 'OK', 'task_ids': tasks});
       default:
         throw ApiError.badRequest({'method': ['Unsupported method: $method']});
     }

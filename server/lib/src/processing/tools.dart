@@ -28,6 +28,7 @@ class ExternalTools {
       'pdftotext',
       'pdftoppm',
       'pdfinfo',
+      'qpdf',
     ])
       t: await has(t),
   };
@@ -69,6 +70,14 @@ class ExternalTools {
     final base = outputPdf.replaceAll(RegExp(r'\.pdf$'), '');
     final r = await _run('tesseract', [image, base, '-l', ocrLanguage, 'pdf']);
     return r != null && r.exitCode == 0 && await File(outputPdf).exists();
+  }
+
+  /// qpdf mit Argumenten; wirft bei Fehler oder fehlendem Programm.
+  Future<void> qpdf(List<String> args) async {
+    if (!await has('qpdf')) throw StateError('qpdf ist nicht installiert (für PDF-Bearbeitung nötig).');
+    final r = await Process.run('qpdf', args);
+    // Exit-Code 3 = Warnungen, Ergebnis ist trotzdem gültig.
+    if (r.exitCode != 0 && r.exitCode != 3) throw StateError('qpdf: ${r.stderr}');
   }
 
   Future<String?> pdfText(String pdf) async {

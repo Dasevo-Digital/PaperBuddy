@@ -12,7 +12,7 @@ RUN dart build cli -t bin/server.dart -o /out/server \
 FROM debian:trixie-slim
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      ca-certificates ocrmypdf poppler-utils \
+      ca-certificates ocrmypdf poppler-utils qpdf \
       tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --uid 1000 --create-home paperbuddy \

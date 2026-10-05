@@ -173,6 +173,23 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           await client.bulkEdit(ids, 'set_document_type', {
             'document_type': picked == -1 ? null : picked,
           });
+        case _BulkAction.merge:
+          final trashOriginals = await choose<bool>(
+            context,
+            title: '${ids.length} Dokumente zusammenführen?',
+            message:
+                'Es entsteht ein neues Dokument mit den Metadaten des ersten.',
+            options: [
+              (false, 'Einzeldokumente behalten'),
+              (true, 'Einzeldokumente in den Papierkorb'),
+            ],
+          );
+          if (trashOriginals == null) return;
+          if (!mounted) return;
+          await client.bulkEdit(ids, 'merge', {
+            'metadata_document_id': ids.first,
+            'delete_originals': trashOriginals,
+          });
         case _BulkAction.delete:
           if (!mounted) return;
           final ok = await showDialog<bool>(
@@ -729,7 +746,14 @@ class _Message extends StatelessWidget {
   }
 }
 
-enum _BulkAction { addTags, removeTags, correspondent, documentType, delete }
+enum _BulkAction {
+  addTags,
+  removeTags,
+  correspondent,
+  documentType,
+  merge,
+  delete,
+}
 
 /// Ersetzt die Kopfzeile, solange Dokumente markiert sind.
 class _SelectionBar extends StatelessWidget {
@@ -789,6 +813,11 @@ class _SelectionBar extends StatelessWidget {
                   value: _BulkAction.documentType,
                   child: Text('Dokumenttyp setzen'),
                 ),
+                if (count >= 2)
+                  const PopupMenuItem(
+                    value: _BulkAction.merge,
+                    child: Text('Zu einem PDF zusammenführen'),
+                  ),
               ],
               if (user.can('delete', 'document'))
                 const PopupMenuItem(

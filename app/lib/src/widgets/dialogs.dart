@@ -144,3 +144,33 @@ class _TextDialogState extends State<_TextDialog> {
     ],
   );
 }
+
+/// Auswahl zwischen mehreren Möglichkeiten; `null` = abgebrochen.
+Future<T?> choose<T>(
+  BuildContext context, {
+  required String title,
+  String? message,
+  required List<(T, String)> options,
+}) => showDialog<T>(
+  context: context,
+  builder: (context) => AlertDialog(
+    title: Text(title),
+    content: message == null ? null : Text(message),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Abbrechen'),
+      ),
+      for (final (i, (value, label)) in options.indexed)
+        i == options.length - 1
+            ? FilledButton(
+                onPressed: () => Navigator.pop(context, value),
+                child: Text(label),
+              )
+            : TextButton(
+                onPressed: () => Navigator.pop(context, value),
+                child: Text(label),
+              ),
+    ],
+  ),
+);

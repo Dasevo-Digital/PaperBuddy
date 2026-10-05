@@ -178,6 +178,20 @@ class Consumer {
     return taskId;
   }
 
+  /// Führt [action] in der Warteschlange aus, damit Dateien nicht
+  /// gleichzeitig verarbeitet und bearbeitet werden.
+  Future<T> runExclusive<T>(Future<T> Function() action) {
+    final done = Completer<T>();
+    _queue = _queue.then((_) async {
+      try {
+        done.complete(await action());
+      } catch (e, st) {
+        done.completeError(e, st);
+      }
+    });
+    return done.future;
+  }
+
   /// Für Tests: wartet, bis ein Task abgeschlossen ist.
   Future<void> waitFor(String taskId) => _pending[taskId] ?? Future.value();
 

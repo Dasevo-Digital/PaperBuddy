@@ -15,6 +15,7 @@ import 'config.dart';
 import 'db.dart';
 import 'processing/consume_folder.dart';
 import 'processing/consumer.dart';
+import 'processing/pdf_ops.dart';
 import 'processing/tools.dart';
 import 'mail/mail_service.dart';
 import 'scanners/escl.dart';
@@ -102,6 +103,7 @@ class PaperbuddyServer {
       tools: tools,
       trash: trash,
       customFields: customFields,
+      pdf: PdfOperations(db: db, store: store, tools: tools, consumer: consumer, workDir: p.join(config.dataDir, 'work')),
       extraRoutes: [workflows.mount, mail.mount, scanners.mount],
       onDocumentUpdated: workflows.documentUpdated,
       corsOrigins: config.corsOrigins,
