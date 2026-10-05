@@ -47,3 +47,4 @@ app.*.map.json
 # Optionale lokale Signatur (tool/dev.sh, AppInfo.xcconfig)
 macos/Runner/Configs/Signing.xcconfig
 build.noindex/
+/build

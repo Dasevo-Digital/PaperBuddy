@@ -1,0 +1,23 @@
+[Unit]
+Description=PaperBuddy Dokumentenserver
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=paperbuddy
+Group=paperbuddy
+EnvironmentFile=/etc/paperbuddy/paperbuddy.env
+WorkingDirectory=/var/lib/paperbuddy
+ExecStart=/opt/paperbuddy/bin/server
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/paperbuddy
+
+[Install]
+WantedBy=multi-user.target

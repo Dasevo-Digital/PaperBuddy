@@ -41,6 +41,23 @@ docker compose up -d
 Startet den Server auf Port 8000 und optional eine SMB-Freigabe `\\<host>\scans`
 für Netzwerkscanner.
 
+### Debian/Ubuntu ohne Docker (z. B. Proxmox-LXC)
+
+```bash
+deploy/lxc/build_bundle.sh          # baut build/lxc/paperbuddy-server-<version>-linux-x64.tar.gz
+scp build/lxc/paperbuddy-server-*.tar.gz root@<server>:/root/
+ssh root@<server> 'sh -c "tar xzf paperbuddy-server-*.tar.gz && sh paperbuddy-server-*/install.sh"'
+```
+
+`install.sh` installiert OCR-Werkzeuge, legt den Dienst `paperbuddy` (systemd)
+an und startet ihn auf Port 8000. Daten liegen in `/var/lib/paperbuddy`, der
+Eingangsordner in `/var/lib/paperbuddy/consume`, die Konfiguration in
+`/etc/paperbuddy/paperbuddy.env`. Beim ersten Lauf wird ein Administrator mit
+Zufallspasswort angelegt (`/root/paperbuddy-admin.txt`). Ein erneuter Lauf mit
+einem neueren Paket aktualisiert den Server und behält Daten und
+Konfiguration; die vorige Version bleibt in `/opt/paperbuddy.old`.
+Verwaltungsbefehle laufen über `paperbuddy-manage` (z. B. `paperbuddy-manage export /root/backup`).
+
 ## Funktionen
 
 - **Erfassen:** Upload (App, Web, API, Teilen-Menü), Eingangsordner über SMB/FTP, E-Mail-Abruf per IMAP (auch Gmail/Outlook per OAuth),
