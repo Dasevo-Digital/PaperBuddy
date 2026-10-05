@@ -8,6 +8,7 @@
 #   tool/dev.sh ios [gerät]      flutter run auf iPhone/Simulator
 #   tool/dev.sh android [gerät]  flutter run --flavor dev
 #   tool/dev.sh web              flutter run -d chrome
+#   tool/dev.sh install-macos    Release bauen und nach /Applications legen
 #
 # Weitere Argumente gehen an flutter run.
 set -eu
@@ -28,9 +29,24 @@ mkdir -p build.noindex
 [ -L build ] || ln -s build.noindex build
 
 case "$target" in
-  macos|ios)
+  macos|ios|install-macos)
     export FLUTTER_XCODE_PAPERBUDDY_APP_NAME="PaperBuddy Dev"
     export FLUTTER_XCODE_PAPERBUDDY_BUNDLE_ID="de.status403.paperbuddy.dev"
+    if [ "$target" != ios ]; then
+      # Icon mit orangem DEV-Band (macos/Runner/Assets.xcassets/AppIconDev).
+      export FLUTTER_XCODE_ASSETCATALOG_COMPILER_APPICON_NAME="AppIconDev"
+    fi
+    if [ "$target" = install-macos ]; then
+      flutter build macos --release "$define" "$@"
+      app="build/macos/Build/Products/Release/PaperBuddy Dev.app"
+      osascript -e 'quit app id "de.status403.paperbuddy.dev"' 2>/dev/null || true
+      rm -rf "/Applications/PaperBuddy Dev.app"
+      ditto "$app" "/Applications/PaperBuddy Dev.app"
+      # Das Bündel unter build/ nicht liegen lassen (Spotlight, App-Übersicht).
+      rm -rf "$app"
+      echo "Installiert: /Applications/PaperBuddy Dev.app"
+      exit 0
+    fi
     if [ "$target" = macos ]; then
       exec flutter run -d macos "$define" "$@"
     fi
@@ -45,7 +61,7 @@ case "$target" in
     exec flutter run -d chrome "$define" "$@"
     ;;
   *)
-    echo "Unbekanntes Ziel: $target (macos, ios, android, web)" >&2
+    echo "Unbekanntes Ziel: $target (macos, ios, android, web, install-macos)" >&2
     exit 1
     ;;
 esac

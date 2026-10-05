@@ -46,6 +46,16 @@ class _PaperBuddyAppState extends State<PaperBuddyApp> {
         locale: const Locale('de'),
         supportedLocales: const [Locale('de')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        // Entwicklungs-Builds tragen eine Schärpe, damit man sie nicht mit
+        // der normalen App verwechselt.
+        builder: AppEnv.isDev
+            ? (context, child) => Banner(
+                message: 'DEV',
+                location: BannerLocation.topEnd,
+                color: const Color(0xFFE8590C),
+                child: child!,
+              )
+            : null,
         home: const _Root(),
       ),
     );
