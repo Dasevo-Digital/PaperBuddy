@@ -1,0 +1,58 @@
+# Nur prüfen: analysieren, testen, bauen. Nichts wird veröffentlicht.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Server
+        working-directory: server
+        run: |
+          dart pub get
+          dart format --output=none --set-exit-if-changed lib bin test || true
+          dart analyze --fatal-infos
+          dart test
+      - name: API-Paket
+        working-directory: packages/paperbuddy_api
+        run: |
+          dart pub get
+          dart analyze --fatal-infos
+          dart test
+
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Analyse und Tests
+        working-directory: app
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+      - name: Web-Build
+        working-directory: app
+        run: flutter build web --release
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Image bauen (ohne Push)
+        run: docker build -t paperbuddy:ci server
