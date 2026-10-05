@@ -32,6 +32,7 @@ case "$target" in
   macos|ios|install-macos)
     export FLUTTER_XCODE_PAPERBUDDY_APP_NAME="PaperBuddy Dev"
     export FLUTTER_XCODE_PAPERBUDDY_BUNDLE_ID="de.status403.paperbuddy.dev"
+    export FLUTTER_XCODE_PAPERBUDDY_VARIANT="-dev"
     # Icon mit orangem DEV-Band (AppIconDev, erzeugt von tool/make_icons.py).
     export FLUTTER_XCODE_ASSETCATALOG_COMPILER_APPICON_NAME="AppIconDev"
     if [ "$target" = install-macos ]; then

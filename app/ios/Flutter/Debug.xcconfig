@@ -3,3 +3,5 @@
 // Überschreibbar mit FLUTTER_XCODE_PAPERBUDDY_* (tool/dev.sh).
 PAPERBUDDY_APP_NAME = PaperBuddy
 PAPERBUDDY_BUNDLE_ID = de.status403.paperbuddy
+// "-dev" wählt die Entitlements der Dev-Variante (tool/dev.sh).
+PAPERBUDDY_VARIANT =

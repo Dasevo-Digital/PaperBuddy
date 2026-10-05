@@ -57,7 +57,9 @@ ext.build_configurations.each do |config|
   s['PRODUCT_BUNDLE_IDENTIFIER'] = '$(PAPERBUDDY_BUNDLE_ID).ShareExtension'
   s['PRODUCT_NAME'] = '$(TARGET_NAME)'
   s['INFOPLIST_FILE'] = "#{name}/Info.plist"
-  s['CODE_SIGN_ENTITLEMENTS'] = "#{name}/#{name}.entitlements"
+  # Feste Gruppen-ID je Variante; Xcode setzt beim Registrieren im
+  # Apple-Konto keine Variablen in Entitlements ein.
+  s['CODE_SIGN_ENTITLEMENTS'] = "#{name}/#{name}$(PAPERBUDDY_VARIANT).entitlements"
   s['CUSTOM_GROUP_ID'] = group_id
   s['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
   s['SWIFT_VERSION'] = '5.0'
@@ -69,10 +71,16 @@ end
 
 runner.build_configurations.each do |config|
   config.build_settings['CUSTOM_GROUP_ID'] = group_id
-  config.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'Runner/Runner.entitlements'
+  config.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'Runner/Runner$(PAPERBUDDY_VARIANT).entitlements'
 end
 runner_group = project.main_group['Runner']
-runner_group.new_reference('Runner.entitlements') unless runner_group.files.any? { |f| f.path == 'Runner.entitlements' }
+%w[Runner.entitlements Runner-dev.entitlements].each do |f|
+  runner_group.new_reference(f) unless runner_group.files.any? { |r| r.path == f }
+end
+ext_group = project.main_group[name]
+%W[#{name}.entitlements #{name}-dev.entitlements].each do |f|
+  ext_group.new_reference(f) unless ext_group.files.any? { |r| r.path == f }
+end
 
 # Swift-Paket von receive_sharing_intent für die Extension.
 ref = project.root_object.package_references.find do |r|
@@ -93,6 +101,14 @@ unless ext.package_product_dependencies.any? { |d| d.product_name == 'receive-sh
   ext.frameworks_build_phase.files << build_file
 end
 ext.package_product_dependencies.each { |d| d.package = ref if d.product_name == 'receive-sharing-intent' }
+
+# App Groups als Capability eintragen, damit die automatische Signierung
+# die Gruppe im Apple-Konto anlegt und in beide Profile aufnimmt.
+attributes = project.root_object.attributes['TargetAttributes'] ||= {}
+[runner, ext].each do |t|
+  a = attributes[t.uuid] ||= {}
+  a['SystemCapabilities'] = { 'com.apple.ApplicationGroups.iOS' => { 'enabled' => '1' } }
+end
 
 project.save
 puts "Share Extension eingerichtet (Paket: #{relative_package})"

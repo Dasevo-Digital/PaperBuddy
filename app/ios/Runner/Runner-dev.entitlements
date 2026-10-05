@@ -4,7 +4,7 @@
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.de.status403.paperbuddy</string>
+		<string>group.de.status403.paperbuddy.dev</string>
 	</array>
 </dict>
 </plist>
