@@ -29,6 +29,7 @@ class ExternalTools {
       'pdftoppm',
       'pdfinfo',
       'qpdf',
+      'soffice',
     ])
       t: await has(t),
   };
@@ -70,6 +71,29 @@ class ExternalTools {
     final base = outputPdf.replaceAll(RegExp(r'\.pdf$'), '');
     final r = await _run('tesseract', [image, base, '-l', ocrLanguage, 'pdf']);
     return r != null && r.exitCode == 0 && await File(outputPdf).exists();
+  }
+
+  /// Office-Datei per LibreOffice in ein PDF umwandeln (für Archiv-PDF,
+  /// Vorschaubild und alte Binärformate). Liefert den Pfad oder `null`.
+  Future<String?> officeToPdf(String input, String outputDir) async {
+    if (!await has('soffice')) return null;
+    final profile = Uri.directory('$outputDir/lo-profile').toString();
+    final r = await Process.run('soffice', [
+      '-env:UserInstallation=$profile',
+      '--headless',
+      '--norestore',
+      '--convert-to',
+      'pdf',
+      '--outdir',
+      outputDir,
+      input,
+    ]).timeout(const Duration(minutes: 3));
+    final pdf = '$outputDir/${input.split('/').last.replaceAll(RegExp(r'\.[^.]+$'), '')}.pdf';
+    if (r.exitCode != 0 || !await File(pdf).exists()) {
+      _log.warning('soffice fehlgeschlagen (${r.exitCode}): ${r.stderr}');
+      return null;
+    }
+    return pdf;
   }
 
   /// qpdf mit Argumenten; wirft bei Fehler oder fehlendem Programm.

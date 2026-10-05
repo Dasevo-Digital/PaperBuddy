@@ -7,7 +7,10 @@
 # ftp://<host> (FTP), jeweils Benutzer „scanner“.
 services:
   paperbuddy:
-    build: ./server
+    build:
+      context: ./server
+      args:
+        OFFICE: ${PAPERBUDDY_OFFICE:-0}   # 1 = LibreOffice für Office-Vorschau
     # Für die Scanner-Suche per mDNS im Heimnetz: network_mode: host
     image: paperbuddy:latest
     restart: unless-stopped

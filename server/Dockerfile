@@ -10,10 +10,16 @@ RUN dart build cli -t bin/server.dart -o /out/server \
  && cp /out/manage/bundle/bin/manage /out/server/bundle/bin/
 
 FROM debian:trixie-slim
+# OFFICE=1: LibreOffice für Vorschau und Archiv-PDF von Word, Excel und
+# PowerPoint (macht das Image rund 400 MB größer; Text gibt es auch ohne).
+ARG OFFICE=0
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       ca-certificates ocrmypdf poppler-utils qpdf \
       tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng \
+ && if [ "$OFFICE" = 1 ]; then apt-get install -y --no-install-recommends \
+      libreoffice-writer-nogui libreoffice-calc-nogui libreoffice-impress-nogui \
+      fonts-dejavu-core fonts-liberation2; fi \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --uid 1000 --create-home paperbuddy \
  && mkdir -p /data /consume && chown paperbuddy:paperbuddy /data /consume

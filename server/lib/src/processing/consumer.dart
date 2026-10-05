@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:logging/logging.dart';
-import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 import 'package:uuid/uuid.dart';
@@ -13,6 +12,7 @@ import '../db.dart';
 import '../history.dart';
 import '../storage.dart';
 import 'classifier.dart';
+import 'file_types.dart';
 import 'matching.dart';
 import 'tools.dart';
 
@@ -25,6 +25,8 @@ const supportedMimeTypes = {
   'image/tiff': 'tiff',
   'image/webp': 'webp',
   'text/plain': 'txt',
+  'text/csv': 'csv',
+  ...officeMimeTypes,
 };
 
 /// Herkunft eines Dokuments (Werte wie `DocumentSource` in Paperless-ngx).
@@ -245,9 +247,8 @@ class Consumer {
     }
   }
 
-  static String detectMime(String fileName, List<int> bytes) =>
-      lookupMimeType(fileName, headerBytes: bytes.take(defaultMagicNumbersMaxLength).toList()) ??
-      'application/octet-stream';
+  /// Typ nach Inhalt, nicht nach Endung (siehe [detectFileType]).
+  static String detectMime(String fileName, List<int> bytes) => detectFileType(fileName, bytes);
 
   /// Texterkennung, Archiv-PDF, Vorschaubild und Seitenzahl.
   Future<_Extracted> _extract(File source, String mime, Directory scratch) async {
@@ -259,8 +260,23 @@ class Consumer {
     String? thumbnail;
     int? pages;
 
-    if (mime == 'text/plain') {
+    if (mime == 'text/plain' || mime == 'text/csv') {
       content = utf8.decode(await source.readAsBytes(), allowMalformed: true);
+    } else if (officeMimeTypes.containsKey(mime)) {
+      // Text direkt aus der Datei; Archiv-PDF und Vorschau über LibreOffice.
+      content = officeText(await source.readAsBytes(), mime) ?? '';
+      final input = p.join(scratch.path, 'document.$ext');
+      await source.copy(input);
+      final pdf = await tools.officeToPdf(input, scratch.path);
+      if (pdf != null) {
+        archive = pdf;
+        if (content.isEmpty) content = await tools.pdfText(pdf) ?? '';
+        pages = await tools.pdfPageCount(pdf);
+        final thumb = p.join(scratch.path, 'thumb.png');
+        if (await tools.pdfThumbnail(pdf, thumb)) thumbnail = thumb;
+      } else if (legacyOfficeMimeTypes.contains(mime)) {
+        throw ConsumeError('Not consuming ${p.basename(source.path)}: LibreOffice is required for $mime');
+      }
     } else {
       final ocrInput = p.join(scratch.path, 'input.$ext');
       await source.copy(ocrInput);

@@ -128,10 +128,39 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
               child: Center(child: Image.memory(bytes)),
             );
           }
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: SelectableText(
-              utf8.decode(file.bytes, allowMalformed: true),
+          if (file.mimeType.startsWith('text/')) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: SelectableText(
+                utf8.decode(file.bytes, allowMalformed: true),
+              ),
+            );
+          }
+          // Office-Dateien u. Ä. ohne Archiv-PDF: an eine passende App geben.
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 12,
+                children: [
+                  const Icon(LucideIcons.fileQuestionMark, size: 48),
+                  const Text(
+                    'Für diesen Dateityp gibt es hier keine Vorschau.',
+                    textAlign: TextAlign.center,
+                  ),
+                  FilledButton.tonalIcon(
+                    onPressed: () => exportFile(
+                      context,
+                      bytes,
+                      file.fileName,
+                      file.mimeType,
+                    ),
+                    icon: const Icon(LucideIcons.share),
+                    label: const Text('Teilen oder öffnen'),
+                  ),
+                ],
+              ),
             ),
           );
         },

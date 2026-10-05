@@ -32,6 +32,13 @@ apt-get update -q
 apt-get install -y -q --no-install-recommends \
   ca-certificates curl ocrmypdf poppler-utils qpdf \
   tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng
+# PAPERBUDDY_OFFICE=1 sh install.sh: LibreOffice für Vorschau und Archiv-PDF
+# von Word, Excel und PowerPoint (rund 400 MB). Einmal installiert, bleibt es.
+if [ "${PAPERBUDDY_OFFICE:-0}" = 1 ]; then
+  apt-get install -y -q --no-install-recommends \
+    libreoffice-writer-nogui libreoffice-calc-nogui libreoffice-impress-nogui \
+    fonts-dejavu-core fonts-liberation2
+fi
 
 if ! id paperbuddy >/dev/null 2>&1; then
   useradd --system --home-dir /var/lib/paperbuddy --shell /usr/sbin/nologin paperbuddy

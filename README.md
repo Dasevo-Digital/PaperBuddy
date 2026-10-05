@@ -62,6 +62,10 @@ Verwaltungsbefehle laufen über `paperbuddy-manage` (z. B. `paperbuddy-manage ex
 
 - **Erfassen:** Upload (App, Web, API, Teilen-Menü, Drag & Drop auf das Fenster), Eingangsordner über SMB/FTP, E-Mail-Abruf per IMAP (auch Gmail/Outlook per OAuth),
   Netzwerkscanner über eSCL/AirScan, Dokumentenscanner in der App (iOS VisionKit, Android ML Kit)
+- **Dateitypen:** PDF, JPEG, PNG, TIFF, WebP, Text/CSV, Word, Excel, PowerPoint (DOCX/XLSX/PPTX)
+  und OpenDocument; erkannt am Inhalt, nicht an der Endung. Bei Office-Dateien wird der Text
+  immer gelesen, Vorschau und Archiv-PDF gibt es mit LibreOffice (`PAPERBUDDY_OFFICE=1` beim
+  Docker-Build bzw. bei `install.sh`, auch nötig für alte DOC/XLS/PPT)
 - **Verarbeiten:** OCR (ocrmypdf/Tesseract), Archiv-PDF, Vorschaubild, Datumserkennung,
   Zuordnung per Regel oder lernend, Workflows (Zuweisen, Entfernen, E-Mail, Webhook, zeitgesteuert)
 - **Ordnen:** Tags, Korrespondenten, Dokumenttypen, Speicherpfade (auch als Ordnerstruktur),
