@@ -18,6 +18,7 @@ import '../upload_queue.dart';
 import 'document_screen.dart';
 import 'network_scan_screen.dart';
 import 'upload_screen.dart';
+import '../file_kinds.dart';
 
 /// Dokumentliste mit Suche, Filtern und Upload.
 ///
@@ -388,16 +389,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   Future<void> _pickFiles() async {
     final picked = await FilePicker.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const [
-        'pdf',
-        'png',
-        'jpg',
-        'jpeg',
-        'tif',
-        'tiff',
-        'webp',
-        'txt',
-      ],
+      allowedExtensions: FileKinds.uploadExtensions,
     );
     if (picked.isEmpty || !mounted) return;
     final files = [

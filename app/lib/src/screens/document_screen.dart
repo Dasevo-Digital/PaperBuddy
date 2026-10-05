@@ -17,6 +17,7 @@ import '../widgets/versions_history.dart';
 import '../widgets/tag_chip.dart';
 import 'document_edit_screen.dart';
 import 'document_viewer_screen.dart';
+import '../file_kinds.dart';
 
 /// Was die Detailansicht an die Liste zurückmeldet.
 sealed class DocumentScreenResult {}
@@ -246,7 +247,11 @@ class _DocumentScreenState extends State<DocumentScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              DocumentThumbnail(documentId: _doc.id, fit: BoxFit.contain),
+              DocumentThumbnail(
+                documentId: _doc.id,
+                mimeType: _doc.mimeType,
+                fit: BoxFit.contain,
+              ),
               Positioned(
                 right: 8,
                 bottom: 8,
@@ -310,6 +315,12 @@ class _DocumentScreenState extends State<DocumentScreen> {
           _doc.added == null ? null : formatDayTime(_doc.added!),
         ),
         _Field(LucideIcons.paperclip, 'Originaldatei', _doc.originalFileName),
+        if (_doc.mimeType != null)
+          _Field(
+            FileKinds.icon(_doc.mimeType),
+            'Dateityp',
+            FileKinds.describe(_doc.mimeType!),
+          ),
         if (_doc.pageCount != null)
           _Field(LucideIcons.layers, 'Seiten', '${_doc.pageCount}'),
         _Field(

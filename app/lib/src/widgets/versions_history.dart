@@ -7,6 +7,7 @@ import '../app_state.dart';
 import '../format.dart';
 import '../screens/document_viewer_screen.dart';
 import 'dialogs.dart';
+import '../file_kinds.dart';
 
 /// Fassungen eines Dokuments: ansehen, neue hochladen, alte entfernen.
 class VersionsSection extends StatelessWidget {
@@ -22,16 +23,7 @@ class VersionsSection extends StatelessWidget {
   Future<void> _upload(BuildContext context) async {
     final picked = await FilePicker.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const [
-        'pdf',
-        'png',
-        'jpg',
-        'jpeg',
-        'tif',
-        'tiff',
-        'webp',
-        'txt',
-      ],
+      allowedExtensions: FileKinds.uploadExtensions,
     );
     if (picked.isEmpty || !context.mounted) return;
     final file = picked.first;

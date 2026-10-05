@@ -12,8 +12,15 @@ class TagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = Color(parseHexColor(tag.color));
-    final fg = Color(parseHexColor(tag.textColor, fallback: 0xFF000000));
+    var bg = Color(parseHexColor(tag.color));
+    var fg = Color(parseHexColor(tag.textColor, fallback: 0xFF000000));
+    // Helle Tag-Farben blenden auf dunklem Grund: etwas abdunkeln und die
+    // Schriftfarbe passend zur neuen Fläche wählen.
+    if (Theme.of(context).brightness == Brightness.dark &&
+        bg.computeLuminance() > 0.4) {
+      bg = Color.lerp(bg, Colors.black, 0.3)!;
+      fg = bg.computeLuminance() > 0.3 ? Colors.black : Colors.white;
+    }
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: dense ? 6 : 10,

@@ -76,32 +76,36 @@ class _PaperBuddyAppState extends State<PaperBuddyApp> {
   Widget build(BuildContext context) {
     return AppScope(
       state: widget.state,
-      child: MaterialApp(
-        navigatorKey: _navigator,
-        scaffoldMessengerKey: _messenger,
-        title: AppEnv.appName,
-        debugShowCheckedModeBanner: false,
-        theme: buildTheme(Brightness.light),
-        darkTheme: buildTheme(Brightness.dark),
-        locale: const Locale('de'),
-        supportedLocales: const [Locale('de')],
-        localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        builder: (context, child) {
-          // Dateien auf das Fenster ziehen, um sie hochzuladen (Desktop, Web).
-          Widget app = DropZone(navigator: _navigator, child: child!);
-          // Entwicklungs-Builds tragen eine Schärpe, damit man sie nicht mit
-          // der normalen App verwechselt.
-          if (AppEnv.isDev) {
-            app = Banner(
-              message: 'DEV',
-              location: BannerLocation.topEnd,
-              color: const Color(0xFFE8590C),
-              child: app,
-            );
-          }
-          return app;
-        },
-        home: const _Root(),
+      child: ValueListenableBuilder<ThemeMode>(
+        valueListenable: widget.state.themeMode,
+        builder: (context, themeMode, _) => MaterialApp(
+          themeMode: themeMode,
+          navigatorKey: _navigator,
+          scaffoldMessengerKey: _messenger,
+          title: AppEnv.appName,
+          debugShowCheckedModeBanner: false,
+          theme: buildTheme(Brightness.light),
+          darkTheme: buildTheme(Brightness.dark),
+          locale: const Locale('de'),
+          supportedLocales: const [Locale('de')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          builder: (context, child) {
+            // Dateien auf das Fenster ziehen, um sie hochzuladen (Desktop, Web).
+            Widget app = DropZone(navigator: _navigator, child: child!);
+            // Entwicklungs-Builds tragen eine Schärpe, damit man sie nicht mit
+            // der normalen App verwechselt.
+            if (AppEnv.isDev) {
+              app = Banner(
+                message: 'DEV',
+                location: BannerLocation.topEnd,
+                color: const Color(0xFFE8590C),
+                child: app,
+              );
+            }
+            return app;
+          },
+          home: const _Root(),
+        ),
       ),
     );
   }

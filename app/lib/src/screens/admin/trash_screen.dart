@@ -134,7 +134,10 @@ class _TrashScreenState extends State<TrashScreen> {
                   leading: SizedBox(
                     width: 40,
                     height: 52,
-                    child: DocumentThumbnail(documentId: d.id),
+                    child: DocumentThumbnail(
+                      documentId: d.id,
+                      mimeType: d.mimeType,
+                    ),
                   ),
                   title: Text(d.title),
                   subtitle: Text(

@@ -4,6 +4,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import '../app_state.dart';
 import '../widgets/notification_bell.dart';
+import '../file_kinds.dart';
 
 /// Übersicht mit Kennzahlen wie im Dashboard von Paperless-ngx.
 class StatisticsScreen extends StatefulWidget {
@@ -231,6 +232,10 @@ class _CountRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
+    // Im Dunkeln kräftiges Grün mit heller Schrift statt des hellen Mint.
+    final pill = dark ? strongPrimary(scheme) : scheme.primary;
+    final onPill = dark ? Colors.white : scheme.onPrimary;
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -241,16 +246,14 @@ class _CountRow extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
-                color: highlight
-                    ? scheme.primary
-                    : scheme.surfaceContainerHighest,
+                color: highlight ? pill : scheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 value,
                 style: theme.textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: highlight ? scheme.onPrimary : scheme.onSurfaceVariant,
+                  color: highlight ? onPill : scheme.onSurfaceVariant,
                 ),
               ),
             ),
@@ -270,27 +273,7 @@ class FileTypeBar extends StatelessWidget {
   /// Mehr Typen als hier fasst „Andere“ zusammen.
   static const maxTypes = 5;
 
-  static String label(String mimeType) => switch (mimeType) {
-    'application/pdf' => 'PDF',
-    'text/plain' => 'TXT',
-    'image/jpeg' => 'JPG',
-    'image/png' => 'PNG',
-    'image/tiff' => 'TIFF',
-    'image/webp' => 'WEBP',
-    'image/heic' => 'HEIC',
-    'message/rfc822' => 'E-Mail',
-    'text/csv' => 'CSV',
-    'text/html' => 'HTML',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' =>
-      'XLSX',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document' =>
-      'DOCX',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation' =>
-      'PPTX',
-    'application/vnd.oasis.opendocument.text' => 'ODT',
-    'application/vnd.oasis.opendocument.spreadsheet' => 'ODS',
-    _ => mimeType.split('/').last.toUpperCase(),
-  };
+  static String label(String mimeType) => FileKinds.label(mimeType);
 
   @override
   Widget build(BuildContext context) {
@@ -307,8 +290,11 @@ class FileTypeBar extends StatelessWidget {
       if (rest > 0) (label: 'Andere', count: rest),
     ];
     // Abstufungen der Hauptfarbe, dunkler je seltener.
+    final base = theme.brightness == Brightness.dark
+        ? strongPrimary(scheme)
+        : scheme.primary;
     Color colorAt(int i) =>
-        Color.lerp(scheme.primary, scheme.surface, (i * 0.22).clamp(0, 0.8))!;
+        Color.lerp(base, scheme.surface, (i * 0.22).clamp(0, 0.8))!;
     final percent = NumberFormat('#0.0', 'de');
 
     return Padding(
@@ -378,4 +364,11 @@ class FileTypeBar extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Kräftige Variante der Hauptfarbe für dunkle Flächen (Material 3 macht
+/// sie im Darkmode sehr hell).
+Color strongPrimary(ColorScheme scheme) {
+  final hsl = HSLColor.fromColor(scheme.primary);
+  return hsl.withSaturation(0.55).withLightness(0.36).toColor();
 }

@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:paperbuddy_api/paperbuddy_api.dart';
 
@@ -39,6 +39,19 @@ class AppState extends ChangeNotifier {
   /// Benutzer und Gruppen für Freigaben; bei fehlendem Recht leer.
   Map<int, AppUser> users = {};
   Map<int, UserGroup> groups = {};
+
+  /// Darstellung (System, hell, dunkel); gilt sofort und bleibt gespeichert.
+  late final themeMode = ValueNotifier<ThemeMode>(
+    ThemeMode.values.firstWhere(
+      (m) => m.name == _store.themeMode,
+      orElse: () => ThemeMode.system,
+    ),
+  );
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    themeMode.value = mode;
+    await _store.setThemeMode(mode.name);
+  }
 
   /// Wird erhöht, wenn sich Dokumente geändert haben (z. B. nach einem
   /// Upload), damit Listen neu laden.
@@ -208,6 +221,7 @@ class AppState extends ChangeNotifier {
   void dispose() {
     _client?.close();
     documentsChanged.dispose();
+    themeMode.dispose();
     notifications.dispose();
     uploads.dispose();
     super.dispose();

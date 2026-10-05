@@ -39,6 +39,10 @@ class SessionStore {
   String? get lastServer => _prefs.getString('lastServer');
   String? get lastUsername => _prefs.getString('lastUsername');
 
+  /// Hell, dunkel oder wie das System (`system`, `light`, `dark`).
+  String? get themeMode => _prefs.getString('themeMode');
+  Future<void> setThemeMode(String mode) => _prefs.setString('themeMode', mode);
+
   /// Bis wann Benachrichtigungen als gelesen gelten.
   DateTime? get noticesSeen =>
       DateTime.tryParse(_prefs.getString('noticesSeen') ?? '');

@@ -89,6 +89,10 @@ void main() {
     expect(doc['mime_type'], 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     final hits = await env.json('GET', '/api/documents/?query=dachdecker');
     expect(hits['count'], 1);
+    // Original mit passender Endung, damit es in Word aufgeht.
+    final download = await env.call('GET', '/api/documents/$id/download/?original=true');
+    expect(download.headers['content-disposition'], contains('angebot.docx'));
+    expect(download.headers['content-type'], startsWith(doc['mime_type']));
     final stats = await env.json('GET', '/api/statistics/');
     expect((stats['document_file_type_counts'] as List).single['mime_type'], doc['mime_type']);
   });

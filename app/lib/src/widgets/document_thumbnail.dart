@@ -1,18 +1,22 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../app_state.dart';
+import '../file_kinds.dart';
 
 class DocumentThumbnail extends StatefulWidget {
   const DocumentThumbnail({
     super.key,
     required this.documentId,
+    this.mimeType,
     this.fit = BoxFit.cover,
   });
 
   final int documentId;
+
+  /// Für das Symbol, solange es kein Vorschaubild gibt.
+  final String? mimeType;
   final BoxFit fit;
 
   @override
@@ -66,6 +70,22 @@ class _DocumentThumbnailState extends State<DocumentThumbnail> {
     );
   }
 
-  Widget _placeholder(ColorScheme scheme) =>
-      Center(child: Icon(LucideIcons.fileText, color: scheme.onSurfaceVariant));
+  Widget _placeholder(ColorScheme scheme) => Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 4,
+      children: [
+        Icon(FileKinds.icon(widget.mimeType), color: scheme.onSurfaceVariant),
+        if (widget.mimeType != null)
+          Text(
+            FileKinds.label(widget.mimeType!),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+      ],
+    ),
+  );
 }

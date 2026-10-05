@@ -77,6 +77,29 @@ class SettingsScreen extends StatelessWidget {
               ].join(' · '),
             ),
           ),
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: state.themeMode,
+            builder: (context, mode, _) => ListTile(
+              leading: const Icon(LucideIcons.sunMoon),
+              title: const Text('Darstellung'),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: SegmentedButton<ThemeMode>(
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      label: Text('System'),
+                    ),
+                    ButtonSegment(value: ThemeMode.light, label: Text('Hell')),
+                    ButtonSegment(value: ThemeMode.dark, label: Text('Dunkel')),
+                  ],
+                  selected: {mode},
+                  onSelectionChanged: (s) => state.setThemeMode(s.single),
+                ),
+              ),
+            ),
+          ),
           ListTile(
             leading: const Icon(LucideIcons.userCog),
             title: const Text('Profil'),

@@ -61,7 +61,10 @@ class DocumentListTile extends StatelessWidget {
                           color: theme.colorScheme.onPrimary,
                         ),
                       )
-                    : DocumentThumbnail(documentId: document.id),
+                    : DocumentThumbnail(
+                        documentId: document.id,
+                        mimeType: document.mimeType,
+                      ),
               ),
             ),
             const SizedBox(width: 14),
@@ -154,7 +157,10 @@ class DocumentGridCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  DocumentThumbnail(documentId: document.id),
+                  DocumentThumbnail(
+                    documentId: document.id,
+                    mimeType: document.mimeType,
+                  ),
                   if (selected)
                     Positioned(
                       top: 8,

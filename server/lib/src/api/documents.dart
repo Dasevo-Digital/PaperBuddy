@@ -635,7 +635,19 @@ class DocumentsResource {
     }
     final file = await store.get(f.original);
     if (file == null) throw ApiError(404, 'File not found.');
-    return sendFile(file, f.mime, filename: f.filename, inline: inline);
+    return sendFile(file, f.mime, filename: _withExtension(f.filename, f.mime), inline: inline);
+  }
+
+  /// Falsch benannte Uploads (z. B. eine DOCX als „angebot.pdf“) mit der
+  /// Endung zum erkannten Typ ausliefern, damit sie in der richtigen App
+  /// aufgehen. Gleichwertige Endungen (jpeg/jpg, tif/tiff) bleiben.
+  static String _withExtension(String filename, String mime) {
+    final ext = supportedMimeTypes[mime];
+    if (ext == null) return filename;
+    final current = p.extension(filename).toLowerCase().replaceFirst('.', '');
+    const same = {'jpeg': 'jpg', 'tif': 'tiff', 'text': 'txt'};
+    if (current == ext || same[current] == ext) return filename;
+    return '${p.basenameWithoutExtension(filename)}.$ext';
   }
 
   Future<Response> thumb(Request request) async {
