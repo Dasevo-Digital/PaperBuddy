@@ -6,17 +6,39 @@ import 'design/theme.dart';
 import 'environment.dart';
 import 'screens/connect_screen.dart';
 import 'screens/home_shell.dart';
+import 'share_intake.dart';
 
-class PaperBuddyApp extends StatelessWidget {
+class PaperBuddyApp extends StatefulWidget {
   const PaperBuddyApp({super.key, required this.state});
 
   final AppState state;
 
   @override
+  State<PaperBuddyApp> createState() => _PaperBuddyAppState();
+}
+
+class _PaperBuddyAppState extends State<PaperBuddyApp> {
+  final _navigator = GlobalKey<NavigatorState>();
+  late final _share = ShareIntake(widget.state, _navigator);
+
+  @override
+  void initState() {
+    super.initState();
+    _share.start();
+  }
+
+  @override
+  void dispose() {
+    _share.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AppScope(
-      state: state,
+      state: widget.state,
       child: MaterialApp(
+        navigatorKey: _navigator,
         title: AppEnv.appName,
         debugShowCheckedModeBanner: false,
         theme: buildTheme(Brightness.light),

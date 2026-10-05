@@ -104,6 +104,11 @@ tool/dev.sh ios          # bzw. android, web
 flutter run -d macos     # normale App (Android: --flavor prod)
 ```
 
+**Teilen-Menü (iOS):** Die Share Extension braucht eine App Group
+(`group.<Bundle-ID>`); beim Signieren in Xcode muss das Team diese Fähigkeit haben.
+Nach `flutter pub upgrade` einmal `ruby tool/ios_share_extension.rb` ausführen, damit
+der Pfad zum Swift-Paket stimmt.
+
 Für Tests und Probe-Builds immer die Dev-Variante nehmen, damit die installierte
 App und ihre Anmeldung unberührt bleiben.
 
