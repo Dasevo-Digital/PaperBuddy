@@ -10,6 +10,7 @@ import 'package:sqlite3/sqlite3.dart';
 import 'package:uuid/uuid.dart';
 
 import '../db.dart';
+import '../history.dart';
 import '../storage.dart';
 import 'classifier.dart';
 import 'matching.dart';
@@ -122,6 +123,7 @@ class Consumer {
     required this.tools,
     required this.workDir,
     DocumentClassifier? classifier,
+    this.history,
   }) : classifier = classifier ?? DocumentClassifier(db);
 
   final Database db;
@@ -129,6 +131,7 @@ class Consumer {
   final ExternalTools tools;
   final String workDir;
   final DocumentClassifier classifier;
+  final History? history;
   ConsumeHooks? hooks;
 
   /// Nach dem Anlegen und nach Workflows (z. B. Dateien einsortieren).
@@ -219,6 +222,7 @@ class Consumer {
       hooks?.consumptionStarted(
           fileName: originalName, path: sourcePath, source: source, overrides: o, mailRule: mailRule);
       final id = await _consume(staged, originalName, o, scratch);
+      history?.recordCreate(id, actor: o.owner);
       final template = o.titleTemplate;
       if (template != null && hooks != null) {
         final title = hooks!.renderTitle(template, id).trim();
@@ -371,6 +375,90 @@ class Consumer {
       rethrow;
     }
     return id;
+  }
+
+  /// Neue Fassung eines vorhandenen Dokuments (`update_version`).
+  /// Die bisherige Fassung bleibt als Version erhalten.
+  Future<String> submitVersion(int documentId, File file,
+      {required String originalName, String? label, int? actor}) async {
+    final taskId = _uuid.v4();
+    final staged = File(p.join(workDir, 'incoming', '$taskId${p.extension(originalName)}'));
+    await staged.parent.create(recursive: true);
+    await file.copy(staged.path);
+    db.execute(
+      'INSERT INTO tasks (task_id, task_file_name, date_created, status, owner) VALUES (?, ?, ?, ?, ?)',
+      [taskId, originalName, nowIso(), 'PENDING', actor],
+    );
+    final done = Completer<void>();
+    _queue = _queue.then((_) async {
+      _setTask(taskId, 'STARTED');
+      final scratch = Directory(p.join(workDir, 'scratch', taskId));
+      try {
+        await _consumeVersion(documentId, staged, originalName, label, actor, scratch);
+        _setTask(taskId, 'SUCCESS', result: 'Success. New version of document $documentId created', document: documentId);
+        await onStored?.call(documentId);
+      } catch (e, st) {
+        final message = e is ConsumeError ? e.message : '$originalName: $e';
+        if (e is! ConsumeError) _log.severe('Neue Version fehlgeschlagen', e, st);
+        _setTask(taskId, 'FAILURE', result: message);
+      } finally {
+        if (await scratch.exists()) await scratch.delete(recursive: true);
+        if (await staged.exists()) await staged.delete();
+        done.complete();
+      }
+    });
+    _pending[taskId] = done.future;
+    unawaited(done.future.whenComplete(() => _pending.remove(taskId)));
+    return taskId;
+  }
+
+  Future<void> _consumeVersion(
+      int id, File source, String originalName, String? label, int? actor, Directory scratch) async {
+    await scratch.create(recursive: true);
+    final doc = db.select('SELECT * FROM documents WHERE id = ?', [id]).firstOrNull ??
+        (throw ConsumeError('Document $id does not exist.'));
+    final bytes = await source.readAsBytes();
+    final checksum = md5.convert(bytes).toString();
+    final dup = db.select(
+      'SELECT id FROM documents WHERE checksum = ? UNION SELECT document_id FROM document_versions WHERE checksum = ?',
+      [checksum, checksum],
+    ).firstOrNull;
+    if (dup != null) throw ConsumeError('Not consuming $originalName: It is a duplicate of document (#${dup['id']}).');
+    final mime = detectMime(originalName, bytes);
+    final ext = supportedMimeTypes[mime] ??
+        (throw ConsumeError('Not consuming $originalName: Unsupported mime type $mime'));
+    final x = await _extract(source, mime, scratch);
+    final before = history?.snapshot(id);
+
+    // Beim ersten Update die bisherige Fassung als Ursprung festhalten.
+    if (db.select('SELECT 1 FROM document_versions WHERE document_id = ?', [id]).isEmpty) {
+      db.execute(
+        'INSERT INTO document_versions (document_id, added, version_label, checksum, is_root, original_filename, '
+        'mime_type, original_path, archive_path, thumbnail_path, content, page_count) '
+        'VALUES (?, ?, NULL, ?, 1, ?, ?, ?, ?, ?, ?, ?)',
+        [id, doc['added'], doc['checksum'], doc['original_filename'], doc['mime_type'], doc['original_path'],
+          doc['archive_path'], doc['thumbnail_path'], doc['content'], doc['page_count']],
+      );
+    }
+    final n = (db.select('SELECT COUNT(*) AS c FROM document_versions WHERE document_id = ?', [id]).first['c'] as int) + 1;
+    final base = '${id.toString().padLeft(7, '0')}_v$n';
+    final originalKey = 'originals/$base.$ext';
+    final archiveKey = x.archive == null ? null : 'archive/$base.pdf';
+    final thumbKey = x.thumbnail == null ? null : 'thumbnails/$base${p.extension(x.thumbnail!)}';
+    await store.put(originalKey, source);
+    if (x.archive != null) await store.put(archiveKey!, File(x.archive!));
+    if (x.thumbnail != null) await store.put(thumbKey!, File(x.thumbnail!));
+    db.execute(
+      'INSERT INTO document_versions (document_id, added, version_label, checksum, is_root, original_filename, '
+      'mime_type, original_path, archive_path, thumbnail_path, content, page_count) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)',
+      [id, nowIso(), label, checksum, originalName, mime, originalKey, archiveKey, thumbKey, x.content, x.pages],
+    );
+    db.execute(
+      'UPDATE documents SET content = ?, checksum = ?, mime_type = ?, original_filename = ?, original_path = ?, '
+      'archive_path = ?, thumbnail_path = ?, page_count = ?, modified = ? WHERE id = ?',
+      [x.content, checksum, mime, originalName, originalKey, archiveKey, thumbKey, x.pages, nowIso(), id],
+    );
+    history?.recordUpdate(id, before, actor: actor, note: label ?? 'Version $n');
   }
 
   /// Texterkennung und Vorschau eines vorhandenen Dokuments neu erzeugen

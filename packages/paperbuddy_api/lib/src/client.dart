@@ -267,7 +267,10 @@ class PaperlessClient {
 
   Future<void> deleteDocument(int id) => _send('DELETE', '/api/documents/$id/');
 
-  Future<Uint8List> thumbnail(int id) => _bytes('/api/documents/$id/thumb/');
+  Future<Uint8List> thumbnail(int id, {int? version}) => _bytes(
+    '/api/documents/$id/thumb/',
+    {if (version != null) 'version': '$version'},
+  );
 
   /// Archiv-PDF bzw. – mit [original] oder wenn es keins gibt – die Originaldatei.
   Future<Uint8List> download(int id, {bool original = false}) => _bytes(
@@ -276,12 +279,17 @@ class PaperlessClient {
   );
 
   /// Wie [download], zusätzlich mit Dateiname und Typ aus den Headern.
-  Future<DownloadedFile> downloadFile(int id, {bool original = false}) async {
+  Future<DownloadedFile> downloadFile(
+    int id, {
+    bool original = false,
+    int? version,
+  }) async {
     final r = await _guard(
       () => _http
           .get(
             _resolve(baseUrl, '/api/documents/$id/download/', {
               if (original) 'original': 'true',
+              if (version != null) 'version': '$version',
             }),
             headers: _headers,
           )

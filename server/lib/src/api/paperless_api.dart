@@ -7,6 +7,7 @@ import 'package:sqlite3/sqlite3.dart';
 
 import '../access.dart';
 import '../auth.dart';
+import '../history.dart';
 import '../processing/consumer.dart';
 import '../processing/pdf_ops.dart';
 import '../processing/tools.dart';
@@ -36,6 +37,7 @@ class PaperlessApi {
     required this.trash,
     required this.customFields,
     this.pdf,
+    this.history,
     this.extraRoutes = const [],
     this.onDocumentUpdated,
     this.onLabelUpdated,
@@ -60,6 +62,7 @@ class PaperlessApi {
 
   final CustomFieldsResource customFields;
   final PdfOperations? pdf;
+  final History? history;
   final _taxonomies = <String, TaxonomyResource>{};
 
   static const _public = {'api/token/', 'api/token'};
@@ -108,6 +111,7 @@ class PaperlessApi {
       customFields: customFields,
       trash: trash,
       pdf: pdf,
+      history: history,
       onUpdated: onDocumentUpdated,
     ).mount(route);
 

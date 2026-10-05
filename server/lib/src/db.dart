@@ -261,6 +261,34 @@ const _migrations = <String>[
     owner INTEGER REFERENCES users(id) ON DELETE CASCADE
   );
   ''',
+  // 6: Verlauf und Versionen
+  '''
+  CREATE TABLE document_history (
+    id INTEGER PRIMARY KEY,
+    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    timestamp TEXT NOT NULL,
+    action TEXT NOT NULL,
+    changes TEXT NOT NULL DEFAULT '{}',
+    actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
+  CREATE INDEX document_history_doc ON document_history(document_id, timestamp);
+  CREATE TABLE document_versions (
+    id INTEGER PRIMARY KEY,
+    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    added TEXT NOT NULL,
+    version_label TEXT,
+    checksum TEXT NOT NULL,
+    is_root INTEGER NOT NULL DEFAULT 0,
+    original_filename TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    original_path TEXT NOT NULL,
+    archive_path TEXT,
+    thumbnail_path TEXT,
+    content TEXT NOT NULL DEFAULT '',
+    page_count INTEGER
+  );
+  CREATE INDEX document_versions_doc ON document_versions(document_id);
+  ''',
 ];
 
 Database openDatabase(String path) {

@@ -241,6 +241,52 @@ extension PaperlessAdmin on PaperlessClient {
   Future<void> deleteMailRule(int id) =>
       _send('DELETE', '/api/mail_rules/$id/');
 
+  // Verlauf und Versionen -----------------------------------------------------
+
+  Future<List<HistoryEntry>> history(int documentId) async => [
+    for (final h
+        in (await _send('GET', '/api/documents/$documentId/history/')) as List)
+      HistoryEntry.fromJson(h as Map<String, dynamic>),
+  ];
+
+  /// Neue Fassung hochladen; liefert die Task-ID.
+  Future<String> uploadVersion(
+    int documentId,
+    List<int> bytes,
+    String filename, {
+    String? label,
+  }) async {
+    final request =
+        http.MultipartRequest(
+            'POST',
+            PaperlessClient._resolve(
+              baseUrl,
+              '/api/documents/$documentId/update_version/',
+              null,
+            ),
+          )
+          ..headers.addAll(_headers)
+          ..files.add(
+            http.MultipartFile.fromBytes('document', bytes, filename: filename),
+          );
+    if (label != null && label.isNotEmpty) {
+      request.files.add(http.MultipartFile.fromString('version_label', label));
+    }
+    final response = await PaperlessClient._guard(
+      () async => http.Response.fromStream(
+        await _http.send(request).timeout(PaperlessClient._uploadTimeout),
+      ),
+    );
+    final body = PaperlessClient._decode(response);
+    if (response.statusCode != 200 || body is! String) {
+      throw PaperlessClient._error(response, body);
+    }
+    return body;
+  }
+
+  Future<void> deleteVersion(int documentId, int versionId) =>
+      _send('DELETE', '/api/documents/$documentId/versions/$versionId/');
+
   // Freigabelinks -------------------------------------------------------------
 
   Future<List<ShareLink>> shareLinks(int documentId) async => [

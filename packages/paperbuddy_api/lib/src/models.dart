@@ -100,6 +100,7 @@ class Document {
     this.userCanChange = true,
     this.customFields = const [],
     this.deletedAt,
+    this.versions = const [],
   });
 
   final int id;
@@ -127,6 +128,9 @@ class Document {
   /// Werte der Custom Fields: `(feld, wert)`.
   final List<CustomFieldValue> customFields;
   final DateTime? deletedAt;
+
+  /// Fassungen, falls je eine neue hochgeladen wurde (älteste zuerst).
+  final List<DocumentVersion> versions;
 
   bool get hasArchiveVersion => archivedFileName != null;
 
@@ -167,8 +171,61 @@ class Document {
             CustomFieldValue(_int(c['field'])!, c['value']),
       ],
       deletedAt: _date(j['deleted_at']),
+      versions: [
+        for (final v in j['versions'] as List? ?? const [])
+          if (v is Map<String, dynamic>) DocumentVersion.fromJson(v),
+      ],
     );
   }
+}
+
+class DocumentVersion {
+  const DocumentVersion({
+    required this.id,
+    required this.added,
+    this.label,
+    this.checksum,
+    this.isRoot = false,
+  });
+  final int id;
+  final DateTime? added;
+  final String? label;
+  final String? checksum;
+  final bool isRoot;
+
+  factory DocumentVersion.fromJson(Map<String, dynamic> j) => DocumentVersion(
+    id: j['id'] as int,
+    added: _date(j['added']),
+    label: j['version_label'] as String?,
+    checksum: j['checksum'] as String?,
+    isRoot: j['is_root'] as bool? ?? false,
+  );
+}
+
+/// Eintrag im Änderungsverlauf.
+class HistoryEntry {
+  const HistoryEntry({
+    required this.id,
+    required this.timestamp,
+    required this.action,
+    required this.changes,
+    this.actor,
+  });
+  final int id;
+  final DateTime? timestamp;
+
+  /// `create`, `update` oder `delete`
+  final String action;
+  final Map<String, dynamic> changes;
+  final String? actor;
+
+  factory HistoryEntry.fromJson(Map<String, dynamic> j) => HistoryEntry(
+    id: j['id'] as int,
+    timestamp: _date(j['timestamp']),
+    action: j['action'] as String? ?? 'update',
+    changes: (j['changes'] as Map?)?.cast<String, dynamic>() ?? const {},
+    actor: (j['actor'] as Map?)?['username'] as String?,
+  );
 }
 
 class CustomFieldValue {

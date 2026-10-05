@@ -13,6 +13,7 @@ import '../widgets/document_thumbnail.dart';
 import '../widgets/pdf_actions.dart';
 import '../widgets/share_links_sheet.dart';
 import '../widgets/share_sheet.dart';
+import '../widgets/versions_history.dart';
 import '../widgets/tag_chip.dart';
 import 'document_edit_screen.dart';
 import 'document_viewer_screen.dart';
@@ -186,6 +187,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
     owner: _doc.owner,
     userCanChange: _doc.userCanChange,
     customFields: _doc.customFields,
+    versions: _doc.versions,
   );
 
   Future<void> _delete() async {
@@ -364,6 +366,15 @@ class _DocumentScreenState extends State<DocumentScreen> {
               ),
             ),
           ),
+        const SizedBox(height: 20),
+        VersionsSection(
+          document: _doc,
+          onChanged: () {
+            _changed = true;
+            _load();
+          },
+        ),
+        HistorySection(key: ValueKey(_doc.modified), documentId: _doc.id),
         const SizedBox(height: 20),
         Text('Inhalt', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),

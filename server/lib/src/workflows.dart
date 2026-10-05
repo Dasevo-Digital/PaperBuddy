@@ -17,6 +17,7 @@ import 'api/http_utils.dart';
 import 'auth.dart';
 import 'config.dart';
 import 'db.dart';
+import 'history.dart';
 import 'processing/consumer.dart';
 import 'processing/matching.dart';
 import 'storage.dart';
@@ -99,6 +100,7 @@ class WorkflowEngine implements ConsumeHooks {
     required this.access,
     required this.store,
     required this.customFields,
+    this.history,
     this.email,
     this.publicUrl,
     http.Client? httpClient,
@@ -108,6 +110,7 @@ class WorkflowEngine implements ConsumeHooks {
   final Access access;
   final BlobStore store;
   final CustomFieldsResource customFields;
+  final History? history;
   final EmailSettings? email;
   final String? publicUrl;
   final http.Client _http;
@@ -287,6 +290,7 @@ class WorkflowEngine implements ConsumeHooks {
   Row? _doc(int id) => db.select('SELECT * FROM documents WHERE id = ? AND deleted_at IS NULL', [id]).firstOrNull;
 
   Future<void> _runActions(_Workflow w, int documentId, int triggerType) async {
+    final before = history?.snapshot(documentId);
     for (final a in w.actions) {
       try {
         switch (a['type']) {
@@ -303,6 +307,7 @@ class WorkflowEngine implements ConsumeHooks {
         _log.warning('Aktion ${a['id']} von Workflow „${w.name}“ fehlgeschlagen', e, st);
       }
     }
+    history?.recordUpdate(documentId, before);
     db.execute(
       'INSERT INTO workflow_runs (workflow_id, document_id, trigger_type, run_at) VALUES (?, ?, ?, ?)',
       [w.id, documentId, triggerType, nowIso()],

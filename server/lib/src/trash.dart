@@ -39,15 +39,21 @@ class Trash {
         [id],
       ).firstOrNull;
       if (row == null) continue;
+      final keys = <String>{
+        for (final k in [row['original_path'], row['archive_path'], row['thumbnail_path']])
+          if (k is String && k.isNotEmpty) k,
+        for (final v in db.select(
+            'SELECT original_path, archive_path, thumbnail_path FROM document_versions WHERE document_id = ?', [id]))
+          for (final k in [v['original_path'], v['archive_path'], v['thumbnail_path']])
+            if (k is String && k.isNotEmpty) k,
+      };
       db.execute('DELETE FROM documents WHERE id = ?', [id]);
       access.forgetObject('document', id);
-      for (final key in [row['original_path'], row['archive_path'], row['thumbnail_path']]) {
-        if (key is String && key.isNotEmpty) {
-          try {
-            await store.delete(key);
-          } catch (e) {
-            _log.warning('Datei $key nicht gelöscht: $e');
-          }
+      for (final key in keys) {
+        try {
+          await store.delete(key);
+        } catch (e) {
+          _log.warning('Datei $key nicht gelöscht: $e');
         }
       }
     }

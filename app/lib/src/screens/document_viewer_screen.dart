@@ -15,10 +15,14 @@ class DocumentViewerScreen extends StatefulWidget {
     super.key,
     required this.document,
     this.original = false,
+    this.version,
   });
 
   final Document document;
   final bool original;
+
+  /// Ältere Fassung statt der aktuellen.
+  final int? version;
 
   @override
   State<DocumentViewerScreen> createState() => _DocumentViewerScreenState();
@@ -35,9 +39,11 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
   }
 
   void _load() {
-    _file = AppScope.read(
-      context,
-    ).client.downloadFile(widget.document.id, original: _original);
+    _file = AppScope.read(context).client.downloadFile(
+      widget.document.id,
+      original: _original,
+      version: widget.version,
+    );
   }
 
   @override

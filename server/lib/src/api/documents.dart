@@ -6,6 +6,7 @@ import 'package:sqlite3/sqlite3.dart';
 import '../access.dart';
 import '../auth.dart';
 import '../db.dart';
+import '../history.dart';
 import '../processing/consumer.dart';
 import '../processing/matching.dart';
 import '../processing/pdf_ops.dart';
@@ -25,6 +26,7 @@ class DocumentsResource {
     required this.customFields,
     required this.trash,
     this.pdf,
+    this.history,
     this.onUpdated,
   });
 
@@ -35,6 +37,7 @@ class DocumentsResource {
   final CustomFieldsResource customFields;
   final Trash trash;
   final PdfOperations? pdf;
+  final History? history;
 
   /// Wird nach jeder Änderung an einem Dokument aufgerufen (Workflows).
   final Future<void> Function(int documentId)? onUpdated;
@@ -130,6 +133,7 @@ class DocumentsResource {
       'custom_fields': customFields.valuesOf(id),
       'page_count': row['page_count'],
       'mime_type': row['mime_type'],
+      'versions': _versions(id),
     };
     if (asBool(q['full_perms'])) out['permissions'] = access.permissionsJson(_model, id);
     if (searchHit != null) out['__search_hit__'] = searchHit;
@@ -361,11 +365,13 @@ class DocumentsResource {
     final owner = row['owner'] as int?;
     final isOwner = user.isSuperuser || owner == null || owner == user.id;
     if (!isOwner) body.remove('owner');
+    final before = history?.snapshot(id);
     _applyChanges(id, body);
     if (isOwner && body.containsKey('set_permissions')) {
       access.setPermissions(_model, id, body['set_permissions']);
     }
     await onUpdated?.call(id);
+    history?.recordUpdate(id, before, actor: user.id);
     return json(serialize(_row(id)!, request));
   }
 
@@ -453,7 +459,9 @@ class DocumentsResource {
     if (!access.canChange(user, _model, row['id'] as int, row['owner'] as int?)) {
       throw Access.forbidden();
     }
+    final before = history?.snapshot(row['id'] as int);
     trash.moveToTrash([row['id'] as int]);
+    history?.recordUpdate(row['id'] as int, before, actor: user.id);
     return Response(204);
   }
 
@@ -477,6 +485,7 @@ class DocumentsResource {
       if (!access.canChange(user, _model, r['id'] as int, r['owner'] as int?)) throw Access.forbidden();
     }
     final idList = ids.join(',');
+    final before = {for (final id in ids) id: history?.snapshot(id)};
     void touch() => db.execute('UPDATE documents SET modified = ? WHERE id IN ($idList)', [nowIso()]);
 
     switch (method) {
@@ -544,6 +553,9 @@ class DocumentsResource {
         await onUpdated?.call(id);
       }
     }
+    for (final id in ids) {
+      history?.recordUpdate(id, before[id], actor: user.id);
+    }
     return json({'result': 'OK'});
   }
 
@@ -570,7 +582,11 @@ class DocumentsResource {
     }
     switch (action) {
       case 'restore':
+        final before = {for (final id in allowed) id: history?.snapshot(id)};
         trash.restore(allowed);
+        for (final id in allowed) {
+          history?.recordUpdate(id, before[id], actor: user.id);
+        }
       case 'empty':
         await trash.purge(allowed);
       default:
@@ -582,28 +598,49 @@ class DocumentsResource {
   // ---------------------------------------------------------------------------
   // Dateien
 
+  /// Datei-Pfade des Dokuments oder einer Version (`?version=<id>`).
+  ({String original, String? archive, String? thumbnail, String mime, String filename}) _files(Request request, Row row) {
+    final v = asInt(request.url.queryParameters['version']);
+    if (v != null) {
+      final version = db.select('SELECT * FROM document_versions WHERE id = ? AND document_id = ?', [v, row['id']]).firstOrNull ??
+          (throw ApiError(404, 'Version not found.'));
+      return (
+        original: version['original_path'] as String,
+        archive: version['archive_path'] as String?,
+        thumbnail: version['thumbnail_path'] as String?,
+        mime: version['mime_type'] as String,
+        filename: version['original_filename'] as String,
+      );
+    }
+    return (
+      original: row['original_path'] as String,
+      archive: row['archive_path'] as String?,
+      thumbnail: row['thumbnail_path'] as String?,
+      mime: row['mime_type'] as String,
+      filename: row['original_filename'] as String,
+    );
+  }
+
   Future<Response> download(Request request, {bool inline = false}) async {
     access.require(_user(request), 'view', _model);
     final row = _require(request);
+    final f = _files(request, row);
     final wantOriginal = asBool(request.url.queryParameters['original']);
-    final archive = row['archive_path'] as String?;
-    final original = row['original_filename'] as String;
-    if (!wantOriginal && archive != null) {
-      final file = await store.get(archive);
+    if (!wantOriginal && f.archive != null) {
+      final file = await store.get(f.archive!);
       if (file != null) {
-        return sendFile(file, 'application/pdf',
-            filename: '${p.basenameWithoutExtension(original)}.pdf', inline: inline);
+        return sendFile(file, 'application/pdf', filename: '${p.basenameWithoutExtension(f.filename)}.pdf', inline: inline);
       }
     }
-    final file = await store.get(row['original_path'] as String);
+    final file = await store.get(f.original);
     if (file == null) throw ApiError(404, 'File not found.');
-    return sendFile(file, row['mime_type'] as String, filename: original, inline: inline);
+    return sendFile(file, f.mime, filename: f.filename, inline: inline);
   }
 
   Future<Response> thumb(Request request) async {
     access.require(_user(request), 'view', _model);
     final row = _require(request);
-    final key = row['thumbnail_path'] as String?;
+    final key = _files(request, row).thumbnail;
     final file = key == null ? null : await store.get(key);
     if (file == null) throw ApiError(404, 'Thumbnail not available.');
     final type = switch (p.extension(key!).toLowerCase()) {
@@ -614,6 +651,73 @@ class DocumentsResource {
       _ => 'application/octet-stream',
     };
     return sendFile(file, type, filename: p.basename(key), inline: true);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Versionen und Verlauf
+
+  List<Map<String, dynamic>> _versions(int id) => [
+        for (final v in db.select('SELECT * FROM document_versions WHERE document_id = ? ORDER BY id', [id]))
+          {
+            'id': v['id'],
+            'added': v['added'],
+            'version_label': v['version_label'],
+            'checksum': v['checksum'],
+            'is_root': v['is_root'] == 1,
+          },
+      ];
+
+  Future<Response> updateVersion(Request request) async {
+    final user = _user(request);
+    final row = _require(request);
+    _requireChange(user, row);
+    if (!(request.headers['content-type'] ?? '').startsWith('multipart/form-data')) {
+      throw ApiError(415, 'Unsupported media type, multipart/form-data expected.');
+    }
+    final form = await readMultipart(request);
+    final upload = form.files['document'] ?? (throw ApiError.badRequest({'document': ['No file was submitted.']}));
+    try {
+      final label = form.fields['version_label']?.toString().trim();
+      final task = await consumer.submitVersion(row['id'] as int, upload.file,
+          originalName: upload.filename, label: (label?.isEmpty ?? true) ? null : label, actor: user.id);
+      return json(task);
+    } finally {
+      for (final f in form.files.values) {
+        await f.file.parent.delete(recursive: true);
+      }
+    }
+  }
+
+  /// Ältere Version entfernen (nicht die aktuelle).
+  Future<Response> deleteVersion(Request request) async {
+    final user = _user(request);
+    final row = _require(request);
+    _requireChange(user, row);
+    final v = db.select('SELECT * FROM document_versions WHERE id = ? AND document_id = ?',
+            [int.parse(request.params['version']!), row['id']]).firstOrNull ??
+        (throw ApiError(404, 'Version not found.'));
+    if (v['original_path'] == row['original_path']) {
+      throw ApiError.badRequest({'version': ['The current version cannot be deleted.']});
+    }
+    db.execute('DELETE FROM document_versions WHERE id = ?', [v['id']]);
+    for (final key in [v['original_path'], v['archive_path'], v['thumbnail_path']]) {
+      if (key is String && key != row['original_path'] && key != row['archive_path'] && key != row['thumbnail_path']) {
+        await store.delete(key);
+      }
+    }
+    return Response(204);
+  }
+
+  Response historyOf(Request request) {
+    final user = _user(request);
+    access.require(user, 'view', _model);
+    final row = _require(request);
+    // Wie in Paperless: Eigentümer, Superuser oder Recht auf den Verlauf.
+    final owner = row['owner'] as int?;
+    if (!(user.isSuperuser || owner == null || owner == user.id || access.has(user, 'view', 'history'))) {
+      throw Access.forbidden();
+    }
+    return json(history?.entries(row['id'] as int) ?? const []);
   }
 
   Future<Response> metadata(Request request) async {
@@ -753,6 +857,9 @@ class DocumentsResource {
     route('GET', '$doc/metadata/', metadata);
     route('GET', '$doc/suggestions/', suggestions);
     route('GET', '$doc/notes/', notes);
+    route('GET', '$doc/history/', historyOf);
+    route('POST', '$doc/update_version/', updateVersion);
+    route('DELETE', '$doc/versions/<version|[0-9]+>/', deleteVersion);
     route('POST', '$doc/notes/', addNote);
     route('DELETE', '$doc/notes/', deleteNote);
   }

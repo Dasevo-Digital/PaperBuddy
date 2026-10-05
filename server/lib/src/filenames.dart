@@ -130,6 +130,13 @@ class FilenameGenerator {
     }
     if (changed) {
       db.execute('UPDATE documents SET original_path = ?, archive_path = ? WHERE id = ?', [originalKey, archiveKey, id]);
+      // Versionen verweisen ggf. auf dieselben Dateien.
+      db.execute('UPDATE document_versions SET original_path = ? WHERE document_id = ? AND original_path = ?',
+          [originalKey, id, d['original_path']]);
+      if (archiveKey != null) {
+        db.execute('UPDATE document_versions SET archive_path = ? WHERE document_id = ? AND archive_path = ?',
+            [archiveKey, id, d['archive_path']]);
+      }
       _log.fine('Dokument #$id → $originalKey');
     }
     return changed;

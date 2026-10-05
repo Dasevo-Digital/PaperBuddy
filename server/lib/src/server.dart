@@ -13,6 +13,7 @@ import 'api/paperless_api.dart';
 import 'auth.dart';
 import 'config.dart';
 import 'filenames.dart';
+import 'history.dart';
 import 'db.dart';
 import 'processing/consume_folder.dart';
 import 'processing/consumer.dart';
@@ -69,7 +70,8 @@ class PaperbuddyServer {
     final access = Access(db);
     final tools = ExternalTools(ocrLanguage: config.ocrLanguage);
     store ??= await createStore(config);
-    final consumer = Consumer(db: db, store: store, tools: tools, workDir: p.join(config.dataDir, 'work'));
+    final history = History(db);
+    final consumer = Consumer(db: db, store: store, tools: tools, workDir: p.join(config.dataDir, 'work'), history: history);
     final trash = Trash(db, store, access, delay: config.emptyTrashDelay);
     final customFields = CustomFieldsResource(db, access);
     final workflows = WorkflowEngine(
@@ -77,6 +79,7 @@ class PaperbuddyServer {
       access: access,
       store: store,
       customFields: customFields,
+      history: history,
       email: config.email,
       publicUrl: config.publicUrl,
     );
@@ -106,6 +109,7 @@ class PaperbuddyServer {
       tools: tools,
       trash: trash,
       customFields: customFields,
+      history: history,
       pdf: PdfOperations(db: db, store: store, tools: tools, consumer: consumer, workDir: p.join(config.dataDir, 'work')),
       extraRoutes: [workflows.mount, mail.mount, scanners.mount],
       onLabelUpdated: (table, id) async {
