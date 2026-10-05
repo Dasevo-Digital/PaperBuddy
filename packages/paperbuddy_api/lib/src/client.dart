@@ -146,6 +146,7 @@ class PaperlessClient {
           ? maxApiVersion
           : (serverMax < maxApiVersion ? serverMax : maxApiVersion),
       serverVersion: response.headers['x-version'],
+      paperbuddyVersion: response.headers['x-paperbuddy-version'],
     );
     return PaperlessClient._(
       base,

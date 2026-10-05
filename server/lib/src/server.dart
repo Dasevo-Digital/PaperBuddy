@@ -26,6 +26,7 @@ import 'storage.dart';
 import 'storage_remote.dart';
 import 'trash.dart';
 import 'workflows.dart';
+import 'version.dart';
 
 final _log = Logger('server');
 
@@ -181,7 +182,7 @@ class PaperbuddyServer {
         .addHandler(this.handler);
     _http = await io.serve(handler, config.host, config.port);
     _http!.autoCompress = true;
-    _log.info('PaperBuddy läuft auf http://${config.host}:${config.port}');
+    _log.info('PaperBuddy $paperbuddyVersion läuft auf http://${config.host}:${config.port}');
   }
 
   Future<void> close() async {

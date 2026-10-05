@@ -44,7 +44,7 @@ für Netzwerkscanner.
 ### Debian/Ubuntu ohne Docker (z. B. Proxmox-LXC)
 
 ```bash
-deploy/lxc/build_bundle.sh          # baut build/lxc/paperbuddy-server-<version>-linux-x64.tar.gz
+deploy/lxc/build_bundle.sh          # build/lxc/paperbuddy-server-<version>-linux-x64.tar.gz (ARCH=arm64 für ARM)
 scp build/lxc/paperbuddy-server-*.tar.gz root@<server>:/root/
 ssh root@<server> 'sh -c "tar xzf paperbuddy-server-*.tar.gz && sh paperbuddy-server-*/install.sh"'
 ```

@@ -68,9 +68,12 @@ class SettingsScreen extends StatelessWidget {
             title: Text(client.baseUrl.toString()),
             subtitle: Text(
               [
-                if (client.server.serverVersion != null)
-                  'Server ${client.server.serverVersion}',
+                if (client.server.paperbuddyVersion != null)
+                  'PaperBuddy-Server ${client.server.paperbuddyVersion}'
+                else if (client.server.serverVersion != null)
+                  'Paperless-ngx ${client.server.serverVersion}',
                 'API v${client.apiVersion}',
+                'App ${AppEnv.version}',
               ].join(' · '),
             ),
           ),

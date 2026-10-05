@@ -20,6 +20,7 @@ import 'users.dart';
 import 'documents.dart';
 import 'http_utils.dart';
 import 'taxonomy.dart';
+import '../version.dart';
 
 
 final _log = Logger('api');
@@ -253,6 +254,7 @@ class PaperlessApi {
       headers: {
         'x-api-version': '${PaperlessCompat.maxApiVersion}',
         'x-version': PaperlessCompat.serverVersion,
+        'x-paperbuddy-version': paperbuddyVersion,
       },
     );
   };
@@ -596,6 +598,7 @@ class PaperlessApi {
     final toolStatus = await tools.report();
     return json({
       'pngx_version': PaperlessCompat.serverVersion,
+      'paperbuddy_version': paperbuddyVersion,
       'server_os': 'paperbuddy',
       'install_type': 'paperbuddy',
       'database': {'type': 'sqlite', 'status': 'OK', 'error': null},

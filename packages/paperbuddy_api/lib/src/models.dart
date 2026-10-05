@@ -534,7 +534,16 @@ class DownloadedFile {
 
 /// Was der Server beim Verbinden über sich verrät.
 class ServerInfo {
-  const ServerInfo({required this.apiVersion, this.serverVersion});
+  const ServerInfo({
+    required this.apiVersion,
+    this.serverVersion,
+    this.paperbuddyVersion,
+  });
   final int apiVersion;
+
+  /// Paperless-ngx-Version laut Server (bei PaperBuddy die kompatible).
   final String? serverVersion;
+
+  /// Gesetzt, wenn der Server PaperBuddy ist.
+  final String? paperbuddyVersion;
 }

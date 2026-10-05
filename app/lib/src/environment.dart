@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 /// Entwicklungs-Build (`--dart-define=PAPERBUDDY_ENV=dev`), der daneben
 /// mit eigenem Namen und eigenem Schlüsselbund-Eintrag läuft.
 abstract final class AppEnv {
+  /// Version der App (Git-Tag `v<version>`, wie `version` in pubspec.yaml).
+  static const version = '0.1.0';
+
   static const name = String.fromEnvironment(
     'PAPERBUDDY_ENV',
     defaultValue: 'prod',

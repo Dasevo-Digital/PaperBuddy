@@ -15,3 +15,4 @@ export 'src/storage_remote.dart';
 export 'src/access.dart';
 export 'src/trash.dart';
 export 'src/filenames.dart';
+export 'src/version.dart';
