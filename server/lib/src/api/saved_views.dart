@@ -6,6 +6,7 @@ import 'package:sqlite3/sqlite3.dart';
 
 import '../access.dart';
 import '../auth.dart';
+import 'documents.dart' show apiVersion;
 import 'http_utils.dart';
 
 /// `/api/saved_views/`: Filterregeln werden gespeichert, ausgewertet werden
@@ -21,14 +22,15 @@ class SavedViewsResource {
         [id],
       ).firstOrNull;
 
-  Map<String, dynamic> serialize(Row r, User user, {bool fullPerms = false}) {
+  Map<String, dynamic> serialize(Row r, User user, {bool fullPerms = false, int apiVersion = 9}) {
     final id = r['id'] as int;
     final owner = r['owner'] as int?;
     return {
       'id': id,
       'name': r['name'],
-      'show_on_dashboard': r['show_on_dashboard'] == 1,
-      'show_in_sidebar': r['show_in_sidebar'] == 1,
+      // Ab API v10 steht die Sichtbarkeit in den UI-Einstellungen.
+      if (apiVersion < 10) 'show_on_dashboard': r['show_on_dashboard'] == 1,
+      if (apiVersion < 10) 'show_in_sidebar': r['show_in_sidebar'] == 1,
       'sort_field': r['sort_field'],
       'sort_reverse': r['sort_reverse'] == 1,
       'filter_rules': jsonDecode(r['filter_rules'] as String),
@@ -79,7 +81,10 @@ class SavedViewsResource {
     final fullPerms = asBool(request.url.queryParameters['full_perms']);
     return paginated(
       request,
-      (limit, offset) => [for (final r in rows.skip(offset).take(limit)) serialize(r, user, fullPerms: fullPerms)],
+      (limit, offset) => [
+        for (final r in rows.skip(offset).take(limit))
+          serialize(r, user, fullPerms: fullPerms, apiVersion: apiVersion(request)),
+      ],
       allIds: [for (final r in rows) r['id'] as int],
       defaultPageSize: 100,
     );
@@ -89,7 +94,8 @@ class SavedViewsResource {
     final user = request.context['user'] as User;
     access.require(user, 'view', _model);
     final row = _row(user, int.parse(request.params['id']!)) ?? (throw ApiError(404, 'Not found.'));
-    return json(serialize(row, user, fullPerms: asBool(request.url.queryParameters['full_perms'])));
+    return json(serialize(row, user,
+        fullPerms: asBool(request.url.queryParameters['full_perms']), apiVersion: apiVersion(request)));
   }
 
   Future<Response> create(Request request) async {
@@ -104,7 +110,7 @@ class SavedViewsResource {
     );
     final id = db.lastInsertRowId;
     access.setPermissions(_model, id, body['set_permissions']);
-    return json(serialize(_row(user, id)!, user), status: 201);
+    return json(serialize(_row(user, id)!, user, apiVersion: apiVersion(request)), status: 201);
   }
 
   Future<Response> update(Request request, {required bool partial}) async {
@@ -128,7 +134,7 @@ class SavedViewsResource {
     if (isOwner && body.containsKey('set_permissions')) {
       access.setPermissions(_model, id, body['set_permissions']);
     }
-    return json(serialize(_row(user, id)!, user));
+    return json(serialize(_row(user, id)!, user, apiVersion: apiVersion(request)));
   }
 
   Response delete(Request request) {

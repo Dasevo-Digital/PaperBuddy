@@ -289,6 +289,10 @@ const _migrations = <String>[
   );
   CREATE INDEX document_versions_doc ON document_versions(document_id);
   ''',
+  // 7: API v10 (Herkunft von Aufgaben)
+  '''
+  ALTER TABLE tasks ADD COLUMN trigger_source TEXT NOT NULL DEFAULT 'api_upload';
+  ''',
 ];
 
 Database openDatabase(String path) {

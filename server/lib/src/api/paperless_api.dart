@@ -345,6 +345,19 @@ class PaperlessApi {
       },
       'settings': {
         'app_title': 'paperbuddy',
+        // API v10: Sichtbarkeit gespeicherter Ansichten.
+        'saved_views': {
+          'dashboard_views_visible_ids': [
+            for (final r in db.select(
+                'SELECT id FROM saved_views x WHERE show_on_dashboard = 1 AND ${access.visibleSql(user, 'savedview', 'x')}'))
+              r['id'],
+          ],
+          'sidebar_views_visible_ids': [
+            for (final r in db.select(
+                'SELECT id FROM saved_views x WHERE show_in_sidebar = 1 AND ${access.visibleSql(user, 'savedview', 'x')}'))
+              r['id'],
+          ],
+        },
         'update_checking': {'enabled': false, 'backend_setting': 'default'},
         'trash_delay': 30,
         ...settings,
@@ -356,6 +369,22 @@ class PaperlessApi {
   Future<Response> _saveUiSettings(Request request) async {
     final user = request.context['user'] as User;
     final body = await readBody(request);
+    final views = (body['settings'] as Map?)?['saved_views'];
+    if (views is Map) {
+      // Sichtbarkeit an den Ansichten selbst speichern (für ältere Clients).
+      for (final (key, column) in [
+        ('dashboard_views_visible_ids', 'show_on_dashboard'),
+        ('sidebar_views_visible_ids', 'show_in_sidebar'),
+      ]) {
+        if (views[key] is! List) continue;
+        final ids = asIntList(views[key]);
+        final visible = access.changeableSql(user, 'savedview', 'x');
+        db.execute('UPDATE saved_views AS x SET $column = 0 WHERE $visible');
+        if (ids.isNotEmpty) {
+          db.execute('UPDATE saved_views AS x SET $column = 1 WHERE id IN (${ids.join(',')}) AND $visible');
+        }
+      }
+    }
     db.execute(
       'INSERT INTO ui_settings (user_id, settings) VALUES (?, ?) '
       'ON CONFLICT(user_id) DO UPDATE SET settings = excluded.settings',
@@ -363,6 +392,22 @@ class PaperlessApi {
     );
     return json({'success': true});
   }
+
+  /// Aufgabe im Format von API v10.
+  Map<String, dynamic> _serializeTaskV10(Row t) => {
+    'id': t['id'],
+    'task_id': t['task_id'],
+    'task_type': 'consume_file',
+    'trigger_source': t['trigger_source'],
+    'status': (t['status'] as String).toLowerCase(),
+    'date_created': t['date_created'],
+    'date_done': t['date_done'],
+    'result_message': t['result'],
+    'input_data': {'filename': t['task_file_name']},
+    'related_document_ids': [?t['related_document']],
+    'acknowledged': t['acknowledged'] == 1,
+    'owner': t['owner'],
+  };
 
   Map<String, dynamic> _serializeTask(Row t) => {
     'id': t['id'],
@@ -380,6 +425,7 @@ class PaperlessApi {
   };
 
   /// Paperless liefert hier eine einfache Liste, keine Paginierung.
+  /// Bis API v9 eine einfache Liste, ab v10 paginiert.
   Response _tasks(Request request) {
     final user = request.context['user'] as User;
     access.require(user, 'view', 'paperlesstask');
@@ -396,13 +442,23 @@ class PaperlessApi {
     }
     if (q['status'] != null) {
       where.add('status = ?');
-      args.add(q['status']);
+      args.add(q['status']!.toUpperCase());
     }
+    // Es gibt nur Verarbeitungsaufgaben.
+    final type = q['task_type'] ?? q['task_name'] ?? q['type'];
+    if (type != null && type != 'consume_file' && type != 'file') where.add('0 = 1');
     final rows = db.select(
       'SELECT * FROM tasks ${where.isEmpty ? '' : 'WHERE ${where.join(' AND ')}'} '
-      'ORDER BY date_created DESC LIMIT 500',
+      'ORDER BY date_created DESC, id DESC LIMIT 500',
       args,
     );
+    if (apiVersion(request) >= 10) {
+      return paginated(
+        request,
+        (limit, offset) => [for (final t in rows.skip(offset).take(limit)) _serializeTaskV10(t)],
+        allIds: [for (final t in rows) t['id'] as int],
+      );
+    }
     return json([for (final t in rows) _serializeTask(t)]);
   }
 
@@ -414,7 +470,7 @@ class PaperlessApi {
       [int.parse(request.params['id']!)],
     ).firstOrNull;
     if (row == null) throw ApiError(404, 'Not found.');
-    return json(_serializeTask(row));
+    return json(apiVersion(request) >= 10 ? _serializeTaskV10(row) : _serializeTask(row));
   }
 
   /// `/api/config/`: Anwendungseinstellungen wie in Paperless-ngx (eine Zeile).

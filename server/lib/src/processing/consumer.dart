@@ -29,13 +29,16 @@ const supportedMimeTypes = {
 
 /// Herkunft eines Dokuments (Werte wie `DocumentSource` in Paperless-ngx).
 enum ConsumeSource {
-  consumeFolder(1),
-  api(2),
-  mail(3),
-  scanner(4);
+  consumeFolder(1, 'folder_consume'),
+  api(2, 'api_upload'),
+  mail(3, 'email_consume'),
+  scanner(4, 'manual');
 
-  const ConsumeSource(this.value);
+  const ConsumeSource(this.value, this.triggerSource);
   final int value;
+
+  /// `trigger_source` in API v10.
+  final String triggerSource;
 }
 
 /// Vorgaben beim Upload (entspricht den Feldern von `post_document`) und
@@ -170,8 +173,8 @@ class Consumer {
 
     final o = overrides ?? ConsumeOverrides();
     db.execute(
-      'INSERT INTO tasks (task_id, task_file_name, date_created, status, owner) VALUES (?, ?, ?, ?, ?)',
-      [taskId, originalName, nowIso(), 'PENDING', o.owner],
+      'INSERT INTO tasks (task_id, task_file_name, date_created, status, owner, trigger_source) VALUES (?, ?, ?, ?, ?, ?)',
+      [taskId, originalName, nowIso(), 'PENDING', o.owner, source.triggerSource],
     );
 
     final done = Completer<void>();

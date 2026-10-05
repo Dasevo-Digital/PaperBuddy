@@ -301,7 +301,8 @@ class DocumentsResource {
     _filters(q, where, args);
 
     // Volltextsuche über FTS5.
-    final query = (q['query'] ?? '').trim();
+    // `text` (API v10) sucht wie `query` in Titel und Inhalt.
+    final query = (q['query'] ?? q['text'] ?? '').trim();
     final ftsQuery = query.isEmpty ? null : toFtsQuery(query);
     var from = 'documents d';
     var select = 'd.id';
@@ -886,7 +887,7 @@ int apiVersion(Request request) {
 
 abstract final class PaperlessCompat {
   static const minApiVersion = 1;
-  static const maxApiVersion = 9;
+  static const maxApiVersion = 10;
   static const defaultApiVersion = 9;
   static const serverVersion = '2.18.0';
 }
