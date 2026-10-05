@@ -152,6 +152,13 @@ Schlüsselspeicher des Systems; im Browser nur bis zum Schließen der Seite. Fü
 Web-Version muss der Server die Herkunft erlauben, z. B.
 `PAPERBUDDY_CORS_ALLOWED_HOSTS=http://localhost:8080`.
 
+Auf ein angeschlossenes iPhone: `tool/dev.sh install-iphone`. Ohne bezahltes
+Apple-Entwicklerkonto gibt es keine App Groups; die App wird dann ohne sie
+signiert und läuft, nur das Teilen-Menü (Share Extension) funktioniert nicht.
+Mit Konto: `PAPERBUDDY_APP_GROUPS=1 tool/dev.sh install-iphone`. Mit einem
+kostenlosen Konto signierte Apps laufen nach sieben Tagen ab und müssen neu
+installiert werden.
+
 ## Tests
 
 ```bash

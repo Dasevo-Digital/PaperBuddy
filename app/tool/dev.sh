@@ -9,6 +9,7 @@
 #   tool/dev.sh android [gerät]  flutter run --flavor dev
 #   tool/dev.sh web              flutter run -d chrome
 #   tool/dev.sh install-macos    Release bauen und nach /Applications legen
+#   tool/dev.sh install-iphone   Release aufs angeschlossene iPhone (devicectl)
 #
 # Weitere Argumente gehen an flutter run.
 set -eu
@@ -29,6 +30,30 @@ mkdir -p build.noindex
 [ -L build ] || ln -s build.noindex build
 
 case "$target" in
+  install-iphone)
+    # Ohne bezahltes Apple-Entwicklerkonto gibt es keine App Groups: dann
+    # ohne Entitlements signieren (App läuft, Teilen-Menü bleibt aus).
+    # Mit Konto: PAPERBUDDY_APP_GROUPS=1 tool/dev.sh install-iphone
+    team="${PAPERBUDDY_TEAM:-GJS9KLYL54}"
+    device="${1:-$(xcrun devicectl list devices 2>/dev/null | awk '/physical/ && /iPhone/ && /available/ {for (i=1;i<=NF;i++) if ($i ~ /^[0-9A-F]{8}-[0-9A-F]{16}$/) print $i; exit}')}"
+    [ -n "$device" ] || { echo "Kein iPhone gefunden (xcrun devicectl list devices)" >&2; exit 1; }
+    FLUTTER_XCODE_PAPERBUDDY_BUNDLE_ID="de.status403.paperbuddy.dev" \
+      flutter build ios --release --config-only "$define"
+    entitlements=""
+    [ "${PAPERBUDDY_APP_GROUPS:-0}" = 1 ] || entitlements="CODE_SIGN_ENTITLEMENTS="
+    (cd ios && xcodebuild -workspace Runner.xcworkspace -scheme Runner \
+      -configuration Release -destination generic/platform=iOS \
+      -derivedDataPath ../build/ios-device -allowProvisioningUpdates -quiet \
+      DEVELOPMENT_TEAM="$team" PAPERBUDDY_BUNDLE_ID=de.status403.paperbuddy.dev \
+      PAPERBUDDY_VARIANT=-dev PAPERBUDDY_APP_NAME="PaperBuddy Dev" \
+      ASSETCATALOG_COMPILER_APPICON_NAME=AppIconDev $entitlements build)
+    app=build/ios-device/Build/Products/Release-iphoneos/Runner.app
+    xcrun devicectl device install app --device "$device" "$app"
+    xcrun devicectl device process launch --device "$device" de.status403.paperbuddy.dev >/dev/null
+    rm -rf "$app"
+    echo "Installiert auf $device"
+    exit 0
+    ;;
   macos|ios|install-macos)
     export FLUTTER_XCODE_PAPERBUDDY_APP_NAME="PaperBuddy Dev"
     export FLUTTER_XCODE_PAPERBUDDY_BUNDLE_ID="de.status403.paperbuddy.dev"
@@ -60,7 +85,7 @@ case "$target" in
     exec flutter run -d chrome "$define" "$@"
     ;;
   *)
-    echo "Unbekanntes Ziel: $target (macos, ios, android, web, install-macos)" >&2
+    echo "Unbekanntes Ziel: $target (macos, ios, android, web, install-macos, install-iphone)" >&2
     exit 1
     ;;
 esac
