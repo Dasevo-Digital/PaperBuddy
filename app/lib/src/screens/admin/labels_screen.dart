@@ -90,14 +90,16 @@ class _LabelsScreenState extends State<LabelsScreen> {
             child: FutureBuilder<List<Label>>(
               future: _items,
               builder: (context, snap) {
-                if (snap.hasError)
+                if (snap.hasError) {
                   return EmptyHint(
                     icon: LucideIcons.cloudOff,
                     text: '${snap.error}',
                   );
+                }
                 final items = snap.data;
-                if (items == null)
+                if (items == null) {
                   return const Center(child: CircularProgressIndicator());
+                }
                 final shown =
                     items
                         .where((l) => l.name.toLowerCase().contains(_filter))
@@ -107,11 +109,12 @@ class _LabelsScreenState extends State<LabelsScreen> {
                           b.name.toLowerCase(),
                         ),
                       );
-                if (shown.isEmpty)
+                if (shown.isEmpty) {
                   return EmptyHint(
                     icon: LucideIcons.tags,
                     text: 'Keine ${widget.kind.plural}',
                   );
+                }
                 return RefreshIndicator(
                   onRefresh: () async => setState(_reload),
                   child: ListView.separated(

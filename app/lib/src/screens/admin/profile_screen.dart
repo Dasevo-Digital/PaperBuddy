@@ -36,8 +36,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       },
       onError: (Object e) {
-        if (mounted)
+        if (mounted) {
           setState(() => _error = e is ApiException ? e.message : '$e');
+        }
       },
     );
   }

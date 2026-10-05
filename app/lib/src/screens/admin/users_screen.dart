@@ -268,7 +268,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
   final _password = TextEditingController();
   late bool _active = widget.user?.isActive ?? true;
   late bool _superuser = widget.user?.isSuperuser ?? false;
-  late Set<int> _groups = {...?widget.user?.groups};
+  late final Set<int> _groups = {...?widget.user?.groups};
   late Set<String> _perms = widget.user == null
       ? {...defaultPermissions}
       : {...widget.user!.permissions};

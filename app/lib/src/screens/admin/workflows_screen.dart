@@ -69,11 +69,13 @@ class _WorkflowsScreenState extends State<WorkflowsScreen> {
       body: FutureBuilder<List<Workflow>>(
         future: _items,
         builder: (context, snap) {
-          if (snap.hasError)
+          if (snap.hasError) {
             return EmptyHint(icon: LucideIcons.cloudOff, text: '${snap.error}');
+          }
           final items = snap.data;
-          if (items == null)
+          if (items == null) {
             return const Center(child: CircularProgressIndicator());
+          }
           if (items.isEmpty) {
             return const EmptyHint(
               icon: LucideIcons.workflow,
@@ -655,17 +657,19 @@ class _ActionCard extends StatelessWidget {
                     ],
                     onChanged: (v) {
                       action['type'] = v;
-                      if (v == 3)
+                      if (v == 3) {
                         action['email'] ??= <String, dynamic>{
                           'subject': '{doc_title}',
                           'body': '',
                           'to': '',
                         };
-                      if (v == 4)
+                      }
+                      if (v == 4) {
                         action['webhook'] ??= <String, dynamic>{
                           'url': '',
                           'body': '',
                         };
+                      }
                       onChanged();
                     },
                   ),

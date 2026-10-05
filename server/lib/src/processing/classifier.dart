@@ -78,7 +78,8 @@ class DocumentClassifier {
         final ids = (d['tag_ids'] as String?)?.split(',').map(int.parse).toSet() ?? const <int>{};
         model.add(ids.contains(tag), tokens[d['id']]!);
       }
-      if (model.positives >= 1) _tags[tag] = model;
+      // Ohne Gegenbeispiele würde jeder Text als Treffer gelten.
+      if (model.positives >= 1 && model.negatives >= 1) _tags[tag] = model;
     }
     _trainedOn = fp;
     _log.fine('Trainiert auf ${docs.length} Dokumenten in ${sw.elapsedMilliseconds} ms');
@@ -122,7 +123,9 @@ class _Multiclass {
   final _vocab = <String>{};
   int _docs = 0;
 
-  bool get hasClasses => _docCount.keys.any((c) => c != 0);
+  /// Entscheiden ist erst sinnvoll, wenn es mindestens zwei Klassen gibt
+  /// (z. B. ein Label und „keine Zuordnung“ oder zwei Labels).
+  bool get hasClasses => _docCount.keys.any((c) => c != 0) && _docCount.length >= 2;
 
   void add(int label, Map<String, int> tokens) {
     _docs++;
@@ -136,7 +139,7 @@ class _Multiclass {
   }
 
   int? predict(Map<String, int> tokens) {
-    if (_docs == 0 || tokens.isEmpty) return null;
+    if (_docs == 0 || tokens.isEmpty || _docCount.length < 2) return null;
     int? best;
     var bestScore = double.negativeInfinity;
     final v = _vocab.length + 1;
@@ -160,9 +163,14 @@ class _Multiclass {
 class _Binary {
   final _model = _Multiclass();
   int positives = 0;
+  int negatives = 0;
 
   void add(bool hasTag, Map<String, int> tokens) {
-    if (hasTag) positives++;
+    if (hasTag) {
+      positives++;
+    } else {
+      negatives++;
+    }
     _model.add(hasTag ? 1 : 0, tokens);
   }
 

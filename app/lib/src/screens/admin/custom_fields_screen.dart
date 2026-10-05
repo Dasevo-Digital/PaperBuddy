@@ -14,8 +14,9 @@ class CustomFieldsScreen extends StatelessWidget {
       context: context,
       builder: (_) => _FieldDialog(field: field),
     );
-    if (saved == true && context.mounted)
+    if (saved == true && context.mounted) {
       await AppScope.read(context).refreshLabels();
+    }
   }
 
   Future<void> _delete(BuildContext context, CustomField f) async {

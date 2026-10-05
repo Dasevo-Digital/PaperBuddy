@@ -128,16 +128,6 @@ class AppState extends ChangeNotifier {
   Future<void> refreshLabels() async {
     final c = _client;
     if (c == null) return;
-    final (t, co, dt, sp) = await (
-      c.tags(),
-      c.correspondents(),
-      c.documentTypes(),
-      c.storagePaths(),
-    ).wait;
-    tags = {for (final x in t) x.id: x};
-    correspondents = {for (final x in co) x.id: x};
-    documentTypes = {for (final x in dt) x.id: x};
-    storagePaths = {for (final x in sp) x.id: x};
     final user = c.user;
     Future<T> optional<T>(
       bool allowed,
@@ -148,12 +138,28 @@ class AppState extends ChangeNotifier {
       try {
         return await load();
       } on ApiException {
-        // Ältere Server kennen manche Endpunkte nicht.
+        // Fehlendes Recht oder älterer Server: Liste bleibt leer.
         return empty;
       }
     }
 
-    final (cf, sv, us, gr) = await (
+    final (t, co, dt, sp, cf, sv, us, gr) = await (
+      optional(user.can('view', 'tag'), c.tags, <Tag>[]),
+      optional(
+        user.can('view', 'correspondent'),
+        c.correspondents,
+        <Correspondent>[],
+      ),
+      optional(
+        user.can('view', 'documenttype'),
+        c.documentTypes,
+        <DocumentType>[],
+      ),
+      optional(
+        user.can('view', 'storagepath'),
+        c.storagePaths,
+        <StoragePath>[],
+      ),
       optional(
         user.can('view', 'customfield'),
         c.customFields,
@@ -163,6 +169,10 @@ class AppState extends ChangeNotifier {
       optional(user.can('view', 'user'), c.users, <AppUser>[]),
       optional(user.can('view', 'group'), c.groups, <UserGroup>[]),
     ).wait;
+    tags = {for (final x in t) x.id: x};
+    correspondents = {for (final x in co) x.id: x};
+    documentTypes = {for (final x in dt) x.id: x};
+    storagePaths = {for (final x in sp) x.id: x};
     customFields = {for (final x in cf) x.id: x};
     savedViews = sv;
     users = {for (final x in us) x.id: x};

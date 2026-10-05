@@ -318,35 +318,13 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   }
 
   Future<void> _saveView() async {
-    final name = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ansicht speichern'),
-        content: TextField(
-          controller: name,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Name',
-            hintText: 'z. B. Offene Rechnungen',
-          ),
-          onSubmitted: (_) => Navigator.pop(context, true),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Abbrechen'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Speichern'),
-          ),
-        ],
-      ),
+    final text = await askText(
+      context,
+      title: 'Ansicht speichern',
+      label: 'Name',
+      hint: 'z. B. Offene Rechnungen',
     );
-    final text = name.text.trim();
-    name.dispose();
-    if (ok != true || text.isEmpty || !mounted) return;
+    if (text == null || !mounted) return;
     final filter = _controller.filter.copyWith(query: _search.text);
     final view = await guarded(
       context,

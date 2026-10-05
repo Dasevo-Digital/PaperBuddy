@@ -82,14 +82,16 @@ class _ShareLinksSheetState extends State<_ShareLinksSheet> {
           FutureBuilder<List<ShareLink>>(
             future: _links,
             builder: (context, snap) {
-              if (snap.hasError)
+              if (snap.hasError) {
                 return Text(
                   '${snap.error}',
                   style: TextStyle(color: theme.colorScheme.error),
                 );
+              }
               final links = snap.data;
-              if (links == null)
+              if (links == null) {
                 return const Center(child: CircularProgressIndicator());
+              }
               return Column(
                 children: [
                   for (final l in links)

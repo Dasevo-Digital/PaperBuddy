@@ -142,8 +142,9 @@ class _FieldInputState extends State<_FieldInput> {
     if (widget.field?.type == CustomFieldType.monetary) {
       return '$v'.replaceAll(RegExp('^[A-Z]{3}'), '').replaceAll('.', ',');
     }
-    if (widget.field?.type == CustomFieldType.documentlink && v is List)
+    if (widget.field?.type == CustomFieldType.documentlink && v is List) {
       return v.join(', ');
+    }
     return '$v';
   }
 
@@ -177,8 +178,9 @@ class _FieldInputState extends State<_FieldInput> {
               firstDate: DateTime(1900),
               lastDate: DateTime(2100),
             );
-            if (picked != null)
+            if (picked != null) {
               widget.onChanged(picked.toIso8601String().substring(0, 10));
+            }
           },
           child: InputDecorator(
             decoration: InputDecoration(

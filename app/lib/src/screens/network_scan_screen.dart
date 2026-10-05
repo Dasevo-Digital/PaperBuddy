@@ -53,10 +53,12 @@ class _NetworkScanScreenState extends State<NetworkScanScreen> {
       _caps = AppScope.read(context).client.scannerCapabilities(s.id).then((c) {
         if (mounted) {
           setState(() {
-            if (c.sources.isNotEmpty && !c.sources.contains(_source))
+            if (c.sources.isNotEmpty && !c.sources.contains(_source)) {
               _source = c.sources.first;
-            if (c.colorModes.isNotEmpty && !c.colorModes.contains(_color))
+            }
+            if (c.colorModes.isNotEmpty && !c.colorModes.contains(_color)) {
               _color = c.colorModes.first;
+            }
             if (c.resolutions.isNotEmpty &&
                 !c.resolutions.contains(_resolution)) {
               _resolution = c.resolutions.reduce(
@@ -132,8 +134,9 @@ class _NetworkScanScreenState extends State<NetworkScanScreen> {
             );
           }
           final list = snap.data;
-          if (list == null)
+          if (list == null) {
             return const Center(child: CircularProgressIndicator());
+          }
           if (list.isEmpty) {
             return const EmptyHint(
               icon: LucideIcons.scanLine,
@@ -181,10 +184,11 @@ class _NetworkScanScreenState extends State<NetworkScanScreen> {
                               );
                             }
                             final c = capSnap.data;
-                            if (c == null)
+                            if (c == null) {
                               return const Center(
                                 child: CircularProgressIndicator(),
                               );
+                            }
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               spacing: 12,

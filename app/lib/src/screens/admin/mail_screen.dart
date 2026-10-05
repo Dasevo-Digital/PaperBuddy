@@ -65,11 +65,13 @@ class _MailScreenState extends State<MailScreen> {
       body: FutureBuilder<(List<MailAccount>, List<MailRule>)>(
         future: _data,
         builder: (context, snap) {
-          if (snap.hasError)
+          if (snap.hasError) {
             return EmptyHint(icon: LucideIcons.cloudOff, text: '${snap.error}');
+          }
           final data = snap.data;
-          if (data == null)
+          if (data == null) {
             return const Center(child: CircularProgressIndicator());
+          }
           final (accounts, rules) = data;
           return RefreshIndicator(
             onRefresh: () async => setState(_reload),

@@ -422,7 +422,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
                       _doc = updated;
                       _changed = true;
                     });
-                    showInfo(context, 'Freigaben gespeichert');
+                    showInfo(this.context, 'Freigaben gespeichert');
                   }
                 },
               ),

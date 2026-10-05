@@ -98,16 +98,19 @@ class _TrashScreenState extends State<TrashScreen> {
       body: FutureBuilder<PageResult<Document>>(
         future: _items,
         builder: (context, snap) {
-          if (snap.hasError)
+          if (snap.hasError) {
             return EmptyHint(icon: LucideIcons.cloudOff, text: '${snap.error}');
+          }
           final page = snap.data;
-          if (page == null)
+          if (page == null) {
             return const Center(child: CircularProgressIndicator());
-          if (page.results.isEmpty)
+          }
+          if (page.results.isEmpty) {
             return const EmptyHint(
               icon: LucideIcons.trash,
               text: 'Der Papierkorb ist leer.',
             );
+          }
           return RefreshIndicator(
             onRefresh: () async => setState(_reload),
             child: ListView.separated(

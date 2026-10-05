@@ -203,8 +203,15 @@ class S3BlobStore extends CachedRemoteStore {
     final url = pathStyle
         ? endpoint.replace(path: '${endpoint.path.replaceAll(RegExp(r'/+$'), '')}/$bucket')
         : endpoint.replace(host: '$bucket.${endpoint.host}', path: '/');
-    final r = await _http.head(url, headers: _sign('HEAD', url, _emptyHash));
-    if (r.statusCode >= 300) throw HttpException('S3-Bucket $bucket nicht erreichbar: ${r.statusCode}');
+    var r = await _http.head(url, headers: _sign('HEAD', url, _emptyHash));
+    if (r.statusCode == 404) {
+      // Fehlenden Bucket anlegen (z. B. frisches MinIO).
+      r = await _http.put(url, headers: _sign('PUT', url, _emptyHash));
+      if (r.statusCode >= 300) throw HttpException('S3-Bucket $bucket konnte nicht angelegt werden: ${r.statusCode} ${r.body}');
+      _log.info('S3-Bucket $bucket angelegt');
+    } else if (r.statusCode >= 300) {
+      throw HttpException('S3-Bucket $bucket nicht erreichbar: ${r.statusCode}');
+    }
     _log.info('S3-Speicher: $endpoint, Bucket $bucket');
   }
 }
@@ -241,7 +248,7 @@ class WebDavBlobStore extends CachedRemoteStore {
       if (part == '.' || part.isEmpty) continue;
       current = current.isEmpty ? part : '$current/$part';
       if (_knownDirs.contains(current)) continue;
-      final r = await _http.send(http.Request('MKCOL', _url(current))..headers.addAll(_auth));
+      final r = await _http.send(http.Request('MKCOL', _url('$current/'))..headers.addAll(_auth));
       await r.stream.drain<void>();
       // 201 angelegt, 405 vorhanden
       if (r.statusCode != 201 && r.statusCode != 405 && r.statusCode != 301) {
@@ -276,12 +283,16 @@ class WebDavBlobStore extends CachedRemoteStore {
     if (r.statusCode >= 300 && r.statusCode != 404) throw HttpException('WebDAV DELETE $key: ${r.statusCode}');
   }
 
+  /// Ordner-URLs mit abschließendem Schrägstrich; ohne ihn leiten viele
+  /// Server mit 301 um.
+  Uri get _collection => baseUrl.replace(path: '${baseUrl.path.replaceAll(RegExp(r'/+$'), '')}/');
+
   Future<void> check() async {
-    final r = await _http.send(http.Request('PROPFIND', baseUrl)
+    final r = await _http.send(http.Request('PROPFIND', _collection)
       ..headers.addAll({..._auth, 'depth': '0'}));
     await r.stream.drain<void>();
     if (r.statusCode == 404) {
-      final mk = await _http.send(http.Request('MKCOL', baseUrl)..headers.addAll(_auth));
+      final mk = await _http.send(http.Request('MKCOL', _collection)..headers.addAll(_auth));
       await mk.stream.drain<void>();
       if (mk.statusCode != 201) throw HttpException('WebDAV-Ordner $baseUrl fehlt (${mk.statusCode})');
     } else if (r.statusCode >= 300) {

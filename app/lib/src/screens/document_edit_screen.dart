@@ -49,8 +49,9 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
   static bool _sameFields(List<CustomFieldValue> a, List<CustomFieldValue> b) {
     if (a.length != b.length) return false;
     for (var i = 0; i < a.length; i++) {
-      if (a[i].field != b[i].field || '${a[i].value}' != '${b[i].value}')
+      if (a[i].field != b[i].field || '${a[i].value}' != '${b[i].value}') {
         return false;
+      }
     }
     return true;
   }

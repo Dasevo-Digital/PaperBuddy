@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:mailer/mailer.dart' as mail;
 import 'package:mailer/smtp_server.dart';
@@ -400,15 +399,18 @@ class WorkflowEngine implements ConsumeHooks {
     final added = DateTime.parse(d['added'] as String).toLocal();
     final created = DateTime.parse(d['created'] as String);
     String two(int v) => v.toString().padLeft(2, '0');
-    final months = DateFormat('MMMM', 'en');
-    final monthsShort = DateFormat('MMM', 'en');
+    // Englische Monatsnamen wie in Paperless-ngx (ohne Gebietsschema-Daten).
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
     Map<String, String> dates(String prefix, DateTime t) => {
           prefix: dateOnly(t),
           '${prefix}_year': '${t.year}',
           '${prefix}_year_short': two(t.year % 100),
           '${prefix}_month': two(t.month),
-          '${prefix}_month_name': months.format(t),
-          '${prefix}_month_name_short': monthsShort.format(t),
+          '${prefix}_month_name': months[t.month - 1],
+          '${prefix}_month_name_short': months[t.month - 1].substring(0, 3),
           '${prefix}_day': two(t.day),
         };
     final original = d['original_filename'] as String;

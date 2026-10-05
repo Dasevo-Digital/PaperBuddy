@@ -228,6 +228,9 @@ class TaxonomyResource {
     _writable.forEach((field, convert) {
       if (body.containsKey(field)) values[field] = convert(body[field]);
     });
+    // Wie Paperless-ngx: ohne Angabe „Eines der Wörter“ (mit leerem
+    // Suchbegriff passt das nie), nicht das lernende Matching.
+    if (!partial) values.putIfAbsent('matching_algorithm', () => 1);
     if (!partial && (values['name'] as String?)?.isNotEmpty != true) {
       throw ApiError.badRequest({'name': ['This field is required.']});
     }

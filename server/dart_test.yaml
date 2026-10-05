@@ -1,0 +1,4 @@
+tags:
+  docker:
+    # Braucht laufende Container, siehe test/integration_docker_test.dart
+    timeout: 3x

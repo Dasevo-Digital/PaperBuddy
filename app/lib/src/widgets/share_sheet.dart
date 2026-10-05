@@ -41,8 +41,9 @@ class _ShareSheetState extends State<_ShareSheet> {
             if (mounted) setState(() => _perms = p);
           },
           onError: (Object e) {
-            if (mounted)
+            if (mounted) {
               setState(() => _error = e is ApiException ? e.message : '$e');
+            }
           },
         );
   }

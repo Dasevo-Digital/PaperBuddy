@@ -87,3 +87,60 @@ class EmptyHint extends StatelessWidget {
     );
   }
 }
+
+/// Fragt einen kurzen Text ab; liefert ihn getrimmt oder `null`.
+Future<String?> askText(
+  BuildContext context, {
+  required String title,
+  required String label,
+  String? hint,
+}) => showDialog<String>(
+  context: context,
+  builder: (_) => _TextDialog(title: title, label: label, hint: hint),
+);
+
+class _TextDialog extends StatefulWidget {
+  const _TextDialog({required this.title, required this.label, this.hint});
+  final String title;
+  final String label;
+  final String? hint;
+
+  @override
+  State<_TextDialog> createState() => _TextDialogState();
+}
+
+class _TextDialogState extends State<_TextDialog> {
+  final _text = TextEditingController();
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final value = _text.text.trim();
+    Navigator.pop(context, value.isEmpty ? null : value);
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.title),
+    content: TextField(
+      controller: _text,
+      autofocus: true,
+      decoration: InputDecoration(
+        labelText: widget.label,
+        hintText: widget.hint,
+      ),
+      onSubmitted: (_) => _submit(),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Abbrechen'),
+      ),
+      FilledButton(onPressed: _submit, child: const Text('Speichern')),
+    ],
+  );
+}

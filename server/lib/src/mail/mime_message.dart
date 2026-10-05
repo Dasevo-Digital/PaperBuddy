@@ -96,7 +96,14 @@ MimePart parsePart(Uint8List raw) {
       break;
     }
   }
-  final headerText = latin1.decode(split < 0 ? raw : raw.sublist(0, split), allowInvalid: true);
+  // Köpfe sind meist ASCII; rohes UTF-8 (RFC 6532) kommt aber vor.
+  final headerBytes = split < 0 ? raw : raw.sublist(0, split);
+  String headerText;
+  try {
+    headerText = utf8.decode(headerBytes);
+  } on FormatException {
+    headerText = latin1.decode(headerBytes, allowInvalid: true);
+  }
   final body = split < 0 ? Uint8List(0) : raw.sublist(split + skip);
   final headers = _parseHeaders(headerText);
   final type = (headers['content-type'] ?? 'text/plain').toLowerCase();

@@ -62,9 +62,9 @@ void main() {
     var changed = 0;
     state.documentsChanged.addListener(() => changed++);
     await state.uploads.add(client, [
-      (name: 'police.txt', bytes: text('Versicherungspolice vom 01.02.2026')),
-      (name: 'rechnung.txt', bytes: text('Rechnung Handwerker 03.03.2026')),
-      (name: 'doppelt.txt', bytes: text('Rechnung Handwerker 03.03.2026')),
+      UploadRequest('police.txt', text('Versicherungspolice vom 01.02.2026')),
+      UploadRequest('rechnung.txt', text('Rechnung Handwerker 03.03.2026'), title: 'Handwerker'),
+      UploadRequest('doppelt.txt', text('Rechnung Handwerker 03.03.2026')),
     ]);
     expect(
       [for (final j in state.uploads.jobs) j.state],
@@ -81,8 +81,8 @@ void main() {
     expect(docs.total, 2);
     expect(
       docs.items.first.title,
-      'rechnung',
-      reason: 'neuestes Belegdatum zuerst',
+      'Handwerker',
+      reason: 'neuestes Belegdatum zuerst, Titel aus dem Upload',
     );
 
     await docs.setFilter(const DocumentFilter(query: 'versicherung'));
