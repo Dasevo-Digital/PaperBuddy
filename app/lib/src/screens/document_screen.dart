@@ -499,6 +499,8 @@ class _DocumentScreenState extends State<DocumentScreen> {
   }
 }
 
+/// Eine Zeile mit Merkmal und Wert; ohne Wert wird sie nicht angezeigt
+/// (setzen lässt sich alles über „Bearbeiten“).
 class _Field extends StatelessWidget {
   const _Field(this.icon, this.label, this.value);
   final IconData icon;
@@ -507,6 +509,8 @@ class _Field extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final v = value?.trim();
+    if (v == null || v.isEmpty || v == '–') return const SizedBox.shrink();
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -524,7 +528,7 @@ class _Field extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(value ?? '–', style: theme.textTheme.bodyMedium),
+            child: Text(v, style: theme.textTheme.bodyMedium),
           ),
         ],
       ),

@@ -97,6 +97,9 @@ void main() {
     });
     await tester.pumpAndSettle();
     expect(find.text('Belegdatum'), findsOneWidget);
+    // Leere Merkmale werden nicht angezeigt.
+    expect(find.text('Korrespondent'), findsNothing);
+    expect(find.text('Dokumenttyp'), findsNothing);
     expect(find.textContaining('Mietvertrag Wohnung'), findsOneWidget);
   });
 
