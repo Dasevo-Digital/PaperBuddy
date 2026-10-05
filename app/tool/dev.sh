@@ -50,7 +50,9 @@ case "$target" in
     app=build/ios-device/Build/Products/Release-iphoneos/Runner.app
     xcrun devicectl device install app --device "$device" "$app"
     xcrun devicectl device process launch --device "$device" de.status403.paperbuddy.dev >/dev/null
-    rm -rf "$app"
+    # Ganz entfernen: Nur das Bündel zu löschen, lässt Xcode beim nächsten
+    # Mal Frameworks halb kopieren.
+    rm -rf build/ios-device
     echo "Installiert auf $device"
     exit 0
     ;;
