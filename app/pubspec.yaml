@@ -23,6 +23,7 @@ dependencies:
   cunning_document_scanner: ^3.0.3
   pdf: ^3.13.1
   image: ^4.10.1
+  cupertino_icons: ^2.0.0
 
 dev_dependencies:
   flutter_test:

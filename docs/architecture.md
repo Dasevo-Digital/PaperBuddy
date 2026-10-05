@@ -57,33 +57,45 @@ Die Flutter-App nutzt wie Famio keinen State-Management-Rahmen: `AppState`
 Die Tests in `app/test` und `packages/paperbuddy_api/test` laufen gegen den echten
 Server im selben Prozess (ohne Netzwerk, über einen Shelf-Handler).
 
+## Weitere Server-Module
+
+| Datei | Aufgabe |
+|---|---|
+| `access.dart` | Modellrechte (`view_document` …) und Objektrechte (Eigentümer, Freigaben); SQL-Bedingungen für sichtbare/änderbare Objekte |
+| `trash.dart` | Papierkorb, automatisches Leeren |
+| `workflows.dart` | Workflow-Engine (Auslöser, Aktionen, Platzhalter, Zeitsteuerung) und API |
+| `processing/classifier.dart` | Lernendes Matching (Naive Bayes), stündlich nachtrainiert |
+| `mail/` | IMAP-Client, MIME-Parser, Mailkonten und -regeln |
+| `scanners/escl.dart` | eSCL/AirScan: Suche per mDNS, Fähigkeiten, Scanaufträge |
+| `storage_remote.dart` | S3 (SigV4) und WebDAV mit lokalem Zwischenspeicher |
+| `transfer.dart` | Export/Import im Paperless-Format, Direktübernahme per API |
+| `api/users.dart`, `custom_fields.dart`, `saved_views.dart`, `share_links.dart` | weitere Endpunkte |
+
 ## Paperless-Kompatibilität
 
 Der Server meldet `X-Api-Version: 9` und `X-Version: 2.18.0` und akzeptiert
 `Accept: application/json; version=1..9`. Vor Version 9 wird `created` als Zeitstempel
-geliefert, ab 9 als Datum.
+geliefert, ab 9 als Datum. Abgeglichen mit dem Quellcode von Swift Paperless
+(Endpunkte und Pflichtfelder aller genutzten Datenmodelle).
 
-| Bereich | Status |
-|---|---|
-| `POST /api/token/`, Token- und Basic-Auth | ✅ |
-| `ui_settings`, `profile`, `users`, `statistics`, `status`, `remote_version` | ✅ |
-| Dokumente: Liste, Filter, Sortierung, `query` (FTS5), `fields`, `truncate_content` | ✅ |
-| Dokumente: Detail, PATCH/PUT, DELETE, `download`, `preview`, `thumb`, `metadata`, `suggestions`, `notes`, `next_asn` | ✅ |
-| `post_document` + `tasks` (inkl. acknowledge) | ✅ |
-| `bulk_edit` (Tags, Korrespondent, Typ, Speicherpfad, Löschen) | ✅ teilweise |
-| Tags, Korrespondenten, Dokumenttypen, Speicherpfade (CRUD) | ✅ |
-| `search/autocomplete` | ✅ |
-| `saved_views`, `custom_fields`, `share_links`, `workflows`, `mail_*`, `groups` | ⏳ leere Listen |
-| Objektrechte (`set_permissions`), Papierkorb, Versionen/History | ⏳ |
+Umgesetzt: Token-/Basic-Auth, Dokumente mit allen gängigen Filtern, Volltextsuche,
+`custom_field_query`, Upload und Tasks, Bulk-Edit (Tags, Korrespondent, Typ, Speicherpfad,
+Custom Fields, Rechte, Löschen, Neuverarbeitung), Notizen, Vorschläge, Tags/Korrespondenten/
+Dokumenttypen/Speicherpfade, Custom Fields, gespeicherte Ansichten, Benutzer, Gruppen, Profil,
+Papierkorb, Workflows, Mailkonten und -regeln, Freigabelinks, `bulk_edit_objects`,
+`ui_settings`, `statistics`, `status`, `config`, `remote_version`, `search/autocomplete`.
+
+Nicht umgesetzt: PDF-Bearbeitung per Bulk-Edit (`rotate`, `merge`, `split`, `delete_pages`),
+Dokumentversionen/History, Speicherpfade als Ordnerstruktur auf der Platte, OAuth für Mailkonten,
+API v10 (Paperless 3.x).
 
 ## Roadmap
 
-1. **MVP-Server** *(dieser Stand)*: API-Kern, Upload, Eingangsordner, OCR, Suche
+1. **MVP-Server**: API-Kern, Upload, Eingangsordner, OCR, Suche *(erledigt)*
 2. **Test mit echten Apps**: Swift Paperless und Paperless Mobile gegen den Server, Lücken schließen
-3. **Flutter-Client** (`app/`): Anmeldung, Liste, Suche, Filter, Upload *(erledigt)*;
-   Bearbeiten, PDF-Ansicht, mobiles Scannen (VisionKit/ML Kit) folgen
-4. **Automatik**: lernendes Matching (`auto`), Workflows, Gespeicherte Ansichten, Custom Fields
-5. **Mehrbenutzer und Rechte**, Papierkorb, Freigabelinks
-6. **Speicher-Backends** (S3, WebDAV/Nextcloud), Backup/Export, Import aus Paperless-ngx
-7. **Eingänge**: Mail (IMAP), FTP, eSCL/AirScan
+3. **Flutter-Client** (`app/`): Liste, Suche, Bearbeiten, PDF-Ansicht, Scannen, Verwaltung *(erledigt)*
+4. **Automatik**: lernendes Matching (`auto`), Workflows, Gespeicherte Ansichten, Custom Fields *(erledigt)*
+5. **Mehrbenutzer und Rechte**, Papierkorb, Freigabelinks *(erledigt)*
+6. **Speicher-Backends** (S3, WebDAV/Nextcloud), Backup/Export, Import aus Paperless-ngx *(erledigt)*
+7. **Eingänge**: Mail (IMAP), FTP, eSCL/AirScan *(erledigt)*
 8. **Optional**: Postgres, Thumbnails als WebP, KI-Klassifizierung (lokal)
