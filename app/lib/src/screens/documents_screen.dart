@@ -12,7 +12,7 @@ import '../widgets/document_tiles.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/label_pickers.dart';
-import '../widgets/upload_status.dart';
+import '../widgets/notification_bell.dart';
 import '../scan/scan_service.dart';
 import '../upload_queue.dart';
 import 'document_screen.dart';
@@ -476,6 +476,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                             : _Layout.list,
                       ),
                     ),
+                    const NotificationBell(),
                   ],
                 ),
               ),
@@ -531,7 +532,6 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 ),
               ),
             ),
-            const UploadStatusBar(),
           ],
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:paperbuddy_api/paperbuddy_api.dart';
 
+import 'notifications.dart';
 import 'session_store.dart';
 import 'thumbnail_cache.dart';
 import 'upload_queue.dart';
@@ -49,6 +50,17 @@ class AppState extends ChangeNotifier {
       notifyDocumentsChanged();
       refreshLabels().ignore();
     },
+  );
+
+  /// Benachrichtigungszentrale für Uploads und Importe auf dem Server.
+  late final notifications = NotificationCenter(
+    uploads: uploads,
+    onDocumentAdded: () {
+      notifyDocumentsChanged();
+      refreshLabels().ignore();
+    },
+    loadSeen: () => _store.noticesSeen,
+    saveSeen: _store.setNoticesSeen,
   );
 
   Future<void> restore() async {
@@ -112,6 +124,7 @@ class AppState extends ChangeNotifier {
     _client = client;
     await refreshLabels();
     status = SessionStatus.signedIn;
+    notifications.start(client);
     notifyListeners();
   }
 
@@ -120,6 +133,7 @@ class AppState extends ChangeNotifier {
     _client?.close();
     _client = null;
     thumbnails.clear();
+    notifications.stop();
     uploads.clearFinished();
     tags = {};
     correspondents = {};
@@ -194,6 +208,7 @@ class AppState extends ChangeNotifier {
   void dispose() {
     _client?.close();
     documentsChanged.dispose();
+    notifications.dispose();
     uploads.dispose();
     super.dispose();
   }

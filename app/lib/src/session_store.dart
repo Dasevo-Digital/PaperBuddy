@@ -39,6 +39,12 @@ class SessionStore {
   String? get lastServer => _prefs.getString('lastServer');
   String? get lastUsername => _prefs.getString('lastUsername');
 
+  /// Bis wann Benachrichtigungen als gelesen gelten.
+  DateTime? get noticesSeen =>
+      DateTime.tryParse(_prefs.getString('noticesSeen') ?? '');
+  Future<void> setNoticesSeen(DateTime time) =>
+      _prefs.setString('noticesSeen', time.toIso8601String());
+
   Future<void> rememberLogin(String server, String username) async {
     await _prefs.setString('lastServer', server);
     await _prefs.setString('lastUsername', username);

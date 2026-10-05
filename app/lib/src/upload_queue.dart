@@ -29,11 +29,19 @@ class UploadRequest {
 }
 
 class UploadJob {
-  UploadJob(this.fileName);
+  UploadJob(this.fileName, {this.taskId});
   final String fileName;
+  final DateTime started = DateTime.now();
   UploadState state = UploadState.uploading;
   String? message;
   int? documentId;
+
+  /// Server-Task, sobald die Datei angekommen ist.
+  String? taskId;
+
+  /// Datenbank-ID des Tasks, um ihn auf dem Server als gelesen zu markieren.
+  int? taskDbId;
+  DateTime? finishedAt;
 
   bool get finished => state == UploadState.done || state == UploadState.failed;
 }
@@ -78,21 +86,24 @@ class UploadQueue extends ChangeNotifier {
         tags: r.tags,
         archiveSerialNumber: r.archiveSerialNumber,
       );
+      job.taskId = taskId;
       job.state = UploadState.processing;
       notifyListeners();
       final task = await client.waitForTask(taskId);
+      job.taskDbId = task.id;
       if (task.status == TaskStatus.success) {
         job.state = UploadState.done;
         job.documentId = task.documentId;
         onDocumentAdded();
       } else {
         job.state = UploadState.failed;
-        job.message = _readableResult(task.result);
+        job.message = readableResult(task.result);
       }
     } on ApiException catch (e) {
       job.state = UploadState.failed;
       job.message = e.message;
     }
+    job.finishedAt = DateTime.now();
     notifyListeners();
   }
 
@@ -102,23 +113,31 @@ class UploadQueue extends ChangeNotifier {
     String taskId,
     String label,
   ) async {
-    final job = UploadJob(label)..state = UploadState.processing;
+    final job = UploadJob(label, taskId: taskId)
+      ..state = UploadState.processing;
     jobs.add(job);
     notifyListeners();
     try {
       final task = await client.waitForTask(taskId);
+      job.taskDbId = task.id;
       if (task.status == TaskStatus.success) {
         job.state = UploadState.done;
         job.documentId = task.documentId;
         onDocumentAdded();
       } else {
         job.state = UploadState.failed;
-        job.message = _readableResult(task.result);
+        job.message = readableResult(task.result);
       }
     } on ApiException catch (e) {
       job.state = UploadState.failed;
       job.message = e.message;
     }
+    job.finishedAt = DateTime.now();
+    notifyListeners();
+  }
+
+  void remove(UploadJob job) {
+    jobs.remove(job);
     notifyListeners();
   }
 
@@ -127,7 +146,8 @@ class UploadQueue extends ChangeNotifier {
     notifyListeners();
   }
 
-  static String _readableResult(String? result) {
+  /// Verständliche Meldung zu einem fehlgeschlagenen Task.
+  static String readableResult(String? result) {
     if (result == null) return 'Verarbeitung fehlgeschlagen';
     if (result.contains('duplicate')) {
       return 'Dieses Dokument ist bereits vorhanden.';

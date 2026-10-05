@@ -4,6 +4,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import 'documents_screen.dart';
 import 'settings_screen.dart';
+import 'statistics_screen.dart';
 
 /// Hauptnavigation: unten auf dem Telefon, seitlich ab Tablet-Breite.
 class HomeShell extends StatefulWidget {
@@ -23,6 +24,7 @@ class _HomeShellState extends State<HomeShell> {
   static const _destinations = [
     (icon: LucideIcons.files, label: 'Dokumente'),
     (icon: LucideIcons.inbox, label: 'Posteingang'),
+    (icon: LucideIcons.chartPie, label: 'Übersicht'),
     (icon: LucideIcons.settings, label: 'Einstellungen'),
   ];
 
@@ -34,6 +36,10 @@ class _HomeShellState extends State<HomeShell> {
         key: PageStorageKey('inbox'),
         title: 'Posteingang',
         baseFilter: DocumentFilter(inboxOnly: true),
+      ),
+      StatisticsScreen(
+        onOpenDocuments: () => setState(() => _index = 0),
+        onOpenInbox: () => setState(() => _index = 1),
       ),
       const SettingsScreen(),
     ];

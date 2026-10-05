@@ -395,25 +395,31 @@ enum TaskStatus { pending, started, success, failure, unknown }
 
 class ConsumeTask {
   const ConsumeTask({
+    this.id,
     required this.taskId,
     required this.status,
     this.fileName,
     this.result,
     this.documentId,
     this.created,
+    this.done,
   });
 
+  /// Datenbank-ID, gebraucht für [PaperlessClient.acknowledgeTasks].
+  final int? id;
   final String taskId;
   final TaskStatus status;
   final String? fileName;
   final String? result;
   final int? documentId;
   final DateTime? created;
+  final DateTime? done;
 
   bool get isDone =>
       status == TaskStatus.success || status == TaskStatus.failure;
 
   factory ConsumeTask.fromJson(Map<String, dynamic> j) => ConsumeTask(
+    id: _int(j['id']),
     taskId: j['task_id'] as String,
     status: switch (j['status']) {
       'PENDING' => TaskStatus.pending,
@@ -426,6 +432,57 @@ class ConsumeTask {
     result: j['result'] as String?,
     documentId: _int(j['related_document']),
     created: _date(j['date_created']),
+    done: _date(j['date_done']),
+  );
+}
+
+/// Kennzahlen laut `/api/statistics/` (Übersicht wie in Paperless-ngx).
+class Statistics {
+  const Statistics({
+    this.documentsTotal = 0,
+    this.documentsInbox,
+    this.inboxTag,
+    this.fileTypes = const [],
+    this.characterCount = 0,
+    this.tagCount = 0,
+    this.correspondentCount = 0,
+    this.documentTypeCount = 0,
+    this.storagePathCount = 0,
+    this.currentAsn = 0,
+  });
+
+  final int documentsTotal;
+
+  /// `null`, wenn es keinen Posteingangs-Tag gibt.
+  final int? documentsInbox;
+  final int? inboxTag;
+
+  /// Dokumente je MIME-Typ, häufigste zuerst.
+  final List<({String mimeType, int count})> fileTypes;
+  final int characterCount;
+  final int tagCount;
+  final int correspondentCount;
+  final int documentTypeCount;
+  final int storagePathCount;
+  final int currentAsn;
+
+  factory Statistics.fromJson(Map<String, dynamic> j) => Statistics(
+    documentsTotal: _int(j['documents_total']) ?? 0,
+    documentsInbox: _int(j['documents_inbox']),
+    inboxTag: _int(j['inbox_tag']),
+    fileTypes: [
+      for (final t in (j['document_file_type_counts'] as List? ?? []))
+        (
+          mimeType: '${(t as Map)['mime_type']}',
+          count: _int(t['mime_type_count']) ?? 0,
+        ),
+    ]..sort((a, b) => b.count.compareTo(a.count)),
+    characterCount: _int(j['character_count']) ?? 0,
+    tagCount: _int(j['tag_count']) ?? 0,
+    correspondentCount: _int(j['correspondent_count']) ?? 0,
+    documentTypeCount: _int(j['document_type_count']) ?? 0,
+    storagePathCount: _int(j['storage_path_count']) ?? 0,
+    currentAsn: _int(j['current_asn']) ?? 0,
   );
 }
 

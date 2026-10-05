@@ -453,6 +453,9 @@ class PaperlessClient {
       ConsumeTask.fromJson(t as Map<String, dynamic>),
   ];
 
+  Future<Statistics> statistics() async =>
+      Statistics.fromJson(await _getMap('/api/statistics/'));
+
   Future<void> acknowledgeTasks(List<int> ids) =>
       _send('POST', '/api/tasks/acknowledge/', json: {'tasks': ids});
 

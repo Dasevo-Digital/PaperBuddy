@@ -5,9 +5,11 @@ import 'app_state.dart';
 import 'design/theme.dart';
 import 'environment.dart';
 import 'file_intake.dart';
+import 'notifications.dart';
 import 'screens/connect_screen.dart';
 import 'screens/home_shell.dart';
 import 'share_intake.dart';
+import 'widgets/notification_bell.dart';
 
 class PaperBuddyApp extends StatefulWidget {
   const PaperBuddyApp({super.key, required this.state});
@@ -20,12 +22,48 @@ class PaperBuddyApp extends StatefulWidget {
 
 class _PaperBuddyAppState extends State<PaperBuddyApp> {
   final _navigator = GlobalKey<NavigatorState>();
+  final _messenger = GlobalKey<ScaffoldMessengerState>();
   late final _share = ShareIntake(widget.state, _navigator);
 
   @override
   void initState() {
     super.initState();
     _share.start();
+    widget.state.notifications.onPopup = _popup;
+  }
+
+  /// Kurzer Hinweis zu einem neuen Ergebnis; er verschwindet von selbst,
+  /// die Meldung bleibt in der Benachrichtigungszentrale.
+  void _popup(Notice n) {
+    final messenger = _messenger.currentState;
+    if (messenger == null) return;
+    final wide = MediaQuery.sizeOf(_messenger.currentContext!).width >= 600;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          width: wide ? 420 : null,
+          duration: const Duration(seconds: 4),
+          // Mit Aktionsknopf bliebe der Hinweis sonst stehen.
+          persist: false,
+          content: Text(
+            n.kind == NoticeKind.failure
+                ? '${n.title}: ${n.detail}'
+                : '${n.title}: Dokument hinzugefügt',
+          ),
+          action: n.documentId == null || _navigator.currentState == null
+              ? null
+              : SnackBarAction(
+                  label: 'Öffnen',
+                  onPressed: () => openDocument(
+                    widget.state,
+                    _navigator.currentState!,
+                    n.documentId!,
+                  ),
+                ),
+        ),
+      );
   }
 
   @override
@@ -40,6 +78,7 @@ class _PaperBuddyAppState extends State<PaperBuddyApp> {
       state: widget.state,
       child: MaterialApp(
         navigatorKey: _navigator,
+        scaffoldMessengerKey: _messenger,
         title: AppEnv.appName,
         debugShowCheckedModeBanner: false,
         theme: buildTheme(Brightness.light),
