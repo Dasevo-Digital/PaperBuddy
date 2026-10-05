@@ -9,12 +9,14 @@ import '../app_state.dart';
 import '../documents_controller.dart';
 import '../format.dart';
 import '../widgets/document_tiles.dart';
+import '../widgets/dialogs.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/label_pickers.dart';
 import '../widgets/upload_status.dart';
 import '../scan/scan_service.dart';
 import '../upload_queue.dart';
 import 'document_screen.dart';
+import 'network_scan_screen.dart';
 import 'upload_screen.dart';
 
 /// Dokumentliste mit Suche, Filtern und Upload.
@@ -84,6 +86,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   /// veralteter Stand zurückkommt.
   Future<void> _applyFilter(DocumentFilter filter) {
     _debounce?.cancel();
+    _activeView = null;
     var f = filter.copyWith(query: _search.text);
     if (widget.baseFilter.inboxOnly) f = f.copyWith(inboxOnly: true);
     return _controller.setFilter(f);
@@ -122,6 +125,9 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
 
   /// Markierte Dokumente für die Sammelbearbeitung.
   final _selected = <int>{};
+
+  /// Zuletzt gewählte gespeicherte Ansicht (nur zur Hervorhebung).
+  int? _activeView;
 
   void _toggle(int id) => setState(
     () => _selected.contains(id) ? _selected.remove(id) : _selected.add(id),
@@ -206,9 +212,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     }
   }
 
-  /// Auf dem Telefon: Scannen oder Datei; sonst direkt die Datei-Auswahl.
+  /// Auswahl: Scannen (Telefon), Datei oder Netzwerkscanner.
   Future<void> _upload() async {
-    if (!ScanService.available) return _pickFiles();
     final choice = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
@@ -216,24 +221,149 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(LucideIcons.scanLine),
-              title: const Text('Dokument scannen'),
-              subtitle: const Text('Mit Kantenerkennung, mehrere Seiten'),
-              onTap: () => Navigator.pop(context, 'scan'),
-            ),
+            if (ScanService.available)
+              ListTile(
+                leading: const Icon(LucideIcons.scanLine),
+                title: const Text('Dokument scannen'),
+                subtitle: const Text('Mit Kantenerkennung, mehrere Seiten'),
+                onTap: () => Navigator.pop(context, 'scan'),
+              ),
             ListTile(
               leading: const Icon(LucideIcons.folderOpen),
               title: const Text('Datei auswählen'),
               subtitle: const Text('PDF, Bild oder Text'),
               onTap: () => Navigator.pop(context, 'file'),
             ),
+            ListTile(
+              leading: const Icon(LucideIcons.printer),
+              title: const Text('Am Netzwerkscanner scannen'),
+              subtitle: const Text('Scanner im Heimnetz über den Server'),
+              onTap: () => Navigator.pop(context, 'network'),
+            ),
           ],
         ),
       ),
     );
-    if (choice == 'scan') await _scan();
-    if (choice == 'file') await _pickFiles();
+    if (!mounted) return;
+    switch (choice) {
+      case 'scan':
+        await _scan();
+      case 'file':
+        await _pickFiles();
+      case 'network':
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const NetworkScanScreen()),
+        );
+    }
+  }
+
+  // Gespeicherte Ansichten ---------------------------------------------------
+
+  Widget _savedViewsRow() {
+    final state = AppScope.of(context);
+    final user = state.client.user;
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) {
+        final views = state.savedViews;
+        final canSave = user.can('add', 'savedview') && !_userFilter.isEmpty;
+        if (views.isEmpty && !canSave) return const SizedBox.shrink();
+        return SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              for (final v in views)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: GestureDetector(
+                    onLongPress:
+                        v.userCanChange && user.can('delete', 'savedview')
+                        ? () => _deleteView(v)
+                        : null,
+                    child: ChoiceChip(
+                      avatar: const Icon(LucideIcons.bookmark, size: 16),
+                      label: Text(v.name),
+                      selected: _activeView == v.id,
+                      onSelected: (_) => _activeView == v.id
+                          ? _applyFilter(widget.baseFilter)
+                          : _applyView(v),
+                    ),
+                  ),
+                ),
+              if (canSave)
+                ActionChip(
+                  avatar: const Icon(LucideIcons.bookmarkPlus, size: 16),
+                  label: const Text('Ansicht speichern'),
+                  onPressed: _saveView,
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _applyView(SavedView view) async {
+    final f = DocumentFilter.fromSavedView(view);
+    _search.text = f.query;
+    await _applyFilter(f);
+    setState(() => _activeView = view.id);
+  }
+
+  Future<void> _saveView() async {
+    final name = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ansicht speichern'),
+        content: TextField(
+          controller: name,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Name',
+            hintText: 'z. B. Offene Rechnungen',
+          ),
+          onSubmitted: (_) => Navigator.pop(context, true),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Speichern'),
+          ),
+        ],
+      ),
+    );
+    final text = name.text.trim();
+    name.dispose();
+    if (ok != true || text.isEmpty || !mounted) return;
+    final filter = _controller.filter.copyWith(query: _search.text);
+    final view = await guarded(
+      context,
+      () => _state.client.createSavedView(text, filter),
+    );
+    if (view != null) {
+      await _state.refreshLabels();
+      if (mounted) setState(() => _activeView = view.id);
+    }
+  }
+
+  Future<void> _deleteView(SavedView view) async {
+    final ok = await confirm(
+      context,
+      title: 'Ansicht „${view.name}“ löschen?',
+      action: 'Löschen',
+      destructive: true,
+    );
+    if (!ok || !mounted) return;
+    await guarded(context, () => _state.client.deleteSavedView(view.id));
+    await _state.refreshLabels();
+    if (_activeView == view.id && mounted) setState(() => _activeView = null);
   }
 
   Future<void> _scan() async {
@@ -303,10 +433,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
               // Mehrere Listen liegen gleichzeitig im IndexedStack.
               heroTag: 'upload-${widget.title}',
               onPressed: _upload,
-              icon: Icon(
-                ScanService.available ? LucideIcons.plus : LucideIcons.upload,
-              ),
-              label: Text(ScanService.available ? 'Neu' : 'Hochladen'),
+              icon: const Icon(LucideIcons.plus),
+              label: const Text('Neu'),
             )
           : null,
       body: SafeArea(
@@ -388,6 +516,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 },
               ),
             ),
+            if (!widget.baseFilter.inboxOnly) _savedViewsRow(),
             _ActiveFilters(
               controller: _controller,
               hideInbox: widget.baseFilter.inboxOnly,

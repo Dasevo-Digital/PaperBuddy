@@ -96,6 +96,10 @@ class Document {
     this.pageCount,
     this.notes = const [],
     this.searchHit,
+    this.owner,
+    this.userCanChange = true,
+    this.customFields = const [],
+    this.deletedAt,
   });
 
   final int id;
@@ -117,6 +121,12 @@ class Document {
   final int? pageCount;
   final List<Note> notes;
   final SearchHit? searchHit;
+  final int? owner;
+  final bool userCanChange;
+
+  /// Werte der Custom Fields: `(feld, wert)`.
+  final List<CustomFieldValue> customFields;
+  final DateTime? deletedAt;
 
   bool get hasArchiveVersion => archivedFileName != null;
 
@@ -149,8 +159,24 @@ class Document {
       searchHit: j['__search_hit__'] is Map<String, dynamic>
           ? SearchHit.fromJson(j['__search_hit__'] as Map<String, dynamic>)
           : null,
+      owner: _int(j['owner']),
+      userCanChange: j['user_can_change'] as bool? ?? true,
+      customFields: [
+        for (final c in j['custom_fields'] as List? ?? const [])
+          if (c is Map && c['field'] != null)
+            CustomFieldValue(_int(c['field'])!, c['value']),
+      ],
+      deletedAt: _date(j['deleted_at']),
     );
   }
+}
+
+class CustomFieldValue {
+  const CustomFieldValue(this.field, this.value);
+  final int field;
+  final Object? value;
+
+  Map<String, dynamic> toJson() => {'field': field, 'value': value};
 }
 
 /// Gemeinsame Felder von Tags, Korrespondenten, Dokumenttypen und Speicherpfaden.
@@ -161,13 +187,29 @@ sealed class Label {
     required this.documentCount,
     this.match = '',
     this.matchingAlgorithm = 0,
+    this.isInsensitive = true,
+    this.owner,
+    this.userCanChange = true,
   });
   final int id;
   final String name;
   final int documentCount;
   final String match;
   final int matchingAlgorithm;
+  final bool isInsensitive;
+  final int? owner;
+  final bool userCanChange;
 }
+
+/// Gemeinsame Felder aus dem JSON eines Labels.
+({String match, int algorithm, bool insensitive, int? owner, bool canChange})
+_labelBase(Map<String, dynamic> j) => (
+  match: j['match'] as String? ?? '',
+  algorithm: j['matching_algorithm'] as int? ?? 0,
+  insensitive: j['is_insensitive'] as bool? ?? true,
+  owner: _int(j['owner']),
+  canChange: j['user_can_change'] as bool? ?? true,
+);
 
 class Tag extends Label {
   const Tag({
@@ -176,6 +218,9 @@ class Tag extends Label {
     required super.documentCount,
     super.match,
     super.matchingAlgorithm,
+    super.isInsensitive,
+    super.owner,
+    super.userCanChange,
     this.color = '#a6cee3',
     this.textColor = '#000000',
     this.isInboxTag = false,
@@ -184,16 +229,22 @@ class Tag extends Label {
   final String textColor;
   final bool isInboxTag;
 
-  factory Tag.fromJson(Map<String, dynamic> j) => Tag(
-    id: j['id'] as int,
-    name: j['name'] as String,
-    documentCount: j['document_count'] as int? ?? 0,
-    match: j['match'] as String? ?? '',
-    matchingAlgorithm: j['matching_algorithm'] as int? ?? 0,
-    color: j['color'] as String? ?? '#a6cee3',
-    textColor: j['text_color'] as String? ?? '#000000',
-    isInboxTag: j['is_inbox_tag'] as bool? ?? false,
-  );
+  factory Tag.fromJson(Map<String, dynamic> j) {
+    final b = _labelBase(j);
+    return Tag(
+      id: j['id'] as int,
+      name: j['name'] as String,
+      documentCount: j['document_count'] as int? ?? 0,
+      match: b.match,
+      matchingAlgorithm: b.algorithm,
+      isInsensitive: b.insensitive,
+      owner: b.owner,
+      userCanChange: b.canChange,
+      color: j['color'] as String? ?? '#a6cee3',
+      textColor: j['text_color'] as String? ?? '#000000',
+      isInboxTag: j['is_inbox_tag'] as bool? ?? false,
+    );
+  }
 }
 
 class Correspondent extends Label {
@@ -203,18 +254,27 @@ class Correspondent extends Label {
     required super.documentCount,
     super.match,
     super.matchingAlgorithm,
+    super.isInsensitive,
+    super.owner,
+    super.userCanChange,
     this.lastCorrespondence,
   });
   final DateTime? lastCorrespondence;
 
-  factory Correspondent.fromJson(Map<String, dynamic> j) => Correspondent(
-    id: j['id'] as int,
-    name: j['name'] as String,
-    documentCount: j['document_count'] as int? ?? 0,
-    match: j['match'] as String? ?? '',
-    matchingAlgorithm: j['matching_algorithm'] as int? ?? 0,
-    lastCorrespondence: _date(j['last_correspondence']),
-  );
+  factory Correspondent.fromJson(Map<String, dynamic> j) {
+    final b = _labelBase(j);
+    return Correspondent(
+      id: j['id'] as int,
+      name: j['name'] as String,
+      documentCount: j['document_count'] as int? ?? 0,
+      match: b.match,
+      matchingAlgorithm: b.algorithm,
+      isInsensitive: b.insensitive,
+      owner: b.owner,
+      userCanChange: b.canChange,
+      lastCorrespondence: _date(j['last_correspondence']),
+    );
+  }
 }
 
 class DocumentType extends Label {
@@ -224,15 +284,24 @@ class DocumentType extends Label {
     required super.documentCount,
     super.match,
     super.matchingAlgorithm,
+    super.isInsensitive,
+    super.owner,
+    super.userCanChange,
   });
 
-  factory DocumentType.fromJson(Map<String, dynamic> j) => DocumentType(
-    id: j['id'] as int,
-    name: j['name'] as String,
-    documentCount: j['document_count'] as int? ?? 0,
-    match: j['match'] as String? ?? '',
-    matchingAlgorithm: j['matching_algorithm'] as int? ?? 0,
-  );
+  factory DocumentType.fromJson(Map<String, dynamic> j) {
+    final b = _labelBase(j);
+    return DocumentType(
+      id: j['id'] as int,
+      name: j['name'] as String,
+      documentCount: j['document_count'] as int? ?? 0,
+      match: b.match,
+      matchingAlgorithm: b.algorithm,
+      isInsensitive: b.insensitive,
+      owner: b.owner,
+      userCanChange: b.canChange,
+    );
+  }
 }
 
 class StoragePath extends Label {
@@ -242,18 +311,27 @@ class StoragePath extends Label {
     required super.documentCount,
     super.match,
     super.matchingAlgorithm,
+    super.isInsensitive,
+    super.owner,
+    super.userCanChange,
     this.path = '',
   });
   final String path;
 
-  factory StoragePath.fromJson(Map<String, dynamic> j) => StoragePath(
-    id: j['id'] as int,
-    name: j['name'] as String,
-    documentCount: j['document_count'] as int? ?? 0,
-    match: j['match'] as String? ?? '',
-    matchingAlgorithm: j['matching_algorithm'] as int? ?? 0,
-    path: j['path'] as String? ?? '',
-  );
+  factory StoragePath.fromJson(Map<String, dynamic> j) {
+    final b = _labelBase(j);
+    return StoragePath(
+      id: j['id'] as int,
+      name: j['name'] as String,
+      documentCount: j['document_count'] as int? ?? 0,
+      match: b.match,
+      matchingAlgorithm: b.algorithm,
+      isInsensitive: b.insensitive,
+      owner: b.owner,
+      userCanChange: b.canChange,
+      path: j['path'] as String? ?? '',
+    );
+  }
 }
 
 enum TaskStatus { pending, started, success, failure, unknown }

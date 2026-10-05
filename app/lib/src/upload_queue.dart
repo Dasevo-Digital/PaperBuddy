@@ -96,6 +96,32 @@ class UploadQueue extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Verfolgt einen bereits gestarteten Task (z. B. Netzwerkscan).
+  Future<void> trackTask(
+    PaperlessClient client,
+    String taskId,
+    String label,
+  ) async {
+    final job = UploadJob(label)..state = UploadState.processing;
+    jobs.add(job);
+    notifyListeners();
+    try {
+      final task = await client.waitForTask(taskId);
+      if (task.status == TaskStatus.success) {
+        job.state = UploadState.done;
+        job.documentId = task.documentId;
+        onDocumentAdded();
+      } else {
+        job.state = UploadState.failed;
+        job.message = _readableResult(task.result);
+      }
+    } on ApiException catch (e) {
+      job.state = UploadState.failed;
+      job.message = e.message;
+    }
+    notifyListeners();
+  }
+
   void clearFinished() {
     jobs.removeWhere((j) => j.finished);
     notifyListeners();

@@ -4,6 +4,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import '../app_state.dart';
 import '../format.dart';
+import '../widgets/custom_field_inputs.dart';
 import '../widgets/label_pickers.dart';
 
 /// Metadaten eines Dokuments bearbeiten. Liefert das gespeicherte Dokument.
@@ -26,6 +27,7 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
   late int? _documentType = widget.document.documentType;
   late int? _storagePath = widget.document.storagePath;
   late Set<int> _tags = {...widget.document.tags};
+  late List<CustomFieldValue> _fields = [...widget.document.customFields];
   final _form = GlobalKey<FormState>();
   bool _saving = false;
   String? _error;
@@ -44,6 +46,15 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
     super.dispose();
   }
 
+  static bool _sameFields(List<CustomFieldValue> a, List<CustomFieldValue> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].field != b[i].field || '${a[i].value}' != '${b[i].value}')
+        return false;
+    }
+    return true;
+  }
+
   int? get _asnValue => int.tryParse(_asn.text.trim());
 
   /// Nur geänderte Felder an den Server schicken.
@@ -60,6 +71,8 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
         'archive_serial_number': _asnValue,
       if (!(_tags.length == d.tags.length && _tags.containsAll(d.tags)))
         'tags': _tags.toList(),
+      if (!_sameFields(_fields, d.customFields))
+        'custom_fields': [for (final f in _fields) f.toJson()],
     };
   }
 
@@ -263,6 +276,11 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                                 )
                               : null,
                         ),
+                        if (state.customFields.isNotEmpty || _fields.isNotEmpty)
+                          CustomFieldsEditor(
+                            values: _fields,
+                            onChanged: (v) => setState(() => _fields = v),
+                          ),
                       ],
                     ),
                   ),

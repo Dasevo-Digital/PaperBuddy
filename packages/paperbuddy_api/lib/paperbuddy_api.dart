@@ -3,6 +3,7 @@
 /// Funktioniert auch mit einem echten Paperless-ngx-Server.
 library;
 
+export 'src/admin_models.dart';
 export 'src/client.dart';
 export 'src/errors.dart';
 export 'src/filter.dart';

@@ -4,9 +4,12 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import 'admin_models.dart';
 import 'errors.dart';
 import 'filter.dart';
 import 'models.dart';
+
+part 'client_admin.dart';
 
 /// Zugriff auf einen PaperBuddy- oder Paperless-ngx-Server.
 ///
@@ -324,10 +327,15 @@ class PaperlessClient {
   /// Sammelbearbeitung, z. B. `bulkEdit(ids, 'add_tag', {'tag': 3})`.
   /// Methoden: `set_correspondent`, `set_document_type`, `set_storage_path`,
   /// `add_tag`, `remove_tag`, `modify_tags`, `delete`.
-  Future<void> bulkEdit(List<int> documents, String method,
-          [Map<String, Object?> parameters = const {}]) =>
-      _send('POST', '/api/documents/bulk_edit/',
-          json: {'documents': documents, 'method': method, 'parameters': parameters});
+  Future<void> bulkEdit(
+    List<int> documents,
+    String method, [
+    Map<String, Object?> parameters = const {},
+  ]) => _send(
+    'POST',
+    '/api/documents/bulk_edit/',
+    json: {'documents': documents, 'method': method, 'parameters': parameters},
+  );
 
   Future<int> nextArchiveSerialNumber() async =>
       (await _send('GET', '/api/documents/next_asn/')) as int;

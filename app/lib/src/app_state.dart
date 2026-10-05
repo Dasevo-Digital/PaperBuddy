@@ -32,6 +32,12 @@ class AppState extends ChangeNotifier {
   Map<int, Correspondent> correspondents = {};
   Map<int, DocumentType> documentTypes = {};
   Map<int, StoragePath> storagePaths = {};
+  Map<int, CustomField> customFields = {};
+  List<SavedView> savedViews = [];
+
+  /// Benutzer und Gruppen für Freigaben; bei fehlendem Recht leer.
+  Map<int, AppUser> users = {};
+  Map<int, UserGroup> groups = {};
 
   /// Wird erhöht, wenn sich Dokumente geändert haben (z. B. nach einem
   /// Upload), damit Listen neu laden.
@@ -111,6 +117,10 @@ class AppState extends ChangeNotifier {
     correspondents = {};
     documentTypes = {};
     storagePaths = {};
+    customFields = {};
+    savedViews = [];
+    users = {};
+    groups = {};
     status = SessionStatus.signedOut;
     notifyListeners();
   }
@@ -128,6 +138,35 @@ class AppState extends ChangeNotifier {
     correspondents = {for (final x in co) x.id: x};
     documentTypes = {for (final x in dt) x.id: x};
     storagePaths = {for (final x in sp) x.id: x};
+    final user = c.user;
+    Future<T> optional<T>(
+      bool allowed,
+      Future<T> Function() load,
+      T empty,
+    ) async {
+      if (!allowed) return empty;
+      try {
+        return await load();
+      } on ApiException {
+        // Ältere Server kennen manche Endpunkte nicht.
+        return empty;
+      }
+    }
+
+    final (cf, sv, us, gr) = await (
+      optional(
+        user.can('view', 'customfield'),
+        c.customFields,
+        <CustomField>[],
+      ),
+      optional(user.can('view', 'savedview'), c.savedViews, <SavedView>[]),
+      optional(user.can('view', 'user'), c.users, <AppUser>[]),
+      optional(user.can('view', 'group'), c.groups, <UserGroup>[]),
+    ).wait;
+    customFields = {for (final x in cf) x.id: x};
+    savedViews = sv;
+    users = {for (final x in us) x.id: x};
+    groups = {for (final x in gr) x.id: x};
     notifyListeners();
   }
 

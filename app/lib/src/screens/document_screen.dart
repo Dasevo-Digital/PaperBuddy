@@ -7,7 +7,10 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 import '../app_state.dart';
 import '../file_export.dart';
 import '../format.dart';
+import '../widgets/custom_field_inputs.dart';
+import '../widgets/dialogs.dart';
 import '../widgets/document_thumbnail.dart';
+import '../widgets/share_sheet.dart';
 import '../widgets/tag_chip.dart';
 import 'document_edit_screen.dart';
 import 'document_viewer_screen.dart';
@@ -178,6 +181,9 @@ class _DocumentScreenState extends State<DocumentScreen> {
     mimeType: _doc.mimeType,
     pageCount: _doc.pageCount,
     notes: notes,
+    owner: _doc.owner,
+    userCanChange: _doc.userCanChange,
+    customFields: _doc.customFields,
   );
 
   Future<void> _delete() async {
@@ -224,7 +230,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
     final wide = MediaQuery.sizeOf(context).width >= 840;
     final tags = [for (final id in _doc.tags) ?state.tags[id]];
     final inInbox = tags.any((t) => t.isInboxTag);
-    final canChange = user.can('change', 'document');
+    final canChange = user.can('change', 'document') && _doc.userCanChange;
 
     final preview = Material(
       borderRadius: BorderRadius.circular(8),
@@ -302,6 +308,20 @@ class _DocumentScreenState extends State<DocumentScreen> {
         _Field(LucideIcons.paperclip, 'Originaldatei', _doc.originalFileName),
         if (_doc.pageCount != null)
           _Field(LucideIcons.layers, 'Seiten', '${_doc.pageCount}'),
+        _Field(
+          LucideIcons.userRound,
+          'Eigentümer',
+          _doc.owner == null
+              ? 'Alle'
+              : (state.users[_doc.owner]?.displayName ??
+                    (_doc.owner == user.id ? 'Ich' : '#${_doc.owner}')),
+        ),
+        for (final v in _doc.customFields)
+          _Field(
+            LucideIcons.textCursorInput,
+            state.customFields[v.field]?.name ?? 'Feld ${v.field}',
+            formatCustomValue(state.customFields[v.field], v.value),
+          ),
         const SizedBox(height: 20),
         Text('Notizen', style: theme.textTheme.titleMedium),
         for (final n in _doc.notes)
@@ -384,6 +404,21 @@ class _DocumentScreenState extends State<DocumentScreen> {
                 onPressed: _busy ? null : () => _share(anchor),
               ),
             ),
+            if (canChange)
+              IconButton(
+                tooltip: 'Freigaben',
+                icon: const Icon(LucideIcons.userPlus),
+                onPressed: () async {
+                  final updated = await showShareSheet(context, _doc);
+                  if (updated != null && mounted) {
+                    setState(() {
+                      _doc = updated;
+                      _changed = true;
+                    });
+                    showInfo(context, 'Freigaben gespeichert');
+                  }
+                },
+              ),
             if (user.can('delete', 'document'))
               IconButton(
                 tooltip: 'Löschen',
