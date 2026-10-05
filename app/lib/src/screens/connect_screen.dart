@@ -4,6 +4,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import '../app_state.dart';
 import '../environment.dart';
+import '../widgets/text_menus.dart';
 
 /// Anmeldung an einem PaperBuddy- oder Paperless-ngx-Server.
 class ConnectScreen extends StatefulWidget {
@@ -132,6 +133,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                         controller: _password,
                         enabled: !_busy,
                         obscureText: !_showPassword,
+                        contextMenuBuilder: passwordContextMenu,
                         autofillHints: const [AutofillHints.password],
                         onFieldSubmitted: (_) => _submit(),
                         decoration: InputDecoration(

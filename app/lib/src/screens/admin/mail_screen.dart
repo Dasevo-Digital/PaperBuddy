@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app_state.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/label_pickers.dart';
+import '../../widgets/text_menus.dart';
 
 class MailScreen extends StatefulWidget {
   const MailScreen({super.key});
@@ -412,6 +413,7 @@ class _MailAccountScreenState extends State<MailAccountScreen> {
                     TextField(
                       controller: _password,
                       obscureText: true,
+                      contextMenuBuilder: passwordContextMenu,
                       decoration: InputDecoration(
                         labelText: 'Passwort',
                         helperText: widget.account == null

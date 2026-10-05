@@ -3,6 +3,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import '../../app_state.dart';
 import '../../widgets/dialogs.dart';
+import '../../widgets/text_menus.dart';
 
 /// Eigenen Namen, E-Mail und Passwort ändern.
 class ProfileScreen extends StatefulWidget {
@@ -128,6 +129,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         TextField(
                           controller: _password,
                           obscureText: true,
+                          contextMenuBuilder: passwordContextMenu,
                           decoration: const InputDecoration(
                             labelText: 'Neues Passwort',
                             helperText: 'Leer lassen, um es zu behalten',
@@ -136,6 +138,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         TextField(
                           controller: _repeat,
                           obscureText: true,
+                          contextMenuBuilder: passwordContextMenu,
                           decoration: const InputDecoration(
                             labelText: 'Passwort wiederholen',
                           ),

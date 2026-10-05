@@ -4,6 +4,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import '../../app_state.dart';
 import '../../widgets/dialogs.dart';
+import '../../widgets/text_menus.dart';
 
 /// Bereiche für die Rechte-Matrix, mit deutschem Namen.
 const permissionModels = <(String, String)>[
@@ -423,6 +424,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
                   TextField(
                     controller: _password,
                     obscureText: true,
+                    contextMenuBuilder: passwordContextMenu,
                     decoration: InputDecoration(
                       labelText: widget.user == null
                           ? 'Passwort'
