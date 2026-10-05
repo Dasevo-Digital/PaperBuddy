@@ -249,6 +249,18 @@ const _migrations = <String>[
   );
   CREATE INDEX mail_processed_lookup ON mail_processed(rule_id, folder, uid);
   ''',
+  // 5: Freigabelinks
+  '''
+  CREATE TABLE share_links (
+    id INTEGER PRIMARY KEY,
+    slug TEXT NOT NULL UNIQUE,
+    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    expiration TEXT,
+    file_version TEXT NOT NULL DEFAULT 'archive',
+    created TEXT NOT NULL,
+    owner INTEGER REFERENCES users(id) ON DELETE CASCADE
+  );
+  ''',
 ];
 
 Database openDatabase(String path) {

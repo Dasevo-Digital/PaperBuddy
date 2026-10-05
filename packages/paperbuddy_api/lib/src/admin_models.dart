@@ -425,3 +425,28 @@ class Profile {
     hasUsablePassword: j['has_usable_password'] as bool? ?? true,
   );
 }
+
+class ShareLink {
+  const ShareLink({
+    required this.id,
+    required this.slug,
+    required this.document,
+    this.expiration,
+    this.fileVersion = 'archive',
+  });
+  final int id;
+  final String slug;
+  final int document;
+  final DateTime? expiration;
+  final String fileVersion;
+
+  factory ShareLink.fromJson(Map<String, dynamic> j) => ShareLink(
+    id: j['id'] as int,
+    slug: '${j['slug']}',
+    document: _int(j['document']) ?? 0,
+    expiration: j['expiration'] == null
+        ? null
+        : DateTime.tryParse('${j['expiration']}'),
+    fileVersion: '${j['file_version'] ?? 'archive'}',
+  );
+}

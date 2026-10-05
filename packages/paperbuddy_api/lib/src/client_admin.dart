@@ -241,6 +241,34 @@ extension PaperlessAdmin on PaperlessClient {
   Future<void> deleteMailRule(int id) =>
       _send('DELETE', '/api/mail_rules/$id/');
 
+  // Freigabelinks -------------------------------------------------------------
+
+  Future<List<ShareLink>> shareLinks(int documentId) async => [
+    for (final l
+        in (await _send('GET', '/api/documents/$documentId/share_links/'))
+            as List)
+      ShareLink.fromJson(l as Map<String, dynamic>),
+  ];
+
+  Future<ShareLink> createShareLink(
+    int documentId, {
+    DateTime? expiration,
+    bool original = false,
+  }) async => ShareLink.fromJson(
+    await _json('POST', '/api/share_links/', {
+      'document': documentId,
+      'expiration': expiration?.toUtc().toIso8601String(),
+      'file_version': original ? 'original' : 'archive',
+    }),
+  );
+
+  Future<void> deleteShareLink(int id) =>
+      _send('DELETE', '/api/share_links/$id/');
+
+  /// Öffentliche Adresse eines Freigabelinks.
+  Uri shareLinkUrl(ShareLink link) =>
+      baseUrl.replace(path: '${baseUrl.path}/share/${link.slug}');
+
   // Netzwerkscanner -----------------------------------------------------------
 
   Future<List<ScannerInfo>> scanners({bool refresh = false}) async => [

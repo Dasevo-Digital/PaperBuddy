@@ -10,6 +10,7 @@ import '../format.dart';
 import '../widgets/custom_field_inputs.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/document_thumbnail.dart';
+import '../widgets/share_links_sheet.dart';
 import '../widgets/share_sheet.dart';
 import '../widgets/tag_chip.dart';
 import 'document_edit_screen.dart';
@@ -404,6 +405,12 @@ class _DocumentScreenState extends State<DocumentScreen> {
                 onPressed: _busy ? null : () => _share(anchor),
               ),
             ),
+            if (user.can('view', 'sharelink'))
+              IconButton(
+                tooltip: 'Freigabelinks',
+                icon: const Icon(LucideIcons.link),
+                onPressed: () => showShareLinksSheet(context, _doc),
+              ),
             if (canChange)
               IconButton(
                 tooltip: 'Freigaben',

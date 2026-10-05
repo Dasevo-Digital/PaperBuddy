@@ -13,6 +13,7 @@ import '../storage.dart';
 import '../trash.dart';
 import 'custom_fields.dart';
 import 'saved_views.dart';
+import 'share_links.dart';
 import 'users.dart';
 import 'documents.dart';
 import 'http_utils.dart';
@@ -84,10 +85,10 @@ class PaperlessApi {
     route('GET', '/api/search/autocomplete/', _autocomplete);
     route('POST', '/api/bulk_edit_objects/', _bulkEditObjects);
 
-    // Noch nicht umgesetzt; leere Listen, damit Clients nicht abbrechen.
-    for (final path in ['share_links']) {
-      route('GET', '/api/$path/', (Request r) => emptyPage());
-    }
+    route('GET', '/api/tasks/<id|[0-9]+>/', _task);
+    route('POST', '/api/acknowledge_tasks/', _acknowledgeTasks);
+    route('GET', '/api/config/', _config);
+    ShareLinksResource(db, access, store).mount(route);
 
     UsersResource(db, auth, access).mount(route);
     customFields.mount(route);
@@ -391,6 +392,50 @@ class PaperlessApi {
     );
     return json([for (final t in rows) _serializeTask(t)]);
   }
+
+  Response _task(Request request) {
+    final user = request.context['user'] as User;
+    access.require(user, 'view', 'paperlesstask');
+    final row = db.select(
+      'SELECT * FROM tasks WHERE id = ?${user.isSuperuser ? '' : ' AND owner = ${user.id}'}',
+      [int.parse(request.params['id']!)],
+    ).firstOrNull;
+    if (row == null) throw ApiError(404, 'Not found.');
+    return json(_serializeTask(row));
+  }
+
+  /// `/api/config/`: Anwendungseinstellungen wie in Paperless-ngx (eine Zeile).
+  Response _config(Request request) => json([
+        {
+          'id': 1,
+          'user_args': null,
+          'output_type': 'pdfa',
+          'pages': null,
+          'language': null,
+          'mode': 'skip',
+          'skip_archive_file': null,
+          'image_dpi': null,
+          'unpaper_clean': null,
+          'deskew': true,
+          'rotate_pages': true,
+          'rotate_pages_threshold': null,
+          'max_image_pixels': null,
+          'color_conversion_strategy': null,
+          'app_title': 'PaperBuddy',
+          'app_logo': null,
+          'barcodes_enabled': false,
+          'barcode_enable_tiff_support': false,
+          'barcode_string': null,
+          'barcode_retain_split_pages': false,
+          'barcode_enable_asn': false,
+          'barcode_asn_prefix': 'ASN',
+          'barcode_upscale': null,
+          'barcode_dpi': null,
+          'barcode_max_pages': null,
+          'barcode_enable_tag': false,
+          'barcode_tag_mapping': null,
+        },
+      ]);
 
   Future<Response> _acknowledgeTasks(Request request) async {
     final user = request.context['user'] as User;
