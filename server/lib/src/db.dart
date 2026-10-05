@@ -293,6 +293,18 @@ const _migrations = <String>[
   '''
   ALTER TABLE tasks ADD COLUMN trigger_source TEXT NOT NULL DEFAULT 'api_upload';
   ''',
+  // 8: OAuth für Mailkonten
+  '''
+  ALTER TABLE mail_accounts ADD COLUMN account_type INTEGER NOT NULL DEFAULT 1;
+  ALTER TABLE mail_accounts ADD COLUMN refresh_token TEXT;
+  ALTER TABLE mail_accounts ADD COLUMN expiration TEXT;
+  CREATE TABLE oauth_states (
+    state TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    created TEXT NOT NULL
+  );
+  ''',
 ];
 
 Database openDatabase(String path) {

@@ -317,6 +317,7 @@ class MailAccount {
     this.imapSecurity = 2,
     required this.username,
     this.characterSet = 'UTF-8',
+    this.accountType = 1,
   });
 
   final int? id;
@@ -328,6 +329,10 @@ class MailAccount {
   final int imapSecurity;
   final String username;
   final String characterSet;
+
+  /// 1 = IMAP mit Passwort, 2 = Gmail (OAuth), 3 = Outlook (OAuth)
+  final int accountType;
+  bool get isOAuth => accountType > 1;
 
   factory MailAccount.fromJson(Map<String, dynamic> j) => MailAccount(
     id: j['id'] as int?,

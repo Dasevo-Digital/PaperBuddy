@@ -212,6 +212,16 @@ extension PaperlessAdmin on PaperlessClient {
           ),
   );
 
+  /// Anmelde-Links für Gmail/Outlook, falls auf dem Server eingerichtet.
+  Future<({String? gmail, String? outlook})> mailOAuthUrls() async {
+    final settings =
+        (await _getMap('/api/ui_settings/'))['settings'] as Map? ?? const {};
+    return (
+      gmail: settings['gmail_oauth_url'] as String?,
+      outlook: settings['outlook_oauth_url'] as String?,
+    );
+  }
+
   Future<void> deleteMailAccount(int id) =>
       _send('DELETE', '/api/mail_accounts/$id/');
 

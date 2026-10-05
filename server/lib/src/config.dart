@@ -26,6 +26,7 @@ class Config {
     this.scannerDiscovery = true,
     this.storage = const StorageSettings(),
     this.filenameFormat,
+    this.oauth = const OAuthSettings(),
   });
 
   final String host;
@@ -74,6 +75,9 @@ class Config {
   /// Ablage in Ordnern, z. B. `{{ created_year }}/{{ correspondent }}/{{ title }}`.
   final String? filenameFormat;
 
+  /// OAuth-Apps für Gmail und Outlook.
+  final OAuthSettings oauth;
+
   String get databasePath => p.join(dataDir, 'paperbuddy.sqlite3');
 
   factory Config.fromEnvironment([Map<String, String>? env]) {
@@ -116,6 +120,13 @@ class Config {
       scanners: get('SCANNERS'),
       scannerDiscovery: (get('SCANNER_DISCOVERY') ?? 'true') != 'false',
       filenameFormat: get('FILENAME_FORMAT'),
+      oauth: OAuthSettings(
+        callbackBaseUrl: get('OAUTH_CALLBACK_BASE_URL') ?? get('URL'),
+        gmailClientId: get('GMAIL_OAUTH_CLIENT_ID'),
+        gmailClientSecret: get('GMAIL_OAUTH_CLIENT_SECRET'),
+        outlookClientId: get('OUTLOOK_OAUTH_CLIENT_ID'),
+        outlookClientSecret: get('OUTLOOK_OAUTH_CLIENT_SECRET'),
+      ),
       storage: StorageSettings(
         backend: get('STORAGE_BACKEND') ?? 'local',
         cacheMb: int.parse(get('STORAGE_CACHE_MB') ?? '500'),
@@ -188,4 +199,21 @@ class StorageSettings {
   final String? webdavUrl;
   final String? webdavUser;
   final String? webdavPassword;
+}
+
+class OAuthSettings {
+  const OAuthSettings({
+    this.callbackBaseUrl,
+    this.gmailClientId,
+    this.gmailClientSecret,
+    this.outlookClientId,
+    this.outlookClientSecret,
+  });
+
+  /// Öffentliche Adresse des Servers, an die der Anbieter zurückleitet.
+  final String? callbackBaseUrl;
+  final String? gmailClientId;
+  final String? gmailClientSecret;
+  final String? outlookClientId;
+  final String? outlookClientSecret;
 }

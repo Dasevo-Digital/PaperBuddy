@@ -15,6 +15,7 @@ import '../db.dart';
 import '../processing/consumer.dart';
 import 'imap_client.dart';
 import 'mime_message.dart';
+import 'oauth.dart';
 
 final _log = Logger('mail');
 
@@ -59,6 +60,7 @@ class MailService {
     required this.workDir,
     this.interval = const Duration(minutes: 10),
     this.connector = ImapClient.connect,
+    this.oauth,
   });
 
   final Database db;
@@ -67,6 +69,7 @@ class MailService {
   final String workDir;
   final Duration interval;
   final Future<ImapClient> Function(String host, int port, ImapSecurity security) connector;
+  final MailOAuth? oauth;
   Timer? _timer;
   bool _running = false;
 
@@ -130,7 +133,12 @@ class MailService {
     final port = account['imap_port'] as int? ?? (security == ImapSecurity.ssl ? 993 : 143);
     final client = await connector(account['imap_server'] as String, port, security);
     try {
-      await client.login(account['username'] as String, account['password'] as String);
+      if ((account['account_type'] as int? ?? 1) > 1) {
+        final o = oauth ?? (throw StateError('OAuth ist nicht eingerichtet.'));
+        await client.authenticateXOAuth2(account['username'] as String, await o.accessToken(account));
+      } else {
+        await client.login(account['username'] as String, account['password'] as String);
+      }
     } catch (_) {
       await client.close();
       rethrow;
@@ -331,9 +339,9 @@ class MailService {
         'username': a['username'],
         'password': _masked,
         'character_set': a['character_set'],
-        'is_token': false,
-        'account_type': 1,
-        'expiration': null,
+        'is_token': (a['account_type'] as int? ?? 1) > 1,
+        'account_type': a['account_type'] ?? 1,
+        'expiration': a['expiration'],
         'owner': a['owner'],
         'user_can_change': access.canChange(user, 'mailaccount', a['id'] as int, a['owner'] as int?),
       };
@@ -441,11 +449,11 @@ class MailService {
     access.require(user, 'add', 'mailaccount');
     final body = await readBody(request);
     var password = '${body['password'] ?? ''}';
-    if (password == _masked && body['id'] != null) {
-      password = db.select('SELECT password FROM mail_accounts WHERE id = ?', [asInt(body['id'])]).firstOrNull?['password']
-              as String? ??
-          '';
-    }
+    final stored = body['id'] == null
+        ? null
+        : db.select('SELECT * FROM mail_accounts WHERE id = ?', [asInt(body['id'])]).firstOrNull;
+    if (password == _masked && stored != null) password = stored['password'] as String;
+    final useOAuth = stored != null && (stored['account_type'] as int? ?? 1) > 1;
     final security = ImapSecurity.of(asInt(body['imap_security']));
     try {
       final client = await connector(
@@ -454,7 +462,12 @@ class MailService {
         security,
       );
       try {
-        await client.login('${body['username']}', password);
+        if (useOAuth) {
+          final o = oauth ?? (throw StateError('OAuth ist nicht eingerichtet.'));
+          await client.authenticateXOAuth2(stored['username'] as String, await o.accessToken(stored));
+        } else {
+          await client.login('${body['username']}', password);
+        }
         final folders = await client.listMailboxes();
         return json({'success': true, 'folders': folders});
       } finally {
@@ -605,5 +618,6 @@ class MailService {
     route('PATCH', '/api/mail_rules/<id|[0-9]+>/', _updateRule);
     route('DELETE', '/api/mail_rules/<id|[0-9]+>/', _deleteRule);
     route('GET', '/api/processed_mail/', _processedMail);
+    if (oauth != null) route('GET', '/api/oauth/callback/', oauth!.callback);
   }
 }

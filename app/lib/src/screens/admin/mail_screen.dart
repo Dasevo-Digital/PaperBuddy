@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:paperbuddy_api/paperbuddy_api.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app_state.dart';
 import '../../widgets/dialogs.dart';
@@ -15,6 +16,7 @@ class MailScreen extends StatefulWidget {
 
 class _MailScreenState extends State<MailScreen> {
   late Future<(List<MailAccount>, List<MailRule>)> _data;
+  ({String? gmail, String? outlook})? _oauth;
 
   @override
   void initState() {
@@ -25,6 +27,35 @@ class _MailScreenState extends State<MailScreen> {
   void _reload() {
     final c = AppScope.read(context).client;
     _data = (c.mailAccounts(), c.mailRules()).wait;
+    c.mailOAuthUrls().then((u) {
+      if (mounted) setState(() => _oauth = u);
+    }, onError: (_) {});
+  }
+
+  /// OAuth-Anmeldung im Browser; danach Liste neu laden.
+  Future<void> _connect(String url) async {
+    final ok = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!mounted) return;
+    if (!ok) return showError(context, 'Browser konnte nicht geöffnet werden');
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Im Browser anmelden'),
+        content: const Text(
+          'Melde dich im Browser an und erlaube den Zugriff. Danach hier auf „Fertig“ tippen.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fertig'),
+          ),
+        ],
+      ),
+    );
+    if (mounted) setState(_reload);
   }
 
   Future<void> _editAccount([MailAccount? a]) async {
@@ -86,6 +117,31 @@ class _MailScreenState extends State<MailScreen> {
                     label: const Text('Konto'),
                   ),
                 ),
+                if (_oauth?.gmail != null || _oauth?.outlook != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (_oauth?.gmail case final url?)
+                          OutlinedButton.icon(
+                            onPressed: () => _connect(url),
+                            icon: const Icon(LucideIcons.mail),
+                            label: const Text('Mit Google verbinden'),
+                          ),
+                        if (_oauth?.outlook case final url?)
+                          OutlinedButton.icon(
+                            onPressed: () => _connect(url),
+                            icon: const Icon(LucideIcons.mail),
+                            label: const Text('Mit Microsoft verbinden'),
+                          ),
+                      ],
+                    ),
+                  ),
                 if (accounts.isEmpty)
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
@@ -97,7 +153,11 @@ class _MailScreenState extends State<MailScreen> {
                   ListTile(
                     leading: const Icon(LucideIcons.mail),
                     title: Text(a.name),
-                    subtitle: Text('${a.username} @ ${a.imapServer}'),
+                    subtitle: Text(
+                      a.isOAuth
+                          ? '${a.username} · ${a.accountType == 2 ? 'Google' : 'Microsoft'} (OAuth)'
+                          : '${a.username} @ ${a.imapServer}',
+                    ),
                     onTap: () => _editAccount(a),
                     trailing: IconButton(
                       tooltip: 'Jetzt abrufen',
@@ -339,16 +399,26 @@ class _MailAccountScreenState extends State<MailAccountScreen> {
                       labelText: 'Benutzername',
                     ),
                   ),
-                  TextField(
-                    controller: _password,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: 'Passwort',
-                      helperText: widget.account == null
-                          ? 'Bei vielen Anbietern ein App-Passwort'
-                          : 'Leer lassen, um es zu behalten',
+                  if (widget.account?.isOAuth ?? false)
+                    const ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(LucideIcons.keyRound),
+                      title: Text('Angemeldet über OAuth'),
+                      subtitle: Text(
+                        'Zum Erneuern das Konto über „Mit Google/Microsoft verbinden“ neu verbinden.',
+                      ),
+                    )
+                  else
+                    TextField(
+                      controller: _password,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'Passwort',
+                        helperText: widget.account == null
+                            ? 'Bei vielen Anbietern ein App-Passwort'
+                            : 'Leer lassen, um es zu behalten',
+                      ),
                     ),
-                  ),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _test,
                     icon: _busy

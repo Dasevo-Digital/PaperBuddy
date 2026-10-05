@@ -20,6 +20,7 @@ import 'processing/consumer.dart';
 import 'processing/pdf_ops.dart';
 import 'processing/tools.dart';
 import 'mail/mail_service.dart';
+import 'mail/oauth.dart';
 import 'scanners/escl.dart';
 import 'storage.dart';
 import 'storage_remote.dart';
@@ -86,7 +87,9 @@ class PaperbuddyServer {
     consumer.hooks = workflows;
     final filenames = FilenameGenerator(db, store, format: config.filenameFormat);
     consumer.onStored = filenames.relocate;
+    final oauth = MailOAuth(db, config.oauth);
     final mail = MailService(
+      oauth: oauth,
       db: db,
       access: access,
       consumer: consumer,
@@ -127,6 +130,10 @@ class PaperbuddyServer {
       onDocumentUpdated: (id) async {
         await workflows.documentUpdated(id);
         await filenames.relocate(id);
+      },
+      oauthUrls: (user) => {
+        'gmail': oauth.authorizationUrl('gmail', user.id),
+        'outlook': oauth.authorizationUrl('outlook', user.id),
       },
       corsOrigins: config.corsOrigins,
     );

@@ -41,6 +41,7 @@ class PaperlessApi {
     this.extraRoutes = const [],
     this.onDocumentUpdated,
     this.onLabelUpdated,
+    this.oauthUrls,
     this.corsOrigins = const [],
   });
 
@@ -60,12 +61,15 @@ class PaperlessApi {
   /// Label geändert: `(tabelle, id)`.
   final Future<void> Function(String table, int id)? onLabelUpdated;
 
+  /// OAuth-Anmelde-Links für `ui_settings` (Gmail/Outlook).
+  final Map<String, String?> Function(User user)? oauthUrls;
+
   final CustomFieldsResource customFields;
   final PdfOperations? pdf;
   final History? history;
   final _taxonomies = <String, TaxonomyResource>{};
 
-  static const _public = {'api/token/', 'api/token'};
+  static const _public = {'api/token/', 'api/token', 'api/oauth/callback/', 'api/oauth/callback'};
 
   Handler get handler {
     final router = Router(
@@ -360,6 +364,9 @@ class PaperlessApi {
         },
         'update_checking': {'enabled': false, 'backend_setting': 'default'},
         'trash_delay': 30,
+        if (oauthUrls != null)
+          for (final e in oauthUrls!(user).entries)
+            if (e.value != null) '${e.key}_oauth_url': e.value,
         ...settings,
       },
       'permissions': (access.permissions(user).toList()..sort()),

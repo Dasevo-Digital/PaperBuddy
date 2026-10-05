@@ -220,6 +220,13 @@ class ImapClient {
     await refreshCapabilities();
   }
 
+  /// Anmeldung mit OAuth-Token (Gmail, Outlook).
+  Future<void> authenticateXOAuth2(String user, String accessToken) async {
+    final token = base64.encode(utf8.encode('user=$user\x01auth=Bearer $accessToken\x01\x01'));
+    await command('AUTHENTICATE XOAUTH2 $token');
+    await refreshCapabilities();
+  }
+
   Future<List<String>> listMailboxes() async {
     final r = await command('LIST "" "*"');
     return [
