@@ -286,9 +286,14 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                       avatar: const Icon(LucideIcons.bookmark, size: 16),
                       label: Text(v.name),
                       selected: _activeView == v.id,
-                      onSelected: (_) => _activeView == v.id
-                          ? _applyFilter(widget.baseFilter)
-                          : _applyView(v),
+                      onSelected: (_) {
+                        if (_activeView == v.id) {
+                          _search.clear();
+                          _applyFilter(widget.baseFilter);
+                        } else {
+                          _applyView(v);
+                        }
+                      },
                     ),
                   ),
                 ),
