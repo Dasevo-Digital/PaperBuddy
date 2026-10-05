@@ -38,6 +38,7 @@ class PaperlessApi {
     this.pdf,
     this.extraRoutes = const [],
     this.onDocumentUpdated,
+    this.onLabelUpdated,
     this.corsOrigins = const [],
   });
 
@@ -53,6 +54,9 @@ class PaperlessApi {
   /// Weitere Ressourcen (Workflows, Mail, Scanner …) hängen sich hier ein.
   final List<void Function(void Function(String method, String path, Function handler) route)> extraRoutes;
   final Future<void> Function(int documentId)? onDocumentUpdated;
+
+  /// Label geändert: `(tabelle, id)`.
+  final Future<void> Function(String table, int id)? onLabelUpdated;
 
   final CustomFieldsResource customFields;
   final PdfOperations? pdf;
@@ -123,6 +127,7 @@ class PaperlessApi {
         documentCountSql: countSql,
         extraFields: extraFields,
         extraSerializer: extraSerializer,
+        afterUpdate: onLabelUpdated == null ? null : (id) => onLabelUpdated!(table, id),
       )..mount(path, route);
       _taxonomies[path] = resource;
     }

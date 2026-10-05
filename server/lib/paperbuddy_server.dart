@@ -14,3 +14,4 @@ export 'src/scanners/escl.dart';
 export 'src/storage_remote.dart';
 export 'src/access.dart';
 export 'src/trash.dart';
+export 'src/filenames.dart';

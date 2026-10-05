@@ -25,6 +25,7 @@ class Config {
     this.scanners,
     this.scannerDiscovery = true,
     this.storage = const StorageSettings(),
+    this.filenameFormat,
   });
 
   final String host;
@@ -70,6 +71,9 @@ class Config {
   /// Wo Originale, Archiv-PDFs und Vorschaubilder liegen.
   final StorageSettings storage;
 
+  /// Ablage in Ordnern, z. B. `{{ created_year }}/{{ correspondent }}/{{ title }}`.
+  final String? filenameFormat;
+
   String get databasePath => p.join(dataDir, 'paperbuddy.sqlite3');
 
   factory Config.fromEnvironment([Map<String, String>? env]) {
@@ -111,6 +115,7 @@ class Config {
       mailInterval: Duration(minutes: int.parse(get('MAIL_INTERVAL') ?? '10')),
       scanners: get('SCANNERS'),
       scannerDiscovery: (get('SCANNER_DISCOVERY') ?? 'true') != 'false',
+      filenameFormat: get('FILENAME_FORMAT'),
       storage: StorageSettings(
         backend: get('STORAGE_BACKEND') ?? 'local',
         cacheMb: int.parse(get('STORAGE_CACHE_MB') ?? '500'),

@@ -19,6 +19,7 @@ class TaxonomyResource {
     required this.documentCountSql,
     this.extraFields = const {},
     this.extraSerializer,
+    this.afterUpdate,
   });
 
   final Database db;
@@ -35,6 +36,9 @@ class TaxonomyResource {
   /// Zusätzliche schreibbare Felder: Feldname → Umwandlung des Eingabewerts.
   final Map<String, Object? Function(Object?)> extraFields;
   final void Function(Row row, Map<String, dynamic> out, User user)? extraSerializer;
+
+  /// Nach Änderungen, z. B. um Dateien mit neuem Namen abzulegen.
+  final Future<void> Function(int id)? afterUpdate;
 
   static final _commonFields = <String, Object? Function(Object?)>{
     'name': (v) => v?.toString().trim(),
@@ -186,6 +190,7 @@ class TaxonomyResource {
     if (isOwner && body.containsKey('set_permissions')) {
       access.setPermissions(model, id, body['set_permissions']);
     }
+    await afterUpdate?.call(id);
     return json(serialize(_byId(user, id)!, user));
   }
 

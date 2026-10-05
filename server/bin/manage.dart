@@ -45,12 +45,16 @@ Future<void> main(List<String> args) async {
         );
         stdout.writeln('Importiert: $report');
         report.warnings.forEach(stderr.writeln);
+      case 'rename-files':
+        final n = await FilenameGenerator(db, await createStore(config), format: config.filenameFormat).relocateAll();
+        stdout.writeln('$n Dokument(e) neu abgelegt.');
       default:
         stdout.writeln('''Befehle:
   createsuperuser                    Administrator anlegen
   export <ordner>                    alles exportieren (Paperless-Format, auch als Backup)
   import <ordner>                    Export von PaperBuddy oder Paperless-ngx einlesen
-  import-paperless <url> <token>     direkt von einem laufenden Paperless-ngx übernehmen''');
+  import-paperless <url> <token>     direkt von einem laufenden Paperless-ngx übernehmen
+  rename-files                       Dateien nach FILENAME_FORMAT/Speicherpfaden neu ablegen''');
     }
   } finally {
     db.close();

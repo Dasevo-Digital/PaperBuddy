@@ -12,7 +12,7 @@ final _log = Logger('storage');
 
 /// Gemeinsame Basis für entfernte Speicher: Dateien werden lokal
 /// zwischengespeichert, damit Vorschau und Download schnell bleiben.
-abstract class CachedRemoteStore implements BlobStore {
+abstract class CachedRemoteStore extends BlobStore {
   CachedRemoteStore(this.cacheDir, {this.maxCacheBytes = 500 * 1024 * 1024});
 
   final String cacheDir;

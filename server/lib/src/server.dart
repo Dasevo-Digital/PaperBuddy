@@ -12,6 +12,7 @@ import 'api/custom_fields.dart';
 import 'api/paperless_api.dart';
 import 'auth.dart';
 import 'config.dart';
+import 'filenames.dart';
 import 'db.dart';
 import 'processing/consume_folder.dart';
 import 'processing/consumer.dart';
@@ -80,6 +81,8 @@ class PaperbuddyServer {
       publicUrl: config.publicUrl,
     );
     consumer.hooks = workflows;
+    final filenames = FilenameGenerator(db, store, format: config.filenameFormat);
+    consumer.onStored = filenames.relocate;
     final mail = MailService(
       db: db,
       access: access,
@@ -105,7 +108,22 @@ class PaperbuddyServer {
       customFields: customFields,
       pdf: PdfOperations(db: db, store: store, tools: tools, consumer: consumer, workDir: p.join(config.dataDir, 'work')),
       extraRoutes: [workflows.mount, mail.mount, scanners.mount],
-      onDocumentUpdated: workflows.documentUpdated,
+      onLabelUpdated: (table, id) async {
+        // Betroffene Dokumente mit neuem Namen ablegen.
+        final sql = switch (table) {
+          'tags' => 'SELECT document_id AS id FROM document_tags WHERE tag_id = ?',
+          'correspondents' => 'SELECT id FROM documents WHERE correspondent_id = ?',
+          'document_types' => 'SELECT id FROM documents WHERE document_type_id = ?',
+          _ => 'SELECT id FROM documents WHERE storage_path_id = ?',
+        };
+        for (final r in db.select(sql, [id])) {
+          await filenames.relocate(r['id'] as int);
+        }
+      },
+      onDocumentUpdated: (id) async {
+        await workflows.documentUpdated(id);
+        await filenames.relocate(id);
+      },
       corsOrigins: config.corsOrigins,
     );
     final watcher = config.consumeDir == null

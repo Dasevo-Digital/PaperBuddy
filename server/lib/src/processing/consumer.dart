@@ -131,6 +131,9 @@ class Consumer {
   final DocumentClassifier classifier;
   ConsumeHooks? hooks;
 
+  /// Nach dem Anlegen und nach Workflows (z. B. Dateien einsortieren).
+  Future<void> Function(int documentId)? onStored;
+
   Future<void> _queue = Future.value();
   final _uuid = const Uuid();
   final _pending = <String, Future<void>>{};
@@ -222,6 +225,7 @@ class Consumer {
         if (title.isNotEmpty) db.execute('UPDATE documents SET title = ? WHERE id = ?', [title, id]);
       }
       await hooks?.documentAdded(id, source: source, fileName: originalName, mailRule: mailRule);
+      await onStored?.call(id);
       _setTask(taskId, 'SUCCESS', result: 'Success. New document id $id created', document: id);
       _log.info('$originalName → Dokument #$id');
     } catch (e, st) {
