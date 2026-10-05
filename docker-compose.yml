@@ -3,10 +3,12 @@
 #   cp .env.example .env   # Passwörter anpassen
 #   docker compose up -d
 #
-# Danach im Scanner als Ziel einrichten: \\<host>\scans  (Benutzer: scanner)
+# Danach im Scanner als Ziel einrichten: \\<host>\scans (SMB) oder
+# ftp://<host> (FTP), jeweils Benutzer „scanner“.
 services:
   paperbuddy:
     build: ./server
+    # Für die Scanner-Suche per mDNS im Heimnetz: network_mode: host
     image: paperbuddy:latest
     restart: unless-stopped
     ports:
@@ -15,6 +17,8 @@ services:
       PAPERBUDDY_ADMIN_USER: ${PAPERBUDDY_ADMIN_USER:-admin}
       PAPERBUDDY_ADMIN_PASSWORD: ${PAPERBUDDY_ADMIN_PASSWORD:?PAPERBUDDY_ADMIN_PASSWORD in .env setzen}
       PAPERBUDDY_OCR_LANGUAGE: ${PAPERBUDDY_OCR_LANGUAGE:-deu+eng}
+      PAPERBUDDY_SCANNERS: ${PAPERBUDDY_SCANNERS:-}
+      PAPERBUDDY_URL: ${PAPERBUDDY_URL:-}
     volumes:
       - ./data:/data
       - ./consume:/consume
@@ -34,3 +38,20 @@ services:
         force user = scanner; create mask = 0664
     volumes:
       - ./consume:/shares/scans
+
+  # Optional: FTP für Scanner ohne SMB. Passive Ports müssen erreichbar sein;
+  # FTP_ADDRESS ist die IP dieses Rechners im Heimnetz.
+  ftp:
+    image: delfer/alpine-ftp-server:latest
+    restart: unless-stopped
+    profiles: ["ftp"]
+    ports:
+      - "21:21"
+      - "21000-21010:21000-21010"
+    environment:
+      USERS: "scanner|${SCANNER_PASSWORD:?SCANNER_PASSWORD in .env setzen}|/ftp/scanner|1000"
+      ADDRESS: ${FTP_ADDRESS:-}
+      MIN_PORT: "21000"
+      MAX_PORT: "21010"
+    volumes:
+      - ./consume:/ftp/scanner

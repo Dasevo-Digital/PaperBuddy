@@ -24,6 +24,7 @@ class Config {
     this.mailInterval = const Duration(minutes: 10),
     this.scanners,
     this.scannerDiscovery = true,
+    this.storage = const StorageSettings(),
   });
 
   final String host;
@@ -66,6 +67,9 @@ class Config {
   /// Scanner im Netz per mDNS suchen.
   final bool scannerDiscovery;
 
+  /// Wo Originale, Archiv-PDFs und Vorschaubilder liegen.
+  final StorageSettings storage;
+
   String get databasePath => p.join(dataDir, 'paperbuddy.sqlite3');
 
   factory Config.fromEnvironment([Map<String, String>? env]) {
@@ -107,6 +111,20 @@ class Config {
       mailInterval: Duration(minutes: int.parse(get('MAIL_INTERVAL') ?? '10')),
       scanners: get('SCANNERS'),
       scannerDiscovery: (get('SCANNER_DISCOVERY') ?? 'true') != 'false',
+      storage: StorageSettings(
+        backend: get('STORAGE_BACKEND') ?? 'local',
+        cacheMb: int.parse(get('STORAGE_CACHE_MB') ?? '500'),
+        s3Endpoint: get('S3_ENDPOINT'),
+        s3Region: get('S3_REGION') ?? 'us-east-1',
+        s3Bucket: get('S3_BUCKET'),
+        s3AccessKey: get('S3_ACCESS_KEY'),
+        s3SecretKey: get('S3_SECRET_KEY'),
+        s3Prefix: get('S3_PREFIX') ?? '',
+        s3PathStyle: (get('S3_PATH_STYLE') ?? 'true') != 'false',
+        webdavUrl: get('WEBDAV_URL'),
+        webdavUser: get('WEBDAV_USER'),
+        webdavPassword: get('WEBDAV_PASSWORD'),
+      ),
       corsOrigins: (get('CORS_ALLOWED_HOSTS') ?? '')
           .split(',')
           .map((s) => s.trim())
@@ -134,4 +152,35 @@ class EmailSettings {
   final String? password;
   final bool ssl;
   final bool startTls;
+}
+
+class StorageSettings {
+  const StorageSettings({
+    this.backend = 'local',
+    this.cacheMb = 500,
+    this.s3Endpoint,
+    this.s3Region = 'us-east-1',
+    this.s3Bucket,
+    this.s3AccessKey,
+    this.s3SecretKey,
+    this.s3Prefix = '',
+    this.s3PathStyle = true,
+    this.webdavUrl,
+    this.webdavUser,
+    this.webdavPassword,
+  });
+
+  /// `local`, `s3` oder `webdav`.
+  final String backend;
+  final int cacheMb;
+  final String? s3Endpoint;
+  final String s3Region;
+  final String? s3Bucket;
+  final String? s3AccessKey;
+  final String? s3SecretKey;
+  final String s3Prefix;
+  final bool s3PathStyle;
+  final String? webdavUrl;
+  final String? webdavUser;
+  final String? webdavPassword;
 }

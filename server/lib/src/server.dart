@@ -19,6 +19,7 @@ import 'processing/tools.dart';
 import 'mail/mail_service.dart';
 import 'scanners/escl.dart';
 import 'storage.dart';
+import 'storage_remote.dart';
 import 'trash.dart';
 import 'workflows.dart';
 
@@ -65,7 +66,7 @@ class PaperbuddyServer {
     }
     final access = Access(db);
     final tools = ExternalTools(ocrLanguage: config.ocrLanguage);
-    store ??= LocalBlobStore(config.mediaDir);
+    store ??= await createStore(config);
     final consumer = Consumer(db: db, store: store, tools: tools, workDir: p.join(config.dataDir, 'work'));
     final trash = Trash(db, store, access, delay: config.emptyTrashDelay);
     final customFields = CustomFieldsResource(db, access);
@@ -162,4 +163,41 @@ class PaperbuddyServer {
     await _http?.close();
     db.close();
   }
+}
+
+/// Speicher nach `STORAGE_BACKEND`; entfernte Speicher werden beim Start geprüft.
+Future<BlobStore> createStore(Config config) async {
+  final s = config.storage;
+  final cache = p.join(config.dataDir, 'cache');
+  String need(String? v, String name) =>
+      (v == null || v.isEmpty) ? throw StateError('PAPERBUDDY_$name fehlt für STORAGE_BACKEND=${s.backend}') : v;
+  switch (s.backend) {
+    case 's3':
+      final store = S3BlobStore(
+        endpoint: Uri.parse(need(s.s3Endpoint, 'S3_ENDPOINT')),
+        bucket: need(s.s3Bucket, 'S3_BUCKET'),
+        region: s.s3Region,
+        accessKey: need(s.s3AccessKey, 'S3_ACCESS_KEY'),
+        secretKey: need(s.s3SecretKey, 'S3_SECRET_KEY'),
+        prefix: s.s3Prefix,
+        pathStyle: s.s3PathStyle,
+        cacheDir: cache,
+        maxCacheBytes: s.cacheMb * 1024 * 1024,
+      );
+      await store.check();
+      return store;
+    case 'webdav':
+      final store = WebDavBlobStore(
+        baseUrl: Uri.parse(need(s.webdavUrl, 'WEBDAV_URL')),
+        username: need(s.webdavUser, 'WEBDAV_USER'),
+        password: need(s.webdavPassword, 'WEBDAV_PASSWORD'),
+        cacheDir: cache,
+        maxCacheBytes: s.cacheMb * 1024 * 1024,
+      );
+      await store.check();
+      return store;
+    case 'local':
+      return LocalBlobStore(config.mediaDir);
+  }
+  throw StateError('Unbekanntes STORAGE_BACKEND: ${s.backend} (local, s3, webdav)');
 }
