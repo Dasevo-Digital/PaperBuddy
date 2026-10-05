@@ -53,10 +53,14 @@ class PaperlessClient {
   }
 
   /// Meldet sich mit Benutzername und Passwort an und holt einen Token.
+  ///
+  /// Mit aktiver Zwei-Faktor-Anmeldung wirft der erste Versuch
+  /// [MfaRequiredException]; dann erneut mit [code] aufrufen.
   static Future<PaperlessClient> login(
     String serverAddress,
     String username,
     String password, {
+    String? code,
     http.Client? httpClient,
   }) async {
     final base = normalizeBaseUrl(serverAddress);
@@ -66,12 +70,27 @@ class PaperlessClient {
           .post(
             _resolve(base, '/api/token/', null),
             headers: {'accept': 'application/json'},
-            body: {'username': username, 'password': password},
+            body: {
+              'username': username,
+              'password': password,
+              if (code != null && code.trim().isNotEmpty) 'code': code.trim(),
+            },
           )
           .timeout(_timeout),
     );
     final body = _decode(response);
     if (response.statusCode == 400) {
+      final errors = body is Map ? body['non_field_errors'] : null;
+      final first = errors is List && errors.isNotEmpty ? '${errors.first}' : '';
+      // Meldungen wie bei Paperless-ngx.
+      if (first == 'MFA code is required') throw MfaRequiredException();
+      if (first == 'Invalid MFA code') throw MfaRequiredException(invalid: true);
+      if (first.startsWith('Too many invalid MFA codes')) {
+        throw MfaRequiredException(
+          invalid: true,
+          message: 'Zu viele falsche Codes. Bitte in einigen Minuten erneut versuchen.',
+        );
+      }
       throw ApiException(
         'Benutzername oder Passwort ist falsch.',
         statusCode: 400,

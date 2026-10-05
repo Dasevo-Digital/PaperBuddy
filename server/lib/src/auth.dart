@@ -7,6 +7,7 @@ import 'package:crypto/crypto.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import 'db.dart';
+import 'totp.dart';
 
 class User {
   User(this.id, this.username, {required this.isSuperuser});
@@ -69,6 +70,9 @@ class PasswordHasher {
   }
 }
 
+/// Ergebnis der Prüfung des zweiten Faktors.
+enum MfaCheck { ok, invalid, locked }
+
 class AuthService {
   AuthService(this.db);
   final Database db;
@@ -124,6 +128,76 @@ class AuthService {
     }
     return _userFromRow(rows.first);
   }
+
+  // Zwei-Faktor-Anmeldung --------------------------------------------------
+
+  bool mfaEnabled(int userId) =>
+      db.select('SELECT totp_secret FROM users WHERE id = ?', [userId]).firstOrNull?['totp_secret'] != null;
+
+  /// Fehlversuche je Benutzer: nach [_maxMfaFailures] falschen Codes innerhalb
+  /// von [_mfaWindow] ist der zweite Faktor für dieselbe Zeit gesperrt.
+  final _mfaFailures = <int, List<DateTime>>{};
+  static const _maxMfaFailures = 5;
+  static const _mfaWindow = Duration(minutes: 10);
+
+  /// Prüft einen TOTP- oder Wiederherstellungscode. Jeder TOTP-Code gilt nur
+  /// einmal, ein Wiederherstellungscode wird verbraucht.
+  MfaCheck verifySecondFactor(int userId, String code, {DateTime? now}) {
+    final t = now ?? DateTime.now();
+    final failures = (_mfaFailures[userId] ?? [])..removeWhere((f) => t.difference(f) > _mfaWindow);
+    if (failures.length >= _maxMfaFailures) return MfaCheck.locked;
+
+    final row = db.select('SELECT totp_secret, totp_last_step FROM users WHERE id = ?', [userId]).firstOrNull;
+    final secret = row?['totp_secret'] as String?;
+    if (secret == null) return MfaCheck.ok;
+    final step = Totp.matchingStep(secret, code, now: t);
+    if (step != null && step > (row!['totp_last_step'] as int)) {
+      db.execute('UPDATE users SET totp_last_step = ? WHERE id = ?', [step, userId]);
+      _mfaFailures.remove(userId);
+      return MfaCheck.ok;
+    }
+    if (step == null) {
+      db.execute(
+        'DELETE FROM mfa_recovery_codes WHERE user_id = ? AND code_hash = ?',
+        [userId, Totp.hashRecoveryCode(code)],
+      );
+      if (db.updatedRows > 0) {
+        _mfaFailures.remove(userId);
+        return MfaCheck.ok;
+      }
+    }
+    _mfaFailures[userId] = failures..add(t);
+    return MfaCheck.invalid;
+  }
+
+  /// Schaltet TOTP mit [secret] ein, wenn [code] dazu passt, und gibt neue
+  /// Wiederherstellungscodes zurück; sonst `null`.
+  List<String>? enableTotp(int userId, String secret, String code) {
+    final int? step;
+    try {
+      step = Totp.matchingStep(secret, code);
+    } on FormatException {
+      return null;
+    }
+    if (step == null) return null;
+    final codes = Totp.newRecoveryCodes();
+    db.execute('UPDATE users SET totp_secret = ?, totp_last_step = ? WHERE id = ?', [secret, step, userId]);
+    db.execute('DELETE FROM mfa_recovery_codes WHERE user_id = ?', [userId]);
+    for (final c in codes) {
+      db.execute('INSERT INTO mfa_recovery_codes (user_id, code_hash) VALUES (?, ?)', [userId, Totp.hashRecoveryCode(c)]);
+    }
+    _basicCache.removeWhere((_, v) => v.$1 == userId);
+    return codes;
+  }
+
+  void disableTotp(int userId) {
+    db.execute('UPDATE users SET totp_secret = NULL, totp_last_step = 0 WHERE id = ?', [userId]);
+    db.execute('DELETE FROM mfa_recovery_codes WHERE user_id = ?', [userId]);
+    _mfaFailures.remove(userId);
+  }
+
+  int recoveryCodesLeft(int userId) =>
+      db.select('SELECT COUNT(*) AS n FROM mfa_recovery_codes WHERE user_id = ?', [userId]).first['n'] as int;
 
   /// Erfolgreiche Basic-Auth-Anmeldungen kurz merken, sonst kostet jede
   /// Anfrage eine volle Passwortprüfung.
@@ -185,6 +259,8 @@ class AuthService {
             decoded.substring(0, colon),
             decoded.substring(colon + 1),
           );
+          // Basic-Auth kennt keinen zweiten Faktor; mit TOTP nur Token.
+          if (user != null && mfaEnabled(user.id)) return null;
           if (user != null) {
             _basicCache.removeWhere((_, v) => v.$2.isBefore(DateTime.now()));
             _basicCache[cacheKey] = (

@@ -1,3 +1,4 @@
+import 'package:qr/qr.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -5,6 +6,7 @@ import 'package:sqlite3/sqlite3.dart';
 import '../access.dart';
 import '../auth.dart';
 import '../db.dart';
+import '../totp.dart';
 import 'http_utils.dart';
 
 /// `/api/users/`, `/api/groups/` und `/api/profile/`.
@@ -56,7 +58,7 @@ class UsersResource {
       'groups': _userGroups(id),
       'user_permissions': _userPerms(id),
       'inherited_permissions': inherited,
-      'is_mfa_enabled': false,
+      'is_mfa_enabled': u['totp_secret'] != null,
     };
   }
 
@@ -302,7 +304,7 @@ class UsersResource {
       'auth_token': auth.tokenFor(me),
       'social_accounts': <Object>[],
       'has_usable_password': row['password_hash'] != '!',
-      'is_mfa_enabled': false,
+      'is_mfa_enabled': row['totp_secret'] != null,
     });
   }
 
@@ -323,6 +325,61 @@ class UsersResource {
 
   Response generateToken(Request request) => json(auth.regenerateToken(_me(request)));
 
+  // Zwei-Faktor-Anmeldung (wie Paperless-ngx `/api/profile/totp/`) ------------
+
+  /// Neuer Schlüssel zum Einrichten; aktiv wird er erst mit `POST` und einem
+  /// passenden Code.
+  Response totpSetup(Request request) {
+    final me = _me(request);
+    final secret = Totp.newSecret();
+    final url = Totp.uri(secret, account: me.username);
+    return json({'url': url, 'qr_svg': _qrSvg(url), 'secret': secret});
+  }
+
+  Future<Response> totpActivate(Request request) async {
+    final me = _me(request);
+    final body = await readBody(request);
+    final secret = body['secret']?.toString() ?? '';
+    final code = body['code']?.toString() ?? '';
+    final codes = secret.isEmpty ? null : auth.enableTotp(me.id, secret, code);
+    if (codes == null) {
+      throw ApiError.badRequest({'code': ['Invalid code']});
+    }
+    return json({'success': true, 'recovery_codes': codes});
+  }
+
+  Response totpDeactivate(Request request) {
+    final me = _me(request);
+    if (!auth.mfaEnabled(me.id)) throw ApiError(404, 'TOTP not found');
+    auth.disableTotp(me.id);
+    return json(true);
+  }
+
+  /// Administratoren setzen die Zwei-Faktor-Anmeldung anderer zurück, etwa
+  /// wenn das Telefon verloren ist.
+  Response deactivateUserTotp(Request request) {
+    access.require(_me(request), 'change', 'user');
+    final row = _user(int.parse(request.params['id']!)) ?? (throw ApiError(404, 'Not found.'));
+    if (row['totp_secret'] == null) throw ApiError(404, 'TOTP not found');
+    auth.disableTotp(row['id'] as int);
+    return json({'success': true});
+  }
+
+  static String _qrSvg(String data) {
+    final qr = QrImage(QrCode.fromData(data: data, errorCorrectLevel: QrErrorCorrectLevel.M));
+    const quiet = 4;
+    final size = qr.moduleCount + 2 * quiet;
+    final path = StringBuffer();
+    for (var y = 0; y < qr.moduleCount; y++) {
+      for (var x = 0; x < qr.moduleCount; x++) {
+        if (qr.isDark(y, x)) path.write('M${x + quiet} ${y + quiet}h1v1h-1z');
+      }
+    }
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $size $size" '
+        'shape-rendering="crispEdges"><rect width="$size" height="$size" fill="#fff"/>'
+        '<path d="$path" fill="#000"/></svg>';
+  }
+
   void mount(void Function(String method, String path, Function handler) route) {
     route('GET', '/api/users/', listUsers);
     route('POST', '/api/users/', createUser);
@@ -339,5 +396,9 @@ class UsersResource {
     route('GET', '/api/profile/', profile);
     route('PATCH', '/api/profile/', updateProfile);
     route('POST', '/api/profile/generate_auth_token/', generateToken);
+    route('GET', '/api/profile/totp/', totpSetup);
+    route('POST', '/api/profile/totp/', totpActivate);
+    route('DELETE', '/api/profile/totp/', totpDeactivate);
+    route('POST', '/api/users/<id|[0-9]+>/deactivate_totp/', deactivateUserTotp);
   }
 }

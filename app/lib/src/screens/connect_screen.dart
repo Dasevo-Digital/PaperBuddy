@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:paperbuddy_api/paperbuddy_api.dart';
 
@@ -19,6 +20,11 @@ class _ConnectScreenState extends State<ConnectScreen> {
   late final TextEditingController _server;
   late final TextEditingController _username;
   final _password = TextEditingController();
+  final _code = TextEditingController();
+  final _codeFocus = FocusNode();
+
+  /// Der Server hat einen zweiten Faktor verlangt.
+  bool _needsCode = false;
   bool _busy = false;
   bool _showPassword = false;
   bool _hasSavedSession = false;
@@ -41,7 +47,14 @@ class _ConnectScreenState extends State<ConnectScreen> {
     _server.dispose();
     _username.dispose();
     _password.dispose();
+    _code.dispose();
+    _codeFocus.dispose();
     super.dispose();
+  }
+
+  /// Anderer Server oder Benutzer: wieder ohne Code anfangen.
+  void _resetCode() {
+    if (_needsCode) setState(() => _needsCode = false);
   }
 
   Future<void> _submit() async {
@@ -51,9 +64,21 @@ class _ConnectScreenState extends State<ConnectScreen> {
       _error = null;
     });
     try {
-      await AppScope.read(
-        context,
-      ).login(_server.text, _username.text.trim(), _password.text);
+      await AppScope.read(context).login(
+        _server.text,
+        _username.text.trim(),
+        _password.text,
+        code: _needsCode ? _code.text : null,
+      );
+    } on MfaRequiredException catch (e) {
+      if (!mounted) return;
+      final first = !_needsCode;
+      setState(() {
+        _needsCode = true;
+        _error = first ? null : e.message;
+      });
+      _code.clear();
+      _codeFocus.requestFocus();
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -99,6 +124,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                       const SizedBox(height: 32),
                       TextFormField(
                         controller: _server,
+                        onChanged: (_) => _resetCode(),
                         enabled: !_busy,
                         keyboardType: TextInputType.url,
                         autocorrect: false,
@@ -116,6 +142,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _username,
+                        onChanged: (_) => _resetCode(),
                         enabled: !_busy,
                         autocorrect: false,
                         textInputAction: TextInputAction.next,
@@ -155,6 +182,31 @@ class _ConnectScreenState extends State<ConnectScreen> {
                         validator: (v) =>
                             (v ?? '').isEmpty ? 'Bitte Passwort angeben' : null,
                       ),
+                      if (_needsCode) ...[
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _code,
+                          focusNode: _codeFocus,
+                          enabled: !_busy,
+                          autofillHints: const [AutofillHints.oneTimeCode],
+                          keyboardType: TextInputType.visiblePassword,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp('[0-9A-Za-z -]'),
+                            ),
+                          ],
+                          onFieldSubmitted: (_) => _submit(),
+                          decoration: const InputDecoration(
+                            labelText: 'Bestätigungscode',
+                            helperText:
+                                'Aus der Authenticator-App oder ein Wiederherstellungscode',
+                            prefixIcon: Icon(LucideIcons.shieldCheck),
+                          ),
+                          validator: (v) => (v ?? '').trim().isEmpty
+                              ? 'Bitte den Code eingeben'
+                              : null,
+                        ),
+                      ],
                       if (_error != null) ...[
                         const SizedBox(height: 16),
                         _ErrorBox(message: _error!),

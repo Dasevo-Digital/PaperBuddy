@@ -124,6 +124,7 @@ class _UsersScreenState extends State<UsersScreen>
                     [
                       u.username,
                       if (u.isSuperuser) 'Administrator',
+                      if (u.isMfaEnabled) 'Zwei-Faktor',
                       if (!u.isActive) 'deaktiviert',
                       if (u.groups.isNotEmpty)
                         u.groups
@@ -269,6 +270,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
   final _password = TextEditingController();
   late bool _active = widget.user?.isActive ?? true;
   late bool _superuser = widget.user?.isSuperuser ?? false;
+  late bool _mfa = widget.user?.isMfaEnabled ?? false;
   late final Set<int> _groups = {...?widget.user?.groups};
   late Set<String> _perms = widget.user == null
       ? {...defaultPermissions}
@@ -325,6 +327,30 @@ class _UserEditScreenState extends State<UserEditScreen> {
       setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// Etwa wenn das Telefon mit der Authenticator-App verloren ist.
+  Future<void> _resetMfa() async {
+    final ok = await confirm(
+      context,
+      title: 'Zwei-Faktor-Anmeldung zurücksetzen?',
+      message:
+          'Der Benutzer meldet sich danach nur mit dem Passwort an und kann '
+          'die Zwei-Faktor-Anmeldung im Profil neu einrichten.',
+      action: 'Zurücksetzen',
+      destructive: true,
+    );
+    if (!ok || !mounted) return;
+    final done = await guarded(
+      context,
+      () => AppScope.read(
+        context,
+      ).client.deactivateUserTotp(widget.user!.id).then((_) => true),
+    );
+    if (done == true && mounted) {
+      setState(() => _mfa = false);
+      showInfo(context, 'Zwei-Faktor-Anmeldung zurückgesetzt');
     }
   }
 
@@ -434,6 +460,18 @@ class _UserEditScreenState extends State<UserEditScreen> {
                           : 'Leer lassen, um es zu behalten',
                     ),
                   ),
+                  if (widget.user != null && _mfa)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(LucideIcons.shieldCheck),
+                      title: const Text('Zwei-Faktor-Anmeldung aktiv'),
+                      trailing: !isMe && me.can('change', 'user')
+                          ? TextButton(
+                              onPressed: _resetMfa,
+                              child: const Text('Zurücksetzen'),
+                            )
+                          : null,
+                    ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Aktiv'),

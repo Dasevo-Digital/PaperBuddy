@@ -294,6 +294,27 @@ class PaperlessApi {
         'non_field_errors': ['Unable to log in with provided credentials.'],
       });
     }
+    // Wie Paperless-ngx: mit aktiver Zwei-Faktor-Anmeldung zusätzlich `code`.
+    if (auth.mfaEnabled(user.id)) {
+      final code = body['code']?.toString().trim() ?? '';
+      if (code.isEmpty) {
+        throw ApiError.badRequest({
+          'non_field_errors': ['MFA code is required'],
+        });
+      }
+      switch (auth.verifySecondFactor(user.id, code)) {
+        case MfaCheck.ok:
+          break;
+        case MfaCheck.invalid:
+          throw ApiError.badRequest({
+            'non_field_errors': ['Invalid MFA code'],
+          });
+        case MfaCheck.locked:
+          throw ApiError.badRequest({
+            'non_field_errors': ['Too many invalid MFA codes, please try again later'],
+          });
+      }
+    }
     return json({'token': auth.tokenFor(user)});
   }
 

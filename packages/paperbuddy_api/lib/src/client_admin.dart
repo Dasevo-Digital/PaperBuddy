@@ -111,6 +111,27 @@ extension PaperlessAdmin on PaperlessClient {
   Future<Profile> updateProfile(Map<String, Object?> data) async =>
       Profile.fromJson(await _json('PATCH', '/api/profile/', data));
 
+  // Zwei-Faktor-Anmeldung -----------------------------------------------------
+
+  /// Neuer Schlüssel; aktiv erst nach [activateTotp] mit einem passenden Code.
+  Future<TotpSetup> totpSetup() async =>
+      TotpSetup.fromJson(await _getMap('/api/profile/totp/'));
+
+  /// Schaltet TOTP ein und liefert die Wiederherstellungscodes.
+  Future<List<String>> activateTotp(String secret, String code) async {
+    final r = await _json('POST', '/api/profile/totp/', {
+      'secret': secret,
+      'code': code.replaceAll(' ', ''),
+    });
+    return [for (final c in (r['recovery_codes'] as List? ?? [])) '$c'];
+  }
+
+  Future<void> deactivateTotp() => _send('DELETE', '/api/profile/totp/');
+
+  /// Für Administratoren: TOTP eines anderen Benutzers zurücksetzen.
+  Future<void> deactivateUserTotp(int userId) =>
+      _send('POST', '/api/users/$userId/deactivate_totp/');
+
   // Custom Fields -------------------------------------------------------------
 
   Future<List<CustomField>> customFields() =>

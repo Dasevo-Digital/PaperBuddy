@@ -76,11 +76,19 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> login(String server, String username, String password) async {
+  /// Wirft [MfaRequiredException], wenn der Server einen zweiten Faktor
+  /// verlangt; dann mit [code] erneut aufrufen.
+  Future<void> login(
+    String server,
+    String username,
+    String password, {
+    String? code,
+  }) async {
     final client = await PaperlessClient.login(
       server,
       username,
       password,
+      code: code,
       httpClient: _httpClient?.call(),
     );
     await _store.save(SavedSession(client.baseUrl.toString(), client.token));

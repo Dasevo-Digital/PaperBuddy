@@ -100,6 +100,7 @@ class AppUser {
     this.groups = const [],
     this.permissions = const [],
     this.inheritedPermissions = const [],
+    this.isMfaEnabled = false,
   });
 
   final int id;
@@ -113,6 +114,7 @@ class AppUser {
   final List<int> groups;
   final List<String> permissions;
   final List<String> inheritedPermissions;
+  final bool isMfaEnabled;
 
   String get displayName {
     final n = '$firstName $lastName'.trim();
@@ -131,6 +133,7 @@ class AppUser {
     groups: _ints(j['groups']),
     permissions: _strings(j['user_permissions']),
     inheritedPermissions: _strings(j['inherited_permissions']),
+    isMfaEnabled: j['is_mfa_enabled'] as bool? ?? false,
   );
 }
 
@@ -417,18 +420,33 @@ class Profile {
     this.firstName = '',
     this.lastName = '',
     this.hasUsablePassword = true,
+    this.isMfaEnabled = false,
   });
   final String email;
   final String firstName;
   final String lastName;
   final bool hasUsablePassword;
+  final bool isMfaEnabled;
 
   factory Profile.fromJson(Map<String, dynamic> j) => Profile(
     email: j['email'] as String? ?? '',
     firstName: j['first_name'] as String? ?? '',
     lastName: j['last_name'] as String? ?? '',
     hasUsablePassword: j['has_usable_password'] as bool? ?? true,
+    isMfaEnabled: j['is_mfa_enabled'] as bool? ?? false,
   );
+}
+
+/// Neuer TOTP-Schlüssel zum Einrichten (`GET /api/profile/totp/`).
+class TotpSetup {
+  const TotpSetup({required this.url, required this.secret});
+
+  /// `otpauth://`-Adresse für den QR-Code.
+  final String url;
+  final String secret;
+
+  factory TotpSetup.fromJson(Map<String, dynamic> j) =>
+      TotpSetup(url: '${j['url']}', secret: '${j['secret']}');
 }
 
 class ShareLink {

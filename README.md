@@ -60,7 +60,7 @@ Verwaltungsbefehle laufen über `paperbuddy-manage` (z. B. `paperbuddy-manage ex
 
 ## Funktionen
 
-- **Erfassen:** Upload (App, Web, API, Teilen-Menü), Eingangsordner über SMB/FTP, E-Mail-Abruf per IMAP (auch Gmail/Outlook per OAuth),
+- **Erfassen:** Upload (App, Web, API, Teilen-Menü, Drag & Drop auf das Fenster), Eingangsordner über SMB/FTP, E-Mail-Abruf per IMAP (auch Gmail/Outlook per OAuth),
   Netzwerkscanner über eSCL/AirScan, Dokumentenscanner in der App (iOS VisionKit, Android ML Kit)
 - **Verarbeiten:** OCR (ocrmypdf/Tesseract), Archiv-PDF, Vorschaubild, Datumserkennung,
   Zuordnung per Regel oder lernend, Workflows (Zuweisen, Entfernen, E-Mail, Webhook, zeitgesteuert)
@@ -69,7 +69,7 @@ Verwaltungsbefehle laufen über `paperbuddy-manage` (z. B. `paperbuddy-manage ex
 - **Bearbeiten:** PDF-Seiten drehen und löschen, Dokumente zusammenführen und teilen,
   neue Versionen hochladen, Änderungsverlauf
 - **Teilen:** Mehrbenutzer mit Gruppen, Modell- und Objektrechten, Freigabelinks ohne Anmeldung
-- **Sicherheit:** Papierkorb mit Frist, Export/Backup im Paperless-Format, Import aus Paperless-ngx
+- **Sicherheit:** Zwei-Faktor-Anmeldung (TOTP mit Wiederherstellungscodes), Papierkorb mit Frist, Export/Backup im Paperless-Format, Import aus Paperless-ngx
 - **Speicher:** lokal, S3-kompatibel (AWS, MinIO, RustFS …) oder WebDAV (z. B. Nextcloud)
 
 ## Konfiguration
@@ -110,7 +110,14 @@ dart run bin/manage.dart export /pfad/zum/backup
 dart run bin/manage.dart import /pfad/zum/paperless-export
 dart run bin/manage.dart import-paperless https://paperless.example.org <api-token>
 dart run bin/manage.dart rename-files     # nach Änderung von FILENAME_FORMAT
+dart run bin/manage.dart disable-totp <benutzer>   # Zwei-Faktor-Anmeldung ausschalten
 ```
+
+Zwei-Faktor-Anmeldung: Einrichten in der App unter Einstellungen → Profil.
+Wie bei Paperless-ngx erwartet `POST /api/token/` dann zusätzlich `code`
+(TOTP- oder Wiederherstellungscode); Swift Paperless fragt ihn von selbst ab.
+Basic-Auth ist für solche Konten gesperrt, Token funktionieren weiter. Nach
+fünf falschen Codes ist der zweite Faktor zehn Minuten gesperrt.
 
 Im Container: `docker compose exec paperbuddy manage <befehl>`.
 

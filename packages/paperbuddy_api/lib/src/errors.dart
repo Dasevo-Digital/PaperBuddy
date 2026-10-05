@@ -35,3 +35,18 @@ class ApiException implements Exception {
   @override
   String toString() => statusCode == null ? message : '$message ($statusCode)';
 }
+
+/// Der Server verlangt einen zweiten Faktor (TOTP- oder
+/// Wiederherstellungscode); [invalid] = der mitgeschickte Code war falsch.
+class MfaRequiredException extends ApiException {
+  MfaRequiredException({this.invalid = false, String? message})
+    : super(
+        message ??
+            (invalid
+                ? 'Der Code ist falsch oder abgelaufen.'
+                : 'Bitte den Code aus der Authenticator-App eingeben.'),
+        statusCode: 400,
+      );
+
+  final bool invalid;
+}

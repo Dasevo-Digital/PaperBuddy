@@ -45,6 +45,16 @@ Future<void> main(List<String> args) async {
         );
         stdout.writeln('Importiert: $report');
         report.warnings.forEach(stderr.writeln);
+      case 'disable-totp':
+        final name = args.elementAtOrNull(1) ?? (throw ArgumentError('Benutzername fehlt'));
+        final row = db.select('SELECT id FROM users WHERE username = ?', [name]).firstOrNull;
+        if (row == null) {
+          stderr.writeln('Benutzer "$name" nicht gefunden.');
+          exitCode = 1;
+          return;
+        }
+        auth.disableTotp(row['id'] as int);
+        stdout.writeln('Zwei-Faktor-Anmeldung für "$name" ausgeschaltet.');
       case 'rename-files':
         final n = await FilenameGenerator(db, await createStore(config), format: config.filenameFormat).relocateAll();
         stdout.writeln('$n Dokument(e) neu abgelegt.');
@@ -54,7 +64,8 @@ Future<void> main(List<String> args) async {
   export <ordner>                    alles exportieren (Paperless-Format, auch als Backup)
   import <ordner>                    Export von PaperBuddy oder Paperless-ngx einlesen
   import-paperless <url> <token>     direkt von einem laufenden Paperless-ngx übernehmen
-  rename-files                       Dateien nach FILENAME_FORMAT/Speicherpfaden neu ablegen''');
+  rename-files                       Dateien nach FILENAME_FORMAT/Speicherpfaden neu ablegen
+  disable-totp <benutzer>            Zwei-Faktor-Anmeldung ausschalten (Telefon verloren)''');
     }
   } finally {
     db.close();

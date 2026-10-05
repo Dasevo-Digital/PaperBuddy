@@ -305,6 +305,16 @@ const _migrations = <String>[
     created TEXT NOT NULL
   );
   ''',
+  // 9: Zwei-Faktor-Anmeldung (TOTP)
+  '''
+  ALTER TABLE users ADD COLUMN totp_secret TEXT;
+  ALTER TABLE users ADD COLUMN totp_last_step INTEGER NOT NULL DEFAULT 0;
+  CREATE TABLE mfa_recovery_codes (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    code_hash TEXT NOT NULL,
+    PRIMARY KEY (user_id, code_hash)
+  );
+  ''',
 ];
 
 Database openDatabase(String path) {

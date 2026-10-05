@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import '../../app_state.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/text_menus.dart';
+import '../../widgets/totp_setup.dart';
 
-/// Eigenen Namen, E-Mail und Passwort ändern.
+/// Eigenen Namen, E-Mail und Passwort ändern, Zwei-Faktor-Anmeldung.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -21,6 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _repeat = TextEditingController();
   bool _loading = true;
   bool _saving = false;
+  bool _mfa = false;
   String? _error;
 
   @override
@@ -33,6 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _first.text = p.firstName;
           _last.text = p.lastName;
           _email.text = p.email;
+          _mfa = p.isMfaEnabled;
           _loading = false;
         });
       },
@@ -80,6 +84,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _password.clear();
       _repeat.clear();
       showInfo(context, 'Profil gespeichert');
+    }
+  }
+
+  Future<void> _enableMfa() async {
+    final ok = await showTotpSetup(context, AppScope.read(context).client);
+    if (ok && mounted) setState(() => _mfa = true);
+  }
+
+  Future<void> _disableMfa() async {
+    final client = AppScope.read(context).client;
+    if (!await confirm(
+      context,
+      title: 'Zwei-Faktor-Anmeldung ausschalten?',
+      message:
+          'Danach reicht wieder das Passwort zur Anmeldung. '
+          'Die Wiederherstellungscodes werden ungültig.',
+      action: 'Ausschalten',
+      destructive: true,
+    )) {
+      return;
+    }
+    if (!mounted) return;
+    final ok = await guarded(context, () async {
+      await client.deactivateTotp();
+      return true;
+    });
+    if (ok == true && mounted) {
+      setState(() => _mfa = false);
+      showInfo(context, 'Zwei-Faktor-Anmeldung ausgeschaltet');
     }
   }
 
@@ -147,6 +180,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onPressed: _saving ? null : _save,
                           child: const Text('Speichern'),
                         ),
+                        const Divider(),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            _mfa ? LucideIcons.shieldCheck : LucideIcons.shield,
+                            color: _mfa
+                                ? Theme.of(context).colorScheme.primary
+                                : null,
+                          ),
+                          title: const Text('Zwei-Faktor-Anmeldung'),
+                          subtitle: Text(
+                            _mfa
+                                ? 'Aktiv: Zur Anmeldung ist zusätzlich ein Code aus der Authenticator-App nötig.'
+                                : 'Aus: Ein Code aus einer Authenticator-App schützt das Konto zusätzlich zum Passwort.',
+                          ),
+                        ),
+                        if (_mfa)
+                          OutlinedButton.icon(
+                            onPressed: _disableMfa,
+                            icon: const Icon(LucideIcons.shieldOff),
+                            label: const Text('Ausschalten'),
+                          )
+                        else
+                          FilledButton.tonalIcon(
+                            onPressed: _enableMfa,
+                            icon: const Icon(LucideIcons.shieldPlus),
+                            label: const Text('Einrichten'),
+                          ),
                       ],
                     ),
                   ),

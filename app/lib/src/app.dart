@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'app_state.dart';
 import 'design/theme.dart';
 import 'environment.dart';
+import 'file_intake.dart';
 import 'screens/connect_screen.dart';
 import 'screens/home_shell.dart';
 import 'share_intake.dart';
@@ -46,16 +47,21 @@ class _PaperBuddyAppState extends State<PaperBuddyApp> {
         locale: const Locale('de'),
         supportedLocales: const [Locale('de')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        // Entwicklungs-Builds tragen eine Schärpe, damit man sie nicht mit
-        // der normalen App verwechselt.
-        builder: AppEnv.isDev
-            ? (context, child) => Banner(
-                message: 'DEV',
-                location: BannerLocation.topEnd,
-                color: const Color(0xFFE8590C),
-                child: child!,
-              )
-            : null,
+        builder: (context, child) {
+          // Dateien auf das Fenster ziehen, um sie hochzuladen (Desktop, Web).
+          Widget app = DropZone(navigator: _navigator, child: child!);
+          // Entwicklungs-Builds tragen eine Schärpe, damit man sie nicht mit
+          // der normalen App verwechselt.
+          if (AppEnv.isDev) {
+            app = Banner(
+              message: 'DEV',
+              location: BannerLocation.topEnd,
+              color: const Color(0xFFE8590C),
+              child: app,
+            );
+          }
+          return app;
+        },
         home: const _Root(),
       ),
     );

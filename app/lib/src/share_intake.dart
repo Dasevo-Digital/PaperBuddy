@@ -8,8 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
 import 'app_state.dart';
-import 'screens/upload_screen.dart';
-import 'upload_queue.dart';
+import 'file_intake.dart';
 
 /// Nimmt Dateien aus dem Teilen-Menü anderer Apps entgegen (iOS Share
 /// Extension, Android Intents) und bietet sie zum Hochladen an.
@@ -67,7 +66,7 @@ class ShareIntake {
       _pending = files;
       return;
     }
-    final loaded = <({String name, Uint8List bytes})>[];
+    final loaded = <IncomingFile>[];
     for (final f in files) {
       final file = File(
         f.path.startsWith('file://') ? Uri.parse(f.path).toFilePath() : f.path,
@@ -79,22 +78,7 @@ class ShareIntake {
         ));
       }
     }
-    if (loaded.isEmpty) return;
-    final nav = navigator.currentState;
-    if (loaded.length == 1 && nav != null) {
-      await nav.push(
-        MaterialPageRoute<bool>(
-          builder: (_) => UploadScreen.file(
-            fileName: loaded.single.name,
-            fileBytes: loaded.single.bytes,
-          ),
-        ),
-      );
-    } else {
-      state.uploads.add(state.client, [
-        for (final f in loaded) UploadRequest(f.name, f.bytes),
-      ]).ignore();
-    }
+    await offerFiles(state, navigator.currentState, loaded);
   }
 
   void _onState() {
