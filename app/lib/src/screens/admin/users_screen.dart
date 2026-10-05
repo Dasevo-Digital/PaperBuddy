@@ -39,6 +39,7 @@ final defaultPermissions = <String>{
     'customfield',
     'savedview',
     'uisettings',
+    'sharelink',
   ])
     for (final a in _actions) '${a}_$m',
   'view_paperlesstask',
