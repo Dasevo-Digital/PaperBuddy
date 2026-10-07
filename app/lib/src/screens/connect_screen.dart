@@ -6,6 +6,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 import '../app_state.dart';
 import '../environment.dart';
 import '../widgets/text_menus.dart';
+import 'offline_screen.dart';
 
 /// Anmeldung an einem PaperBuddy- oder Paperless-ngx-Server.
 class ConnectScreen extends StatefulWidget {
@@ -28,6 +29,9 @@ class _ConnectScreenState extends State<ConnectScreen> {
   bool _busy = false;
   bool _showPassword = false;
   bool _hasSavedSession = false;
+
+  /// Offline gespeicherte Dokumente vom letzten Server.
+  int _offlineCount = 0;
   String? _error;
 
   @override
@@ -39,6 +43,10 @@ class _ConnectScreenState extends State<ConnectScreen> {
     _error = state.restoreError;
     state.hasSavedSession.then((v) {
       if (mounted) setState(() => _hasSavedSession = v);
+    });
+    state.offlineCache().then((cache) async {
+      final n = (await cache?.offlineDocuments())?.length ?? 0;
+      if (mounted) setState(() => _offlineCount = n);
     });
   }
 
@@ -224,6 +232,22 @@ class _ConnectScreenState extends State<ConnectScreen> {
                             : const Icon(LucideIcons.logIn),
                         label: const Text('Anmelden'),
                       ),
+                      if (_offlineCount > 0 && !_busy) ...[
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const OfflineScreen(),
+                            ),
+                          ),
+                          icon: const Icon(LucideIcons.cloudCheck),
+                          label: Text(
+                            _offlineCount == 1
+                                ? 'Offline-Dokument öffnen'
+                                : '$_offlineCount Offline-Dokumente öffnen',
+                          ),
+                        ),
+                      ],
                       if (_hasSavedSession && !_busy) ...[
                         const SizedBox(height: 8),
                         TextButton.icon(

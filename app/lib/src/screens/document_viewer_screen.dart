@@ -7,18 +7,28 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../app_state.dart';
+import '../file_cache.dart';
 import '../file_export.dart';
 
 /// Vollbildansicht: Archiv-PDF bzw. Original (Bild, Text).
 class DocumentViewerScreen extends StatefulWidget {
   const DocumentViewerScreen({
     super.key,
-    required this.document,
+    required Document this.document,
     this.original = false,
     this.version,
-  });
+  }) : offline = null;
 
-  final Document document;
+  /// Offline gespeichertes Dokument, ohne Verbindung zum Server.
+  const DocumentViewerScreen.offline({
+    super.key,
+    required OfflineDocument this.offline,
+  }) : document = null,
+       original = false,
+       version = null;
+
+  final Document? document;
+  final OfflineDocument? offline;
   final bool original;
 
   /// Ältere Fassung statt der aktuellen.
@@ -38,9 +48,28 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
     _load();
   }
 
+  String get _title => widget.document?.title ?? widget.offline!.title;
+  int get _id => widget.document?.id ?? widget.offline!.id;
+
   void _load() {
-    _file = AppScope.read(context).client.downloadFile(
-      widget.document.id,
+    final state = AppScope.read(context);
+    final offline = widget.offline;
+    if (offline != null) {
+      _file = () async {
+        final file = await state.files?.document(
+          offline.id,
+          original: false,
+          anyVersion: true,
+        );
+        if (file == null) {
+          throw ApiException('Dieses Dokument ist nicht mehr auf dem Gerät.');
+        }
+        return file;
+      }();
+      return;
+    }
+    _file = state.download(
+      widget.document!,
       original: _original,
       version: widget.version,
     );
@@ -50,13 +79,9 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.document.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        title: Text(_title, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
-          if (widget.document.hasArchiveVersion)
+          if (widget.document?.hasArchiveVersion ?? false)
             IconButton(
               tooltip: _original ? 'Archiv-PDF anzeigen' : 'Original anzeigen',
               icon: Icon(
@@ -115,7 +140,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
           if (file.isPdf) {
             return PdfViewer.data(
               bytes,
-              sourceName: '${widget.document.id}-${_original ? 'o' : 'a'}.pdf',
+              sourceName: '$_id-${_original ? 'o' : 'a'}.pdf',
               params: const PdfViewerParams(
                 margin: 8,
                 backgroundColor: Colors.transparent,

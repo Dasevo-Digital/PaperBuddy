@@ -137,6 +137,7 @@ class _TrashScreenState extends State<TrashScreen> {
                     child: DocumentThumbnail(
                       documentId: d.id,
                       mimeType: d.mimeType,
+                      modified: d.modified,
                     ),
                   ),
                   title: Text(d.title),

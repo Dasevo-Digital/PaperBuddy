@@ -64,6 +64,7 @@ class DocumentListTile extends StatelessWidget {
                     : DocumentThumbnail(
                         documentId: document.id,
                         mimeType: document.mimeType,
+                        modified: document.modified,
                       ),
               ),
             ),
@@ -160,6 +161,7 @@ class DocumentGridCard extends StatelessWidget {
                   DocumentThumbnail(
                     documentId: document.id,
                     mimeType: document.mimeType,
+                    modified: document.modified,
                   ),
                   if (selected)
                     Positioned(

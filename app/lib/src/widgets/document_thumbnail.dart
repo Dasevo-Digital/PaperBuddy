@@ -10,6 +10,7 @@ class DocumentThumbnail extends StatefulWidget {
     super.key,
     required this.documentId,
     this.mimeType,
+    this.modified,
     this.fit = BoxFit.cover,
   });
 
@@ -17,6 +18,9 @@ class DocumentThumbnail extends StatefulWidget {
 
   /// Für das Symbol, solange es kein Vorschaubild gibt.
   final String? mimeType;
+
+  /// Fassung des Dokuments, damit eine neue Vorschau die alte ersetzt.
+  final DateTime? modified;
   final BoxFit fit;
 
   @override
@@ -35,12 +39,19 @@ class _DocumentThumbnailState extends State<DocumentThumbnail> {
   @override
   void didUpdateWidget(DocumentThumbnail old) {
     super.didUpdateWidget(old);
-    if (old.documentId != widget.documentId) _future = _load();
+    if (old.documentId != widget.documentId ||
+        old.modified != widget.modified) {
+      _future = _load();
+    }
   }
 
   Future<Uint8List?> _load() {
     final state = AppScope.read(context);
-    return state.thumbnails.get(state.client, widget.documentId);
+    return state.thumbnails.get(
+      state.client,
+      widget.documentId,
+      modified: widget.modified,
+    );
   }
 
   @override

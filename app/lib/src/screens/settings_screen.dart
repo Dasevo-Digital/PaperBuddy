@@ -11,6 +11,7 @@ import 'admin/profile_screen.dart';
 import 'admin/trash_screen.dart';
 import 'admin/users_screen.dart';
 import 'admin/workflows_screen.dart';
+import 'offline_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -100,6 +101,15 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           ),
+          if (state.files != null) ...[
+            ListTile(
+              leading: const Icon(LucideIcons.cloudCheck),
+              title: const Text('Offline verfügbar'),
+              subtitle: const Text('Dokumente ohne Verbindung öffnen'),
+              onTap: () => _open(context, const OfflineScreen()),
+            ),
+            const _StorageTile(),
+          ],
           ListTile(
             leading: const Icon(LucideIcons.userCog),
             title: const Text('Profil'),
@@ -180,6 +190,50 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Belegter Gerätespeicher; „Leeren“ entfernt Vorschaubilder und zuletzt
+/// geöffnete Dokumente, offline gespeicherte bleiben.
+class _StorageTile extends StatefulWidget {
+  const _StorageTile();
+
+  @override
+  State<_StorageTile> createState() => _StorageTileState();
+}
+
+class _StorageTileState extends State<_StorageTile> {
+  int? _bytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _measure();
+  }
+
+  Future<void> _measure() async {
+    final n = await AppScope.read(context).files?.sizeInBytes();
+    if (mounted) setState(() => _bytes = n);
+  }
+
+  Future<void> _clear() async {
+    final state = AppScope.read(context);
+    await state.files?.clearTemporary();
+    state.thumbnails.clear();
+    await _measure();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mb = _bytes == null
+        ? '…'
+        : (_bytes! / (1024 * 1024)).toStringAsFixed(1);
+    return ListTile(
+      leading: const Icon(LucideIcons.hardDrive),
+      title: const Text('Speicher auf dem Gerät'),
+      subtitle: Text('$mb MB für Vorschauen und Dokumente'),
+      trailing: TextButton(onPressed: _clear, child: const Text('Leeren')),
     );
   }
 }

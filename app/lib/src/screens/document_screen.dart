@@ -48,6 +48,10 @@ class _DocumentScreenState extends State<DocumentScreen> {
   bool _loading = true;
   bool _changed = false;
   bool _busy = false;
+
+  /// Auf dem Gerät für offline gespeichert; `null` = kein Gerätespeicher (Web).
+  bool? _offline;
+  bool _offlineBusy = false;
   String? _error;
   final _note = TextEditingController();
 
@@ -64,15 +68,40 @@ class _DocumentScreenState extends State<DocumentScreen> {
   }
 
   Future<void> _load() async {
+    final state = AppScope.read(context);
     try {
-      final doc = await AppScope.read(
-        context,
-      ).client.document(widget.document.id);
+      final doc = await state.client.document(widget.document.id);
       if (mounted) setState(() => _doc = doc);
+      final cache = state.files;
+      if (cache != null) {
+        final kept = (await cache.offlineDocuments())[doc.id];
+        if (mounted) setState(() => _offline = kept != null);
+        // Offline-Kopie still auffrischen, wenn das Dokument geändert wurde.
+        if (kept != null && kept.modified != doc.modified) {
+          state.keepOffline(doc).ignore();
+        }
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _toggleOffline(bool keep) async {
+    final state = AppScope.read(context);
+    setState(() => _offlineBusy = true);
+    try {
+      if (keep) {
+        await state.keepOffline(_doc);
+      } else {
+        await state.files?.removeOffline(_doc.id);
+      }
+      if (mounted) setState(() => _offline = keep);
+    } catch (e) {
+      _showError(e);
+    } finally {
+      if (mounted) setState(() => _offlineBusy = false);
     }
   }
 
@@ -105,7 +134,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
   Future<void> _share(BuildContext anchor) async {
     setState(() => _busy = true);
     try {
-      final file = await AppScope.read(context).client.downloadFile(_doc.id);
+      final file = await AppScope.read(context).download(_doc);
       if (!anchor.mounted) return;
       final name = file.fileName.contains('.')
           ? file.fileName
@@ -250,6 +279,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
               DocumentThumbnail(
                 documentId: _doc.id,
                 mimeType: _doc.mimeType,
+                modified: _doc.modified,
                 fit: BoxFit.contain,
               ),
               Positioned(
@@ -277,6 +307,31 @@ class _DocumentScreenState extends State<DocumentScreen> {
             spacing: 6,
             runSpacing: 6,
             children: [for (final t in tags) TagChip(tag: t, dense: false)],
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (_offline != null) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilterChip(
+              avatar: _offlineBusy
+                  ? const SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      _offline!
+                          ? LucideIcons.cloudCheck
+                          : LucideIcons.cloudDownload,
+                      size: 18,
+                    ),
+              showCheckmark: false,
+              label: Text(
+                _offline! ? 'Offline verfügbar' : 'Offline verfügbar machen',
+              ),
+              selected: _offline!,
+              onSelected: _offlineBusy ? null : _toggleOffline,
+            ),
           ),
           const SizedBox(height: 12),
         ],

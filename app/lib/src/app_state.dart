@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:paperbuddy_api/paperbuddy_api.dart';
 
+import 'file_cache.dart';
 import 'notifications.dart';
 import 'session_store.dart';
 import 'thumbnail_cache.dart';
@@ -60,6 +61,79 @@ class AppState extends ChangeNotifier {
   final documentsChanged = ValueNotifier(0);
 
   final thumbnails = ThumbnailCache();
+
+  /// Zwischenspeicher auf dem Gerät (im Web `null`).
+  FileCache? files;
+
+  /// Datei eines Dokuments: aus dem Zwischenspeicher, wenn sie zur
+  /// aktuellen Fassung passt, sonst vom Server (und dann gespeichert).
+  /// Ist der Server nicht erreichbar, wird auch eine ältere gespeicherte
+  /// Fassung genommen.
+  Future<DownloadedFile> download(
+    Document doc, {
+    bool original = false,
+    int? version,
+  }) async {
+    final cache = files;
+    if (version != null || cache == null) {
+      return client.downloadFile(doc.id, original: original, version: version);
+    }
+    final hit = await cache.document(
+      doc.id,
+      original: original,
+      modified: doc.modified,
+    );
+    if (hit != null) return hit;
+    try {
+      final file = await client.downloadFile(doc.id, original: original);
+      cache
+          .storeDocument(
+            doc.id,
+            file,
+            original: original,
+            modified: doc.modified,
+          )
+          .ignore();
+      return file;
+    } on ApiException catch (e) {
+      // Netzwerkfehler (kein Statuscode): gespeicherte Fassung nehmen.
+      if (e.statusCode != null) rethrow;
+      final old = await cache.document(
+        doc.id,
+        original: original,
+        anyVersion: true,
+      );
+      if (old == null) rethrow;
+      return old;
+    }
+  }
+
+  /// Zwischenspeicher auch ohne Anmeldung (Server nicht erreichbar), für
+  /// den zuletzt benutzten Server und Benutzer.
+  Future<FileCache?> offlineCache() async {
+    if (files != null) return files;
+    final server = _store.lastServer;
+    final user = _store.lastUsername;
+    if (server == null || user == null || server.isEmpty) return null;
+    try {
+      files = await FileCache.open(
+        PaperlessClient.normalizeBaseUrl(server),
+        user,
+      );
+    } on ApiException {
+      return null;
+    }
+    return files;
+  }
+
+  /// Dokument für unterwegs dauerhaft auf dem Gerät halten.
+  Future<void> keepOffline(Document doc) async {
+    final cache = files;
+    if (cache == null) return;
+    final file = await client.downloadFile(doc.id);
+    await cache.keepOffline(doc, file);
+  }
+
   late final uploads = UploadQueue(onDocumentAdded: documentsArrived);
 
   /// Benachrichtigungszentrale für Uploads und Importe auf dem Server.
@@ -129,6 +203,8 @@ class AppState extends ChangeNotifier {
   Future<void> _signIn(PaperlessClient client) async {
     _client?.close();
     _client = client;
+    files = await FileCache.open(client.baseUrl, client.user.username);
+    thumbnails.disk = files;
     await refreshLabels();
     status = SessionStatus.signedIn;
     notifications.start(client);
@@ -140,6 +216,10 @@ class AppState extends ChangeNotifier {
     _client?.close();
     _client = null;
     thumbnails.clear();
+    // Abmelden entfernt auch alle Dokumente vom Gerät.
+    await files?.clearAll();
+    files = null;
+    thumbnails.disk = null;
     notifications.stop();
     uploads.clearFinished();
     tags = {};
