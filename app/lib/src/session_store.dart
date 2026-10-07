@@ -39,6 +39,9 @@ class SessionStore {
   String? get lastServer => _prefs.getString('lastServer');
   String? get lastUsername => _prefs.getString('lastUsername');
 
+  bool get appLock => _prefs.getBool('appLock') ?? false;
+  Future<void> setAppLock(bool value) => _prefs.setBool('appLock', value);
+
   /// Hell, dunkel oder wie das System (`system`, `light`, `dark`).
   String? get themeMode => _prefs.getString('themeMode');
   Future<void> setThemeMode(String mode) => _prefs.setString('themeMode', mode);

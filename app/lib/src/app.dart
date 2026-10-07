@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'app_lock.dart';
 import 'app_state.dart';
 import 'design/theme.dart';
 import 'environment.dart';
@@ -41,6 +42,8 @@ class _PaperBuddyAppState extends State<PaperBuddyApp>
         widget.state.appResumed();
       case AppLifecycleState.hidden || AppLifecycleState.paused:
         widget.state.appPaused();
+      case AppLifecycleState.inactive:
+        widget.state.lock.inactive();
       default:
         break;
     }
@@ -107,6 +110,7 @@ class _PaperBuddyAppState extends State<PaperBuddyApp>
           builder: (context, child) {
             // Dateien auf das Fenster ziehen, um sie hochzuladen (Desktop, Web).
             Widget app = DropZone(navigator: _navigator, child: child!);
+            app = LockOverlay(lock: widget.state.lock, child: app);
             // Entwicklungs-Builds tragen eine Schärpe, damit man sie nicht mit
             // der normalen App verwechselt.
             if (AppEnv.isDev) {

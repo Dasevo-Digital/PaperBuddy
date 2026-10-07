@@ -20,6 +20,8 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Mit Face ID entsperrst du die App, wenn die App-Sperre eingeschaltet ist.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>PaperBuddy nutzt die Kamera, um Dokumente zu scannen.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

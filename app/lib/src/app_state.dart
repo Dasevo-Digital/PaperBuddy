@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:paperbuddy_api/paperbuddy_api.dart';
 
+import 'app_lock.dart';
 import 'file_cache.dart';
 import 'notifications.dart';
 import 'session_store.dart';
@@ -15,7 +16,7 @@ enum SessionStatus { starting, signedOut, signedIn }
 /// Sitzung und Stammdaten (Tags, Korrespondenten, Dokumenttypen).
 /// Screens erreichen sie über [AppScope].
 class AppState extends ChangeNotifier {
-  AppState(this._store, {this._httpClient});
+  AppState(this._store, {this._httpClient, this.authenticator});
 
   final SessionStore _store;
 
@@ -42,6 +43,16 @@ class AppState extends ChangeNotifier {
   /// Benutzer und Gruppen für Freigaben; bei fehlendem Recht leer.
   Map<int, AppUser> users = {};
   Map<int, UserGroup> groups = {};
+
+  /// App-Sperre (Face ID, Touch ID, Fingerabdruck, Geräte-Code).
+  late final lock = AppLock(
+    enabled: _store.appLock,
+    saveEnabled: _store.setAppLock,
+    authenticate: authenticator,
+  );
+
+  /// Für Tests austauschbar; `null` = Gerät fragen.
+  final Future<bool> Function(String reason)? authenticator;
 
   /// Darstellung (System, hell, dunkel); gilt sofort und bleibt gespeichert.
   late final themeMode = ValueNotifier<ThemeMode>(
@@ -295,6 +306,7 @@ class AppState extends ChangeNotifier {
 
   /// App geht in den Hintergrund: Abfragen pausieren.
   void appPaused() {
+    lock.paused();
     _backgroundSince ??= DateTime.now();
     notifications.pause();
   }
@@ -302,6 +314,7 @@ class AppState extends ChangeNotifier {
   /// App kommt zurück: Benachrichtigungen sofort abgleichen, nach längerer
   /// Pause auch Listen und Labels neu laden.
   void appResumed() {
+    lock.resumed();
     final since = _backgroundSince;
     _backgroundSince = null;
     if (status != SessionStatus.signedIn) return;
@@ -335,6 +348,7 @@ class AppState extends ChangeNotifier {
     _arrivedTimer?.cancel();
     documentsChanged.dispose();
     themeMode.dispose();
+    lock.dispose();
     notifications.dispose();
     uploads.dispose();
     super.dispose();

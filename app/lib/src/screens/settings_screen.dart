@@ -12,6 +12,7 @@ import 'admin/trash_screen.dart';
 import 'admin/users_screen.dart';
 import 'admin/workflows_screen.dart';
 import 'offline_screen.dart';
+import '../widgets/dialogs.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -101,6 +102,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           ),
+          const _AppLockTile(),
           if (state.files != null) ...[
             ListTile(
               leading: const Icon(LucideIcons.cloudCheck),
@@ -234,6 +236,47 @@ class _StorageTileState extends State<_StorageTile> {
       title: const Text('Speicher auf dem Gerät'),
       subtitle: Text('$mb MB für Vorschauen und Dokumente'),
       trailing: TextButton(onPressed: _clear, child: const Text('Leeren')),
+    );
+  }
+}
+
+/// Schalter für die App-Sperre; nur, wenn das Gerät sie unterstützt.
+class _AppLockTile extends StatefulWidget {
+  const _AppLockTile();
+
+  @override
+  State<_AppLockTile> createState() => _AppLockTileState();
+}
+
+class _AppLockTileState extends State<_AppLockTile> {
+  late final Future<bool> _supported = AppScope.read(context).lock.supported;
+
+  @override
+  Widget build(BuildContext context) {
+    final lock = AppScope.of(context).lock;
+    return FutureBuilder<bool>(
+      future: _supported,
+      builder: (context, snap) {
+        if (snap.data != true) return const SizedBox.shrink();
+        return ListenableBuilder(
+          listenable: lock,
+          builder: (context, _) => SwitchListTile(
+            secondary: const Icon(LucideIcons.lock),
+            title: const Text('App-Sperre'),
+            subtitle: const Text(
+              'Beim Öffnen und nach 30 Sekunden im Hintergrund mit Face ID, '
+              'Touch ID, Fingerabdruck oder Geräte-Code entsperren',
+            ),
+            value: lock.enabled,
+            onChanged: (v) async {
+              final ok = await lock.setEnabled(v);
+              if (!ok && context.mounted) {
+                showInfo(context, 'Die Prüfung wurde abgebrochen.');
+              }
+            },
+          ),
+        );
+      },
     );
   }
 }
