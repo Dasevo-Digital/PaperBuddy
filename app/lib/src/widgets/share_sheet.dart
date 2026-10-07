@@ -141,6 +141,7 @@ class _ShareSheetState extends State<_ShareSheet> {
               else ...[
                 if (state.users.isNotEmpty)
                   DropdownButtonFormField<int?>(
+                    isExpanded: true,
                     initialValue: _owner,
                     decoration: const InputDecoration(labelText: 'Eigentümer'),
                     items: [
@@ -173,6 +174,159 @@ class _ShareSheetState extends State<_ShareSheet> {
                 ),
               ],
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Eigentümer und Freigaben für mehrere Dokumente auf einmal setzen.
+/// Liefert `true`, wenn gespeichert wurde.
+Future<bool> showBulkShareSheet(
+  BuildContext context,
+  List<int> documents,
+) async {
+  return await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        showDragHandle: true,
+        builder: (_) => _BulkShareSheet(documents: documents),
+      ) ??
+      false;
+}
+
+class _BulkShareSheet extends StatefulWidget {
+  const _BulkShareSheet({required this.documents});
+  final List<int> documents;
+
+  @override
+  State<_BulkShareSheet> createState() => _BulkShareSheetState();
+}
+
+class _BulkShareSheetState extends State<_BulkShareSheet> {
+  /// Eigentümer bleibt, wie er ist.
+  static const _keepOwner = -2;
+
+  final _perms = ObjectPermissions();
+  int? _owner = _keepOwner;
+
+  /// Freigaben ergänzen statt ersetzen.
+  bool _merge = true;
+  bool _saving = false;
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final client = AppScope.read(context).client;
+    final ok = await guarded(
+      context,
+      () => client
+          .bulkEdit(widget.documents, 'set_permissions', {
+            'set_permissions': _perms.toJson(),
+            if (_owner != _keepOwner) 'owner': _owner,
+            'merge': _merge,
+          })
+          .then((_) => true),
+    );
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (ok == true) Navigator.pop(context, true);
+  }
+
+  Widget _chips(String title, Map<int, String> options, Set<int> selected) {
+    if (options.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final e in options.entries)
+              FilterChip(
+                label: Text(e.value),
+                selected: selected.contains(e.key),
+                onSelected: (v) => setState(
+                  () => v ? selected.add(e.key) : selected.remove(e.key),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    final theme = Theme.of(context);
+    final users = {for (final u in state.users.values) u.id: u.displayName};
+    final groups = {for (final g in state.groups.values) g.id: g.name};
+    final n = widget.documents.length;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        0,
+        20,
+        20 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              n == 1
+                  ? 'Freigaben für 1 Dokument'
+                  : 'Freigaben für $n Dokumente',
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            if (state.users.isNotEmpty) ...[
+              DropdownButtonFormField<int?>(
+                isExpanded: true,
+                initialValue: _owner,
+                decoration: const InputDecoration(labelText: 'Eigentümer'),
+                items: [
+                  const DropdownMenuItem(
+                    value: _keepOwner,
+                    child: Text('Unverändert lassen'),
+                  ),
+                  const DropdownMenuItem(
+                    value: null,
+                    child: Text('Kein Eigentümer (für alle sichtbar)'),
+                  ),
+                  for (final u in state.users.values)
+                    DropdownMenuItem(value: u.id, child: Text(u.displayName)),
+                ],
+                onChanged: (v) => setState(() => _owner = v),
+              ),
+              const SizedBox(height: 16),
+            ],
+            _chips('Ansehen: Benutzer', users, _perms.viewUsers),
+            _chips('Ansehen: Gruppen', groups, _perms.viewGroups),
+            _chips('Ändern: Benutzer', users, _perms.changeUsers),
+            _chips('Ändern: Gruppen', groups, _perms.changeGroups),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Bestehende Freigaben behalten'),
+              subtitle: Text(
+                _merge
+                    ? 'Die gewählten Freigaben kommen hinzu.'
+                    : 'Die gewählten Freigaben ersetzen die bisherigen.',
+              ),
+              value: _merge,
+              onChanged: (v) => setState(() => _merge = v),
+            ),
+            const SizedBox(height: 8),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              child: const Text('Speichern'),
+            ),
           ],
         ),
       ),

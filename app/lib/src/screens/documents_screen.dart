@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
@@ -19,6 +20,8 @@ import 'document_screen.dart';
 import 'network_scan_screen.dart';
 import 'upload_screen.dart';
 import '../file_kinds.dart';
+import '../widgets/share_sheet.dart';
+import '../file_export.dart';
 
 /// Dokumentliste mit Suche, Filtern und Upload.
 ///
@@ -174,6 +177,72 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           await client.bulkEdit(ids, 'set_document_type', {
             'document_type': picked == -1 ? null : picked,
           });
+        case _BulkAction.storagePath:
+          final picked = await pickLabel<StoragePath>(
+            context,
+            title: 'Speicherpfad setzen',
+            options: _state.storagePaths.values.toList(),
+          );
+          if (picked == null) return;
+          await client.bulkEdit(ids, 'set_storage_path', {
+            'storage_path': picked == -1 ? null : picked,
+          });
+        case _BulkAction.permissions:
+          if (!await showBulkShareSheet(context, ids)) return;
+        case _BulkAction.rotate:
+          final degrees = await choose<int>(
+            context,
+            title: ids.length == 1
+                ? '1 Dokument drehen'
+                : '${ids.length} Dokumente drehen',
+            options: [
+              (90, 'Um 90° nach rechts'),
+              (180, 'Um 180°'),
+              (270, 'Um 90° nach links'),
+            ],
+          );
+          if (degrees == null) return;
+          await client.bulkEdit(ids, 'rotate', {'degrees': degrees});
+          for (final id in ids) {
+            _state.thumbnails.evict(id);
+          }
+        case _BulkAction.reprocess:
+          if (!mounted) return;
+          if (!await confirm(
+            context,
+            title: ids.length == 1
+                ? '1 Dokument neu verarbeiten?'
+                : '${ids.length} Dokumente neu verarbeiten?',
+            message:
+                'Texterkennung, Archiv-PDF und Vorschau werden neu erstellt. '
+                'Titel, Tags und andere Angaben bleiben.',
+            action: 'Neu verarbeiten',
+          )) {
+            return;
+          }
+          await client.bulkEdit(ids, 'reprocess');
+          for (final id in ids) {
+            _state.thumbnails.evict(id);
+          }
+        case _BulkAction.share:
+          final docs = [
+            for (final d in _controller.items)
+              if (ids.contains(d.id)) d,
+          ];
+          final files = [for (final d in docs) await _state.download(d)];
+          if (!mounted) return;
+          await exportFiles(context, [
+            for (final (i, f) in files.indexed)
+              (
+                bytes: Uint8List.fromList(f.bytes),
+                fileName: f.fileName.contains('.')
+                    ? f.fileName
+                    : '${docs[i].title}.pdf',
+                mimeType: f.mimeType,
+              ),
+          ]);
+          // Teilen ändert nichts: Auswahl stehen lassen.
+          return;
         case _BulkAction.merge:
           final trashOriginals = await choose<bool>(
             context,
@@ -785,6 +854,11 @@ enum _BulkAction {
   removeTags,
   correspondent,
   documentType,
+  storagePath,
+  permissions,
+  rotate,
+  reprocess,
+  share,
   merge,
   delete,
 }
@@ -847,12 +921,32 @@ class _SelectionBar extends StatelessWidget {
                   value: _BulkAction.documentType,
                   child: Text('Dokumenttyp setzen'),
                 ),
+                const PopupMenuItem(
+                  value: _BulkAction.storagePath,
+                  child: Text('Speicherpfad setzen'),
+                ),
+                const PopupMenuItem(
+                  value: _BulkAction.permissions,
+                  child: Text('Freigaben setzen'),
+                ),
+                const PopupMenuItem(
+                  value: _BulkAction.rotate,
+                  child: Text('Drehen'),
+                ),
+                const PopupMenuItem(
+                  value: _BulkAction.reprocess,
+                  child: Text('Neu verarbeiten'),
+                ),
                 if (count >= 2)
                   const PopupMenuItem(
                     value: _BulkAction.merge,
                     child: Text('Zu einem PDF zusammenführen'),
                   ),
               ],
+              const PopupMenuItem(
+                value: _BulkAction.share,
+                child: Text('Teilen bzw. speichern'),
+              ),
               if (user.can('delete', 'document'))
                 const PopupMenuItem(
                   value: _BulkAction.delete,

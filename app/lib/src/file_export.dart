@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -39,4 +41,71 @@ Future<bool> exportFile(
     dialogTitle: 'Dokument speichern',
   );
   return saved != null || kIsWeb;
+}
+
+/// Mehrere Dateien weitergeben: auf dem Telefon gemeinsam über das
+/// Teilen-Menü, auf dem Desktop in einen gewählten Ordner, im Browser als
+/// einzelne Downloads. Gleiche Namen bekommen eine Nummer.
+///
+/// Liefert `false`, wenn der Benutzer abgebrochen hat.
+Future<bool> exportFiles(
+  BuildContext context,
+  List<({Uint8List bytes, String fileName, String mimeType})> files,
+) async {
+  final names = <String>{};
+  String unique(String name) {
+    var candidate = name;
+    final dot = name.lastIndexOf('.');
+    final (base, ext) = dot > 0
+        ? (name.substring(0, dot), name.substring(dot))
+        : (name, '');
+    for (var i = 2; !names.add(candidate); i++) {
+      candidate = '$base ($i)$ext';
+    }
+    return candidate;
+  }
+
+  final named = [
+    for (final f in files)
+      (bytes: f.bytes, fileName: unique(f.fileName), mimeType: f.mimeType),
+  ];
+  final mobile =
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.android);
+  if (mobile) {
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box == null
+        ? null
+        : box.localToGlobal(Offset.zero) & box.size;
+    final result = await SharePlus.instance.share(
+      ShareParams(
+        files: [
+          for (final f in named)
+            XFile.fromData(f.bytes, name: f.fileName, mimeType: f.mimeType),
+        ],
+        fileNameOverrides: [for (final f in named) f.fileName],
+        sharePositionOrigin: origin,
+      ),
+    );
+    return result.status != ShareResultStatus.dismissed;
+  }
+  if (kIsWeb) {
+    for (final f in named) {
+      await FilePicker.saveFile(
+        fileName: f.fileName,
+        bytes: f.bytes,
+        mimeType: f.mimeType,
+      );
+    }
+    return true;
+  }
+  final dir = await FilePicker.getDirectoryPath(
+    dialogTitle: 'Ordner für die Dokumente wählen',
+  );
+  if (dir == null) return false;
+  for (final f in named) {
+    await File('$dir/${f.fileName}').writeAsBytes(f.bytes);
+  }
+  return true;
 }
