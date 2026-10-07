@@ -29,6 +29,7 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
   late Set<int> _tags = {...widget.document.tags};
   late List<CustomFieldValue> _fields = [...widget.document.customFields];
   final _form = GlobalKey<FormState>();
+  DocumentSuggestions? _suggestions;
   bool _saving = false;
   String? _error;
 
@@ -37,6 +38,13 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
     super.initState();
     _title.addListener(() => setState(() {}));
     _asn.addListener(() => setState(() {}));
+    AppScope.read(context).client.suggestions(widget.document.id).then(
+      (s) {
+        if (mounted) setState(() => _suggestions = s);
+      },
+      // Ältere Server ohne Vorschläge: dann eben keine.
+      onError: (Object _) {},
+    );
   }
 
   @override
@@ -145,6 +153,70 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
     }
   }
 
+  /// Vorschläge des Servers, die noch nicht übernommen sind; ein Tipp
+  /// übernimmt den Wert. `null`, wenn es keine (mehr) gibt.
+  Widget? _suggestionChips(AppState state) {
+    final s = _suggestions;
+    if (s == null) return null;
+    final chips = <Widget>[
+      for (final d in s.dates)
+        if (!DateUtils.isSameDay(d, _created))
+          ActionChip(
+            avatar: const Icon(LucideIcons.calendar, size: 16),
+            label: Text(formatDay(d)),
+            onPressed: () => setState(() => _created = d),
+          ),
+      for (final id in s.correspondents)
+        if (id != _correspondent && state.correspondents[id] != null)
+          ActionChip(
+            avatar: const Icon(LucideIcons.user, size: 16),
+            label: Text(state.correspondents[id]!.name),
+            onPressed: () => setState(() => _correspondent = id),
+          ),
+      for (final id in s.documentTypes)
+        if (id != _documentType && state.documentTypes[id] != null)
+          ActionChip(
+            avatar: const Icon(LucideIcons.fileType, size: 16),
+            label: Text(state.documentTypes[id]!.name),
+            onPressed: () => setState(() => _documentType = id),
+          ),
+      for (final id in s.storagePaths)
+        if (id != _storagePath && state.storagePaths[id] != null)
+          ActionChip(
+            avatar: const Icon(LucideIcons.folderTree, size: 16),
+            label: Text(state.storagePaths[id]!.name),
+            onPressed: () => setState(() => _storagePath = id),
+          ),
+      for (final id in s.tags)
+        if (!_tags.contains(id) && state.tags[id] != null)
+          ActionChip(
+            avatar: const Icon(LucideIcons.tag, size: 16),
+            label: Text(state.tags[id]!.name),
+            onPressed: () => setState(() => _tags = {..._tags, id}),
+          ),
+    ];
+    if (chips.isEmpty) return null;
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 6,
+      children: [
+        Row(
+          spacing: 6,
+          children: [
+            Icon(
+              LucideIcons.sparkles,
+              size: 16,
+              color: theme.colorScheme.primary,
+            ),
+            Text('Vorschläge', style: theme.textTheme.labelLarge),
+          ],
+        ),
+        Wrap(spacing: 6, runSpacing: 6, children: chips),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
@@ -204,6 +276,7 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                               ? 'Bitte einen Titel angeben'
                               : null,
                         ),
+                        ?_suggestionChips(state),
                         InkWell(
                           borderRadius: BorderRadius.circular(4),
                           onTap: _pickDate,

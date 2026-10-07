@@ -436,6 +436,43 @@ class ConsumeTask {
   );
 }
 
+/// Vorschläge für ein Dokument (`/api/documents/{id}/suggestions/`), aus
+/// Zuordnungsregeln, lernender Zuordnung und Datumserkennung.
+class DocumentSuggestions {
+  const DocumentSuggestions({
+    this.correspondents = const [],
+    this.tags = const [],
+    this.documentTypes = const [],
+    this.storagePaths = const [],
+    this.dates = const [],
+  });
+
+  final List<int> correspondents;
+  final List<int> tags;
+  final List<int> documentTypes;
+  final List<int> storagePaths;
+  final List<DateTime> dates;
+
+  bool get isEmpty =>
+      correspondents.isEmpty &&
+      tags.isEmpty &&
+      documentTypes.isEmpty &&
+      storagePaths.isEmpty &&
+      dates.isEmpty;
+
+  factory DocumentSuggestions.fromJson(Map<String, dynamic> j) =>
+      DocumentSuggestions(
+        correspondents: _ints(j['correspondents']),
+        tags: _ints(j['tags']),
+        documentTypes: _ints(j['document_types']),
+        storagePaths: _ints(j['storage_paths']),
+        dates: [
+          for (final d in (j['dates'] as List? ?? []))
+            if (DateTime.tryParse('$d') != null) DateTime.parse('$d'),
+        ],
+      );
+}
+
 /// Kennzahlen laut `/api/statistics/` (Übersicht wie in Paperless-ngx).
 class Statistics {
   const Statistics({

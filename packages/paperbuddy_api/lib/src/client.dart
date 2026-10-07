@@ -454,6 +454,11 @@ class PaperlessClient {
       ConsumeTask.fromJson(t as Map<String, dynamic>),
   ];
 
+  Future<DocumentSuggestions> suggestions(int documentId) async =>
+      DocumentSuggestions.fromJson(
+        await _getMap('/api/documents/$documentId/suggestions/'),
+      );
+
   Future<Statistics> statistics() async =>
       Statistics.fromJson(await _getMap('/api/statistics/'));
 
