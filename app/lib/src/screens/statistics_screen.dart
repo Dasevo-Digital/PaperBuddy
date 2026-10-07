@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import '../app_state.dart';
-import '../widgets/notification_bell.dart';
 import '../file_kinds.dart';
+import '../format.dart';
+import '../widgets/notification_bell.dart';
+import 'document_screen.dart';
+import 'documents_screen.dart';
 
 /// Übersicht mit Kennzahlen wie im Dashboard von Paperless-ngx.
 class StatisticsScreen extends StatefulWidget {
@@ -102,6 +106,20 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                               ),
                       ),
                     ),
+                    for (final view in AppScope.of(context).savedViews)
+                      if (view.showOnDashboard)
+                        Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 560),
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 16),
+                              child: SavedViewCard(
+                                key: ValueKey(view.id),
+                                view: view,
+                              ),
+                            ),
+                          ),
+                        ),
                   ],
                 ),
               ),
@@ -371,4 +389,150 @@ class FileTypeBar extends StatelessWidget {
 Color strongPrimary(ColorScheme scheme) {
   final hsl = HSLColor.fromColor(scheme.primary);
   return hsl.withSaturation(0.55).withLightness(0.36).toColor();
+}
+
+/// Gespeicherte Ansicht als Kachel: die neuesten Dokumente und „Alle
+/// anzeigen“, wie die Ansichten auf dem Dashboard von Paperless-ngx.
+class SavedViewCard extends StatefulWidget {
+  const SavedViewCard({super.key, required this.view});
+
+  final SavedView view;
+
+  /// So viele Dokumente zeigt die Kachel.
+  static const count = 5;
+
+  @override
+  State<SavedViewCard> createState() => _SavedViewCardState();
+}
+
+class _SavedViewCardState extends State<SavedViewCard> {
+  late final AppState _state;
+  PageResult<Document>? _page;
+  String? _error;
+
+  DocumentFilter get _filter => DocumentFilter.fromSavedView(widget.view);
+
+  @override
+  void initState() {
+    super.initState();
+    _state = AppScope.read(context);
+    _state.documentsChanged.addListener(_load);
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(SavedViewCard old) {
+    super.didUpdateWidget(old);
+    if (old.view != widget.view) _load();
+  }
+
+  @override
+  void dispose() {
+    _state.documentsChanged.removeListener(_load);
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final page = await _state.client.documents(
+        filter: _filter,
+        pageSize: SavedViewCard.count,
+      );
+      if (mounted) {
+        setState(() {
+          _page = page;
+          _error = null;
+        });
+      }
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final page = _page;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  LucideIcons.bookmark,
+                  size: 18,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.view.name,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                if (page != null)
+                  Text(
+                    NumberFormat.decimalPattern('de').format(page.count),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => DocumentsScreen(
+                        title: widget.view.name,
+                        baseFilter: _filter,
+                      ),
+                    ),
+                  ),
+                  child: const Text('Alle anzeigen'),
+                ),
+              ],
+            ),
+            if (_error != null)
+              Padding(padding: const EdgeInsets.all(8), child: Text(_error!))
+            else if (page == null)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (page.results.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Text(
+                  'Keine Dokumente',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              )
+            else
+              for (final d in page.results)
+                ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.only(right: 8),
+                  leading: Icon(FileKinds.icon(d.mimeType), size: 20),
+                  title: Text(
+                    d.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Text(formatDay(d.created)),
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => DocumentScreen(document: d),
+                      ),
+                    );
+                    _load();
+                  },
+                ),
+          ],
+        ),
+      ),
+    );
+  }
 }

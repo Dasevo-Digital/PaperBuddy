@@ -186,14 +186,28 @@ extension PaperlessAdmin on PaperlessClient {
     String name,
     DocumentFilter filter, {
     bool showInSidebar = true,
+    bool showOnDashboard = false,
   }) async => SavedView.fromJson(
     await _json('POST', '/api/saved_views/', {
       'name': name,
       'show_in_sidebar': showInSidebar,
-      'show_on_dashboard': false,
+      'show_on_dashboard': showOnDashboard,
       'sort_field': filter.ordering.apiValue.replaceFirst('-', ''),
       'sort_reverse': filter.ordering.apiValue.startsWith('-'),
       'filter_rules': [for (final r in filter.toFilterRules()) r.toJson()],
+    }),
+  );
+
+  Future<SavedView> updateSavedView(
+    int id, {
+    String? name,
+    bool? showOnDashboard,
+    bool? showInSidebar,
+  }) async => SavedView.fromJson(
+    await _json('PATCH', '/api/saved_views/$id/', {
+      'name': ?name,
+      'show_on_dashboard': ?showOnDashboard,
+      'show_in_sidebar': ?showInSidebar,
     }),
   );
 

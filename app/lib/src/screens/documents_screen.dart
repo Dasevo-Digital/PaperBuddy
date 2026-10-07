@@ -296,10 +296,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: GestureDetector(
-                    onLongPress:
-                        v.userCanChange && user.can('delete', 'savedview')
-                        ? () => _deleteView(v)
-                        : null,
+                    onLongPress: v.userCanChange ? () => _viewMenu(v) : null,
                     child: ChoiceChip(
                       avatar: const Icon(LucideIcons.bookmark, size: 16),
                       label: Text(v.name),
@@ -346,12 +343,55 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     final filter = _controller.filter.copyWith(query: _search.text);
     final view = await guarded(
       context,
-      () => _state.client.createSavedView(text, filter),
+      () => _state.client.createSavedView(text, filter, showOnDashboard: true),
     );
     if (view != null) {
       await _state.refreshLabels();
       if (mounted) setState(() => _activeView = view.id);
     }
+  }
+
+  /// Langes Drücken auf eine Ansicht: auf der Übersicht zeigen, löschen.
+  Future<void> _viewMenu(SavedView view) async {
+    final user = _state.client.user;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(title: Text(view.name)),
+            if (user.can('change', 'savedview'))
+              SwitchListTile(
+                secondary: const Icon(LucideIcons.layoutDashboard),
+                title: const Text('Auf der Übersicht zeigen'),
+                value: view.showOnDashboard,
+                onChanged: (v) async {
+                  Navigator.pop(sheet);
+                  await guarded(
+                    context,
+                    () => _state.client.updateSavedView(
+                      view.id,
+                      showOnDashboard: v,
+                    ),
+                  );
+                  await _state.refreshLabels();
+                },
+              ),
+            if (user.can('delete', 'savedview'))
+              ListTile(
+                leading: const Icon(LucideIcons.trash2),
+                title: const Text('Löschen'),
+                onTap: () {
+                  Navigator.pop(sheet);
+                  _deleteView(view);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _deleteView(SavedView view) async {
@@ -447,6 +487,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
                 child: Row(
                   children: [
+                    if (ModalRoute.of(context)?.canPop ?? false)
+                      const BackButton(),
                     Expanded(
                       child: Text(
                         widget.title,
