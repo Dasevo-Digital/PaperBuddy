@@ -43,16 +43,18 @@ case "$target" in
     [ "${PAPERBUDDY_APP_GROUPS:-0}" = 1 ] || entitlements="CODE_SIGN_ENTITLEMENTS="
     (cd ios && xcodebuild -workspace Runner.xcworkspace -scheme Runner \
       -configuration Release -destination generic/platform=iOS \
-      -derivedDataPath ../build/ios-device -allowProvisioningUpdates -quiet \
+      -derivedDataPath ../build.noindex/ios-device -allowProvisioningUpdates -quiet \
       DEVELOPMENT_TEAM="$team" PAPERBUDDY_BUNDLE_ID=de.status403.paperbuddy.dev \
       PAPERBUDDY_VARIANT=-dev PAPERBUDDY_APP_NAME="PaperBuddy Dev" \
       ASSETCATALOG_COMPILER_APPICON_NAME=AppIconDev $entitlements build)
-    app=build/ios-device/Build/Products/Release-iphoneos/Runner.app
+    # Echter Pfad statt des Symlinks build/: sonst sehen Xcode und Flutter
+    # zwei Orte und kopieren Frameworks unvollständig.
+    app=build.noindex/ios-device/Build/Products/Release-iphoneos/Runner.app
     xcrun devicectl device install app --device "$device" "$app"
     xcrun devicectl device process launch --device "$device" de.status403.paperbuddy.dev >/dev/null
     # Ganz entfernen: Nur das Bündel zu löschen, lässt Xcode beim nächsten
     # Mal Frameworks halb kopieren.
-    rm -rf build/ios-device
+    rm -rf build.noindex/ios-device
     echo "Installiert auf $device"
     exit 0
     ;;
