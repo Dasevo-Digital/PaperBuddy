@@ -64,11 +64,11 @@ class _PaperBuddyAppState extends State<PaperBuddyApp>
           duration: const Duration(seconds: 4),
           // Mit Aktionsknopf bliebe der Hinweis sonst stehen.
           persist: false,
-          content: Text(
-            n.kind == NoticeKind.failure
-                ? '${n.title}: ${n.detail}'
-                : '${n.title}: Dokument hinzugefügt',
-          ),
+          content: Text(switch (n.kind) {
+            NoticeKind.failure ||
+            NoticeKind.reminder => '${n.title}: ${n.detail}',
+            _ => '${n.title}: Dokument hinzugefügt',
+          }),
           action: n.documentId == null || _navigator.currentState == null
               ? null
               : SnackBarAction(

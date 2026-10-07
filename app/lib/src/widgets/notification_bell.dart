@@ -196,6 +196,10 @@ class _NoticeTile extends StatelessWidget {
           LucideIcons.circleCheck,
           color: scheme.primary,
         ),
+        NoticeKind.reminder => Icon(
+          LucideIcons.alarmClock,
+          color: scheme.error,
+        ),
         NoticeKind.failure => Icon(
           LucideIcons.circleAlert,
           color: scheme.error,

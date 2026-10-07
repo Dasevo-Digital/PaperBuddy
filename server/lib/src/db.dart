@@ -315,6 +315,20 @@ const _migrations = <String>[
     PRIMARY KEY (user_id, code_hash)
   );
   ''',
+  // 10: Fristen und Erinnerungen an Dokumenten (PaperBuddy-Erweiterung)
+  '''
+  CREATE TABLE reminders (
+    id INTEGER PRIMARY KEY,
+    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    owner INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    due TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    done INTEGER NOT NULL DEFAULT 0,
+    notified INTEGER NOT NULL DEFAULT 0,
+    created TEXT NOT NULL
+  );
+  CREATE INDEX reminders_owner_due ON reminders(owner, done, due);
+  ''',
 ];
 
 Database openDatabase(String path) {

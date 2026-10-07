@@ -18,6 +18,7 @@ import '../widgets/tag_chip.dart';
 import 'document_edit_screen.dart';
 import 'document_viewer_screen.dart';
 import '../file_kinds.dart';
+import '../widgets/reminders_section.dart';
 
 /// Was die Detailansicht an die Liste zurückmeldet.
 sealed class DocumentScreenResult {}
@@ -393,6 +394,8 @@ class _DocumentScreenState extends State<DocumentScreen> {
             formatCustomValue(state.customFields[v.field], v.value),
           ),
         const SizedBox(height: 20),
+        RemindersSection(documentId: _doc.id),
+        const SizedBox(height: 12),
         Text('Notizen', style: theme.textTheme.titleMedium),
         for (final n in _doc.notes)
           ListTile(

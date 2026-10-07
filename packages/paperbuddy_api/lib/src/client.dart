@@ -234,12 +234,13 @@ class PaperlessClient {
 
   Future<List<T>> _all<T>(
     String path,
-    T Function(Map<String, dynamic>) item,
-  ) async {
+    T Function(Map<String, dynamic>) item, [
+    Map<String, String> query = const {},
+  ]) async {
     final result = <T>[];
     for (var page = 1; ; page++) {
       final p = PageResult.fromJson(
-        await _getMap(path, {'page': '$page', 'page_size': '1000'}),
+        await _getMap(path, {...query, 'page': '$page', 'page_size': '1000'}),
         item,
       );
       result.addAll(p.results);

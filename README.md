@@ -72,6 +72,9 @@ Verwaltungsbefehle laufen über `paperbuddy-manage` (z. B. `paperbuddy-manage ex
   Custom Fields, Notizen, Archivnummern, gespeicherte Ansichten, Volltextsuche
 - **Bearbeiten:** PDF-Seiten drehen und löschen, Dokumente zusammenführen und teilen,
   neue Versionen hochladen, Änderungsverlauf
+- **Fristen:** Erinnerungen an Dokumenten (z. B. Kündigungsfrist), in der App unter
+  Übersicht und Benachrichtigungen, per E-Mail am Fälligkeitstag, wenn `EMAIL_HOST` gesetzt
+  ist (PaperBuddy-Erweiterung `/api/reminders/`, Paperless-Apps ignorieren sie)
 - **Teilen:** Mehrbenutzer mit Gruppen, Modell- und Objektrechten, Freigabelinks ohne Anmeldung
 - **Sicherheit:** Zwei-Faktor-Anmeldung (TOTP mit Wiederherstellungscodes), Papierkorb mit Frist, Export/Backup im Paperless-Format, Import aus Paperless-ngx
 - **Speicher:** lokal, S3-kompatibel (AWS, MinIO, RustFS …) oder WebDAV (z. B. Nextcloud)

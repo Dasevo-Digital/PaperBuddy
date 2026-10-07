@@ -9,6 +9,7 @@ import '../format.dart';
 import '../widgets/notification_bell.dart';
 import 'document_screen.dart';
 import 'documents_screen.dart';
+import '../widgets/dialogs.dart';
 
 /// Übersicht mit Kennzahlen wie im Dashboard von Paperless-ngx.
 class StatisticsScreen extends StatefulWidget {
@@ -104,6 +105,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                                 onOpenInbox: widget.onOpenInbox,
                                 onOpenDocuments: widget.onOpenDocuments,
                               ),
+                      ),
+                    ),
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 560),
+                        child: const UpcomingRemindersCard(),
                       ),
                     ),
                     for (final view in AppScope.of(context).savedViews)
@@ -531,6 +538,118 @@ class _SavedViewCardState extends State<SavedViewCard> {
                   },
                 ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Offene Fristen, nächste zuerst; fällige rot. Ohne Fristen unsichtbar.
+class UpcomingRemindersCard extends StatefulWidget {
+  const UpcomingRemindersCard({super.key});
+
+  static const count = 8;
+
+  @override
+  State<UpcomingRemindersCard> createState() => _UpcomingRemindersCardState();
+}
+
+class _UpcomingRemindersCardState extends State<UpcomingRemindersCard> {
+  late final AppState _state;
+  List<Reminder> _open = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _state = AppScope.read(context);
+    _state.documentsChanged.addListener(_load);
+    _state.remindersChanged.addListener(_load);
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _state.documentsChanged.removeListener(_load);
+    _state.remindersChanged.removeListener(_load);
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final list = await _state.client.reminders(done: false);
+      if (mounted) setState(() => _open = list);
+    } on ApiException {
+      // Älterer Server ohne Fristen: Karte bleibt weg.
+    }
+  }
+
+  Future<void> _openDocument(Reminder r) async {
+    final navigator = Navigator.of(context);
+    try {
+      final doc = await _state.client.document(r.document);
+      await navigator.push(
+        MaterialPageRoute<void>(builder: (_) => DocumentScreen(document: doc)),
+      );
+    } on ApiException catch (e) {
+      if (mounted) showError(context, e);
+    }
+    _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_open.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                spacing: 8,
+                children: [
+                  Icon(
+                    LucideIcons.alarmClock,
+                    size: 18,
+                    color: theme.colorScheme.primary,
+                  ),
+                  Text('Fristen', style: theme.textTheme.titleMedium),
+                ],
+              ),
+              const SizedBox(height: 4),
+              for (final r in _open.take(UpcomingRemindersCard.count))
+                ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.only(right: 8),
+                  title: Text(
+                    r.note.isEmpty ? r.documentTitle : r.note,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: r.note.isEmpty
+                      ? null
+                      : Text(
+                          r.documentTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                  trailing: Text(
+                    formatDay(r.due),
+                    style: r.isDue()
+                        ? TextStyle(
+                            color: theme.colorScheme.error,
+                            fontWeight: FontWeight.bold,
+                          )
+                        : null,
+                  ),
+                  onTap: () => _openDocument(r),
+                ),
+            ],
+          ),
         ),
       ),
     );

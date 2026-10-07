@@ -5,7 +5,14 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import 'upload_queue.dart';
 
-enum NoticeKind { running, success, failure }
+enum NoticeKind {
+  running,
+  success,
+  failure,
+
+  /// Fällige Frist an einem Dokument.
+  reminder,
+}
 
 /// Eine Meldung in der Benachrichtigungszentrale: ein Upload aus der App
 /// oder ein Import auf dem Server (Eingangsordner, Mail, Scanner).
@@ -20,6 +27,7 @@ class Notice {
     this.documentId,
     this.taskDbId,
     this.job,
+    this.reminderId,
   });
 
   final String key;
@@ -32,6 +40,9 @@ class Notice {
 
   /// Zugehöriger Upload aus dieser App, falls es einer ist.
   final UploadJob? job;
+
+  /// Bei Fristen: deren ID.
+  final int? reminderId;
 }
 
 /// Sammelt Meldungen zu Uploads und Server-Tasks. Neue Ergebnisse meldet
@@ -69,6 +80,12 @@ class NotificationCenter extends ChangeNotifier {
   bool _serverDisabled = false;
 
   final _serverTasks = <String, ConsumeTask>{};
+
+  /// Fällige offene Fristen; bleiben, bis sie erledigt oder entfernt sind.
+  final _reminders = <int, Reminder>{};
+
+  /// Server ohne Fristen (z. B. Paperless-ngx).
+  bool _remindersUnsupported = false;
   final _dismissed = <String>{};
   final _announced = <String>{};
   DateTime _seen = DateTime.now();
@@ -83,6 +100,10 @@ class NotificationCenter extends ChangeNotifier {
       final n = _fromJob(job);
       byKey[n.key] = n;
     }
+    for (final r in _reminders.values) {
+      final n = _fromReminder(r);
+      byKey[n.key] = n;
+    }
     final list = [
       for (final n in byKey.values)
         if (!_dismissed.contains(n.key)) n,
@@ -90,15 +111,15 @@ class NotificationCenter extends ChangeNotifier {
     return list;
   }
 
-  /// Ungelesene Ergebnisse (laufende zählen nicht).
-  int get unread => notices
-      .where((n) => n.kind != NoticeKind.running && n.time.isAfter(_seen))
-      .length;
+  /// Ungelesene Ergebnisse (laufende zählen nicht); fällige Fristen zählen,
+  /// bis sie erledigt oder entfernt sind.
+  int get unread => notices.where(isUnread).length;
 
   bool get hasRunning => notices.any((n) => n.kind == NoticeKind.running);
 
   bool isUnread(Notice n) =>
-      n.kind != NoticeKind.running && n.time.isAfter(_seen);
+      n.kind == NoticeKind.reminder ||
+      (n.kind != NoticeKind.running && n.time.isAfter(_seen));
 
   void start(PaperlessClient client) {
     stop();
@@ -115,6 +136,8 @@ class NotificationCenter extends ChangeNotifier {
     _timer = null;
     _client = null;
     _serverTasks.clear();
+    _reminders.clear();
+    _remindersUnsupported = false;
     _dismissed.clear();
     _announced.clear();
     notifyListeners();
@@ -157,11 +180,30 @@ class NotificationCenter extends ChangeNotifier {
       if (e.isUnauthorized) _serverDisabled = true;
     } catch (_) {
       // Netzwerk kurz weg: beim nächsten Mal erneut.
-    } finally {
-      _polling = false;
     }
+    await _refreshReminders(client);
+    _polling = false;
     notifyListeners();
     _schedule();
+  }
+
+  Future<void> _refreshReminders(PaperlessClient client) async {
+    if (_remindersUnsupported) return;
+    try {
+      final due = await client.reminders(
+        done: false,
+        dueBefore: DateTime.now(),
+      );
+      _reminders
+        ..clear()
+        ..addEntries(due.map((r) => MapEntry(r.id, r)));
+      // Einmal je Sitzung kurz darauf hinweisen.
+      for (final r in due) {
+        _announce(_fromReminder(r));
+      }
+    } on ApiException catch (e) {
+      if (e.isUnauthorized || e.isNotFound) _remindersUnsupported = true;
+    } catch (_) {}
   }
 
   bool _paused = false;
@@ -183,7 +225,7 @@ class NotificationCenter extends ChangeNotifier {
   void _schedule() {
     _timer?.cancel();
     if (_paused) return;
-    if (_client == null || _serverDisabled) return;
+    if (_client == null || (_serverDisabled && _remindersUnsupported)) return;
     _timer = Timer(hasRunning ? fastPollInterval : pollInterval, refresh);
   }
 
@@ -206,6 +248,7 @@ class NotificationCenter extends ChangeNotifier {
       _dismissed.add(n.key);
       if (n.job != null) uploads.remove(n.job!);
       _serverTasks.remove(n.key);
+      if (n.kind == NoticeKind.reminder) _reminders.remove(n.reminderId);
       if (n.taskDbId != null) ids.add(n.taskDbId!);
     }
     notifyListeners();
@@ -250,6 +293,22 @@ class NotificationCenter extends ChangeNotifier {
     taskDbId: job.taskDbId ?? _serverTasks[job.taskId]?.id,
     job: job,
   );
+
+  Notice _fromReminder(Reminder r) {
+    final d = r.due;
+    final date = '${d.day}.${d.month}.${d.year}';
+    return Notice(
+      key: 'reminder:${r.id}',
+      kind: NoticeKind.reminder,
+      title: r.note.isEmpty ? 'Frist: ${r.documentTitle}' : r.note,
+      detail: r.note.isEmpty
+          ? 'Fällig am $date'
+          : 'Fällig am $date · ${r.documentTitle}',
+      time: DateTime(d.year, d.month, d.day),
+      documentId: r.document,
+      reminderId: r.id,
+    );
+  }
 
   Notice _fromTask(ConsumeTask t) => Notice(
     key: t.taskId,

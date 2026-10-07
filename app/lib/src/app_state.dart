@@ -71,6 +71,9 @@ class AppState extends ChangeNotifier {
   /// Upload), damit Listen neu laden.
   final documentsChanged = ValueNotifier(0);
 
+  /// Wird erhöht, wenn Fristen angelegt, abgehakt oder gelöscht wurden.
+  final remindersChanged = ValueNotifier(0);
+
   final thumbnails = ThumbnailCache();
 
   /// Zwischenspeicher auf dem Gerät (im Web `null`).
@@ -347,6 +350,7 @@ class AppState extends ChangeNotifier {
     _client?.close();
     _arrivedTimer?.cancel();
     documentsChanged.dispose();
+    remindersChanged.dispose();
     themeMode.dispose();
     lock.dispose();
     notifications.dispose();

@@ -437,6 +437,40 @@ class Profile {
   );
 }
 
+/// Frist an einem Dokument (PaperBuddy-Erweiterung `/api/reminders/`).
+class Reminder {
+  const Reminder({
+    required this.id,
+    required this.document,
+    required this.due,
+    this.documentTitle = '',
+    this.note = '',
+    this.done = false,
+  });
+
+  final int id;
+  final int document;
+  final String documentTitle;
+  final DateTime due;
+  final String note;
+  final bool done;
+
+  /// Heute oder früher fällig und noch offen.
+  bool isDue([DateTime? now]) {
+    final n = now ?? DateTime.now();
+    return !done && !due.isAfter(DateTime(n.year, n.month, n.day));
+  }
+
+  factory Reminder.fromJson(Map<String, dynamic> j) => Reminder(
+    id: j['id'] as int,
+    document: _int(j['document']) ?? 0,
+    documentTitle: j['document_title'] as String? ?? '',
+    due: DateTime.parse('${j['due']}'),
+    note: j['note'] as String? ?? '',
+    done: j['done'] as bool? ?? false,
+  );
+}
+
 /// Neuer TOTP-Schlüssel zum Einrichten (`GET /api/profile/totp/`).
 class TotpSetup {
   const TotpSetup({required this.url, required this.secret});

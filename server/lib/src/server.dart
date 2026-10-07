@@ -27,6 +27,7 @@ import 'storage_remote.dart';
 import 'trash.dart';
 import 'workflows.dart';
 import 'version.dart';
+import 'reminders.dart';
 
 final _log = Logger('server');
 
@@ -45,6 +46,7 @@ class PaperbuddyServer {
     required this.workflows,
     required this.mail,
     required this.scanners,
+    required this.reminders,
   });
 
   final Config config;
@@ -58,6 +60,7 @@ class PaperbuddyServer {
   final ConsumeFolderWatcher? watcher;
   final WorkflowEngine workflows;
   final MailService mail;
+  final Reminders reminders;
   final ScannerService scanners;
   HttpServer? _http;
   Timer? _trainTimer;
@@ -104,6 +107,12 @@ class PaperbuddyServer {
       configured: ScannerService.parseConfig(config.scanners),
       discover: config.scannerDiscovery,
     );
+    final reminders = Reminders(
+      db: db,
+      access: access,
+      email: config.email,
+      publicUrl: config.publicUrl,
+    );
     final api = PaperlessApi(
       db: db,
       auth: auth,
@@ -115,7 +124,7 @@ class PaperbuddyServer {
       customFields: customFields,
       history: history,
       pdf: PdfOperations(db: db, store: store, tools: tools, consumer: consumer, workDir: p.join(config.dataDir, 'work')),
-      extraRoutes: [workflows.mount, mail.mount, scanners.mount],
+      extraRoutes: [workflows.mount, mail.mount, scanners.mount, reminders.mount],
       onLabelUpdated: (table, id) async {
         // Betroffene Dokumente mit neuem Namen ablegen.
         final sql = switch (table) {
@@ -154,6 +163,7 @@ class PaperbuddyServer {
       workflows: workflows,
       mail: mail,
       scanners: scanners,
+      reminders: reminders,
     );
   }
 
@@ -172,6 +182,7 @@ class PaperbuddyServer {
     watcher?.start();
     trash.startAutoEmpty();
     workflows.startScheduler();
+    reminders.start();
     if (config.mailInterval > Duration.zero) mail.start();
     // Wie Paperless-ngx: das lernende Matching stündlich nachtrainieren.
     consumer.classifier.trainIfNeeded();
@@ -189,6 +200,7 @@ class PaperbuddyServer {
     watcher?.stop();
     trash.stop();
     workflows.stop();
+    reminders.stop();
     mail.stop();
     scanners.close();
     _trainTimer?.cancel();

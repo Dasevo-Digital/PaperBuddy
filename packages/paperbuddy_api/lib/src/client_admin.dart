@@ -111,6 +111,56 @@ extension PaperlessAdmin on PaperlessClient {
   Future<Profile> updateProfile(Map<String, Object?> data) async =>
       Profile.fromJson(await _json('PATCH', '/api/profile/', data));
 
+  // Fristen (PaperBuddy-Erweiterung) -----------------------------------------
+
+  /// Eigene Fristen, wahlweise für ein Dokument, nur offene oder bis zu
+  /// einem Datum fällige. Paperless-ngx kennt das nicht (404 → leer).
+  Future<List<Reminder>> reminders({
+    int? document,
+    bool? done,
+    DateTime? dueBefore,
+  }) async {
+    try {
+      return await _all('/api/reminders/', Reminder.fromJson, {
+        if (document != null) 'document': '$document',
+        if (done != null) 'done': '$done',
+        if (dueBefore != null)
+          'due__lte': dueBefore.toIso8601String().substring(0, 10),
+      });
+    } on ApiException catch (e) {
+      if (e.isNotFound) return [];
+      rethrow;
+    }
+  }
+
+  Future<Reminder> createReminder(
+    int document,
+    DateTime due, {
+    String note = '',
+  }) async => Reminder.fromJson(
+    await _json('POST', '/api/reminders/', {
+      'document': document,
+      'due': due.toIso8601String().substring(0, 10),
+      'note': note,
+    }),
+  );
+
+  Future<Reminder> updateReminder(
+    int id, {
+    DateTime? due,
+    String? note,
+    bool? done,
+  }) async => Reminder.fromJson(
+    await _json('PATCH', '/api/reminders/$id/', {
+      if (due != null) 'due': due.toIso8601String().substring(0, 10),
+      'note': ?note,
+      'done': ?done,
+    }),
+  );
+
+  Future<void> deleteReminder(int id) =>
+      _send('DELETE', '/api/reminders/$id/');
+
   // Zwei-Faktor-Anmeldung -----------------------------------------------------
 
   /// Neuer Schlüssel; aktiv erst nach [activateTotp] mit einem passenden Code.
