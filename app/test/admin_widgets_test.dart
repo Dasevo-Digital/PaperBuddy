@@ -12,10 +12,15 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 import 'support.dart';
 
 /// Lässt echte Netzwerk- und Dateiarbeit laufen und zeichnet danach neu.
-Future<void> settle(WidgetTester tester, [Duration wait = const Duration(milliseconds: 300)]) async {
+Future<void> settle(
+  WidgetTester tester, [
+  Duration wait = const Duration(milliseconds: 300),
+]) async {
   await tester.runAsync(() => Future<void>.delayed(wait));
   await tester.pumpAndSettle();
-  await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+  await tester.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 200)),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -26,7 +31,11 @@ void main() {
   setUp(() async => server = await TestServer.start());
   tearDown(() => server.stop());
 
-  Future<AppState> signIn(WidgetTester tester, {String user = TestServer.username, String password = TestServer.password}) async {
+  Future<AppState> signIn(
+    WidgetTester tester, {
+    String user = TestServer.username,
+    String password = TestServer.password,
+  }) async {
     tester.view.physicalSize = const Size(1200, 1400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -40,18 +49,33 @@ void main() {
     return state;
   }
 
-  Future<int> addDocument(WidgetTester tester, String name, String text) async => (await tester.runAsync(() async {
-        final file = File('${server.dir.path}/$name')..writeAsStringSync(text);
-        final task = await server.server.consumer.submit(file, originalName: name);
-        await server.server.consumer.waitFor(task);
-        return server.server.db.select('SELECT related_document FROM tasks WHERE task_id = ?', [task]).first['related_document'] as int;
-      }))!;
+  Future<int> addDocument(
+    WidgetTester tester,
+    String name,
+    String text,
+  ) async => (await tester.runAsync(() async {
+    final file = File('${server.dir.path}/$name')..writeAsStringSync(text);
+    final task = await server.server.consumer.submit(file, originalName: name);
+    await server.server.consumer.waitFor(task);
+    return server.server.db.select(
+          'SELECT related_document FROM tasks WHERE task_id = ?',
+          [task],
+        ).first['related_document']
+        as int;
+  }))!;
 
   testWidgets('Verwaltung je nach Rechten', (tester) async {
     await signIn(tester);
     await tester.tap(find.text('Einstellungen'));
     await settle(tester);
-    for (final entry in ['Tags', 'Custom Fields', 'Workflows', 'E-Mail-Abruf', 'Benutzer und Gruppen', 'Papierkorb']) {
+    for (final entry in [
+      'Tags',
+      'Custom Fields',
+      'Workflows',
+      'E-Mail-Abruf',
+      'Benutzer und Gruppen',
+      'Papierkorb',
+    ]) {
       expect(find.text(entry), findsOneWidget, reason: entry);
     }
 
@@ -59,7 +83,10 @@ void main() {
     await tester.runAsync(() async {
       final id = server.server.auth.createUser('leser', 'passwort123');
       for (final p in ['view_document', 'view_tag']) {
-        server.server.db.execute('INSERT INTO user_permissions (user_id, permission) VALUES (?, ?)', [id, p]);
+        server.server.db.execute(
+          'INSERT INTO user_permissions (user_id, permission) VALUES (?, ?)',
+          [id, p],
+        );
       }
     });
     await tester.pumpWidget(const SizedBox());
@@ -70,18 +97,29 @@ void main() {
     expect(find.text('Workflows'), findsNothing);
     expect(find.text('Benutzer und Gruppen'), findsNothing);
     expect(find.text('Papierkorb'), findsNothing);
-    expect(find.text('Neu'), findsNothing, reason: 'ohne add_document kein Upload-Knopf');
+    expect(
+      find.text('Neu'),
+      findsNothing,
+      reason: 'ohne add_document kein Upload-Knopf',
+    );
   });
 
   testWidgets('Tag mit lernender Zuordnung anlegen', (tester) async {
     final state = await signIn(tester);
     final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
-    nav.push(MaterialPageRoute<void>(builder: (_) => const LabelsScreen(kind: LabelKind.tag)));
+    nav.push(
+      MaterialPageRoute<void>(
+        builder: (_) => const LabelsScreen(kind: LabelKind.tag),
+      ),
+    );
     await settle(tester);
     expect(find.text('Keine Tags'), findsOneWidget);
     await tester.tap(find.byTooltip('Tag anlegen'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Versicherung');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Name'),
+      'Versicherung',
+    );
     await tester.tap(find.text('Speichern'));
     await settle(tester);
     expect(find.text('Versicherung'), findsOneWidget);
@@ -128,6 +166,10 @@ void main() {
     await tester.tap(find.text('Wohnen'));
     await settle(tester);
     expect(find.text('1 Dokument'), findsOneWidget);
-    expect(find.text('miet'), findsOneWidget, reason: 'Suchfeld zeigt den Begriff der Ansicht');
+    expect(
+      find.text('miet'),
+      findsOneWidget,
+      reason: 'Suchfeld zeigt den Begriff der Ansicht',
+    );
   });
 }

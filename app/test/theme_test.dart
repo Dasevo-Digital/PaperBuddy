@@ -20,7 +20,11 @@ void main() {
     addTearDown(tester.view.reset);
     final state = (await tester.runAsync(() async {
       final s = await newAppState(server);
-      await s.login(TestServer.address, TestServer.username, TestServer.password);
+      await s.login(
+        TestServer.address,
+        TestServer.username,
+        TestServer.password,
+      );
       return s;
     }))!;
     await tester.pumpWidget(PaperBuddyApp(state: state));

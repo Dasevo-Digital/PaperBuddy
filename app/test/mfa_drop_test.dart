@@ -157,7 +157,11 @@ void main() {
       (name: 'a.txt', bytes: text('Erstes Dokument vom 01.02.2026')),
       (name: 'b.txt', bytes: text('Zweites Dokument vom 02.02.2026')),
     ]);
-    for (var i = 0; i < 100 && state.uploads.jobs.any((j) => !j.finished); i++) {
+    for (
+      var i = 0;
+      i < 100 && state.uploads.jobs.any((j) => !j.finished);
+      i++
+    ) {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
     expect(

@@ -81,10 +81,7 @@ void main() {
     );
     expect(requests, beforeThumb);
     // Neue Fassung des Dokuments: alte Vorschau gilt nicht mehr.
-    expect(
-      await state.files!.thumbnail(doc.id, DateTime(2030)),
-      isNull,
-    );
+    expect(await state.files!.thumbnail(doc.id, DateTime(2030)), isNull);
 
     // Offline markieren, Server weg: Liste und Datei gibt es trotzdem.
     await state.keepOffline(doc);

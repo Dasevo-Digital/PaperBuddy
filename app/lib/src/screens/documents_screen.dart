@@ -49,6 +49,10 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   final _search = TextEditingController();
   final _scroll = ScrollController();
   Timer? _debounce;
+  Timer? _suggestDebounce;
+
+  /// Wörter aus den Dokumenten, die mit dem zuletzt getippten beginnen.
+  List<String> _suggestions = [];
   _Layout? _layout;
 
   @override
@@ -82,6 +86,41 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       () => _applyFilter(_controller.filter),
     );
     setState(() {}); // Löschen-Knopf ein-/ausblenden
+    _suggestDebounce?.cancel();
+    final word = _lastWord(value);
+    if (word.length < 2) {
+      if (_suggestions.isNotEmpty) setState(() => _suggestions = []);
+      return;
+    }
+    _suggestDebounce = Timer(const Duration(milliseconds: 250), () async {
+      try {
+        final words = await _state.client.autocomplete(word, limit: 8);
+        if (!mounted || _lastWord(_search.text) != word) return;
+        setState(
+          () => _suggestions = [
+            for (final w in words)
+              if (w != word.toLowerCase()) w,
+          ],
+        );
+      } on ApiException {
+        // Ohne Vorschläge weiter suchen.
+      }
+    });
+  }
+
+  static String _lastWord(String text) {
+    final m = RegExp(r'[\p{L}\p{N}]+$', unicode: true).firstMatch(text);
+    return m?.group(0) ?? '';
+  }
+
+  /// Vorschlag übernehmen: letztes Wort ersetzen und sofort suchen.
+  void _useSuggestion(String word) {
+    final text = _search.text;
+    final last = _lastWord(text);
+    _search.text = '${text.substring(0, text.length - last.length)}$word ';
+    _search.selection = TextSelection.collapsed(offset: _search.text.length);
+    setState(() => _suggestions = []);
+    _applyFilter(_controller.filter);
   }
 
   /// Übernimmt [filter] mit dem aktuellen Suchtext und dem festen
@@ -620,6 +659,25 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 },
               ),
             ),
+            if (_suggestions.isNotEmpty && _search.text.isNotEmpty)
+              SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
+                    for (final w in _suggestions)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: ActionChip(
+                          avatar: const Icon(LucideIcons.search, size: 14),
+                          label: Text(w),
+                          onPressed: () => _useSuggestion(w),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             if (!widget.baseFilter.inboxOnly) _savedViewsRow(),
             _ActiveFilters(
               controller: _controller,

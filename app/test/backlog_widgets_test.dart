@@ -10,10 +10,15 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import 'support.dart';
 
-Future<void> settle(WidgetTester tester, [Duration wait = const Duration(milliseconds: 300)]) async {
+Future<void> settle(
+  WidgetTester tester, [
+  Duration wait = const Duration(milliseconds: 300),
+]) async {
   await tester.runAsync(() => Future<void>.delayed(wait));
   await tester.pumpAndSettle();
-  await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+  await tester.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 200)),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -36,9 +41,16 @@ void main() {
     addTearDown(tester.view.reset);
     final state = (await tester.runAsync(() async {
       final s = await newAppState(server);
-      await s.login(TestServer.address, TestServer.username, TestServer.password);
-      final file = File('${server.dir.path}/Vertrag.txt')..writeAsStringSync('Entwurf');
-      await server.server.consumer.waitFor(await server.server.consumer.submit(file, originalName: 'Vertrag.txt'));
+      await s.login(
+        TestServer.address,
+        TestServer.username,
+        TestServer.password,
+      );
+      final file = File('${server.dir.path}/Vertrag.txt')
+        ..writeAsStringSync('Entwurf');
+      await server.server.consumer.waitFor(
+        await server.server.consumer.submit(file, originalName: 'Vertrag.txt'),
+      );
       return s;
     }))!;
     await tester.pumpWidget(PaperBuddyApp(state: state));
@@ -52,7 +64,14 @@ void main() {
     // Neue Fassung über den Client, dann Ansicht neu öffnen.
     await tester.runAsync(() async {
       final id = (await state.client.documents()).results.single.id;
-      await state.client.waitForTask(await state.client.uploadVersion(id, utf8.encode('Unterschrieben'), 'Vertrag-v2.txt', label: 'unterschrieben'));
+      await state.client.waitForTask(
+        await state.client.uploadVersion(
+          id,
+          utf8.encode('Unterschrieben'),
+          'Vertrag-v2.txt',
+          label: 'unterschrieben',
+        ),
+      );
     });
     await tester.tap(find.byType(BackButton));
     await settle(tester);

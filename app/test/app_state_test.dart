@@ -63,7 +63,11 @@ void main() {
     state.documentsChanged.addListener(() => changed++);
     await state.uploads.add(client, [
       UploadRequest('police.txt', text('Versicherungspolice vom 01.02.2026')),
-      UploadRequest('rechnung.txt', text('Rechnung Handwerker 03.03.2026'), title: 'Handwerker'),
+      UploadRequest(
+        'rechnung.txt',
+        text('Rechnung Handwerker 03.03.2026'),
+        title: 'Handwerker',
+      ),
       UploadRequest('doppelt.txt', text('Rechnung Handwerker 03.03.2026')),
     ]);
     expect(

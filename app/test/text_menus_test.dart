@@ -42,28 +42,36 @@ void main() {
     return controller;
   }
 
-  testWidgets('Rechtsklick setzt in ein Passwortfeld ein', (tester) async {
-    final controller = await pumpField(tester);
-    await tester.tapAt(
-      tester.getCenter(find.byType(TextField)),
-      buttons: kSecondaryButton,
-      kind: PointerDeviceKind.mouse,
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Einsetzen'), findsOneWidget);
-    expect(find.text('Kopieren'), findsNothing);
+  testWidgets(
+    'Rechtsklick setzt in ein Passwortfeld ein',
+    (tester) async {
+      final controller = await pumpField(tester);
+      await tester.tapAt(
+        tester.getCenter(find.byType(TextField)),
+        buttons: kSecondaryButton,
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Einsetzen'), findsOneWidget);
+      expect(find.text('Kopieren'), findsNothing);
 
-    await tester.tap(find.text('Einsetzen'));
-    await tester.pumpAndSettle();
-    expect(controller.text, 'geheim-123');
-  }, variant: TargetPlatformVariant.desktop());
+      await tester.tap(find.text('Einsetzen'));
+      await tester.pumpAndSettle();
+      expect(controller.text, 'geheim-123');
+    },
+    variant: TargetPlatformVariant.desktop(),
+  );
 
-  testWidgets('Langes Drücken setzt in ein Passwortfeld ein', (tester) async {
-    final controller = await pumpField(tester);
-    await tester.longPress(find.byType(TextField));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Einsetzen'));
-    await tester.pumpAndSettle();
-    expect(controller.text, 'geheim-123');
-  }, variant: TargetPlatformVariant.mobile());
+  testWidgets(
+    'Langes Drücken setzt in ein Passwortfeld ein',
+    (tester) async {
+      final controller = await pumpField(tester);
+      await tester.longPress(find.byType(TextField));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Einsetzen'));
+      await tester.pumpAndSettle();
+      expect(controller.text, 'geheim-123');
+    },
+    variant: TargetPlatformVariant.mobile(),
+  );
 }
