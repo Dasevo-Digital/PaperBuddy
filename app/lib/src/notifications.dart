@@ -164,8 +164,25 @@ class NotificationCenter extends ChangeNotifier {
     _schedule();
   }
 
+  bool _paused = false;
+
+  /// App im Hintergrund: keine Abfragen.
+  void pause() {
+    _paused = true;
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  /// Zurück im Vordergrund: sofort abgleichen und weiter abfragen.
+  void resume() {
+    if (!_paused) return;
+    _paused = false;
+    refresh().ignore();
+  }
+
   void _schedule() {
     _timer?.cancel();
+    if (_paused) return;
     if (_client == null || _serverDisabled) return;
     _timer = Timer(hasRunning ? fastPollInterval : pollInterval, refresh);
   }

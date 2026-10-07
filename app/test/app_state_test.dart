@@ -74,7 +74,21 @@ void main() {
       state.uploads.jobs.last.message,
       'Dieses Dokument ist bereits vorhanden.',
     );
-    expect(changed, 2);
+    await Future<void>.delayed(
+      AppState.arrivalDelay + const Duration(milliseconds: 200),
+    );
+    expect(changed, inInclusiveRange(1, 2));
+
+    // Viele neue Dokumente kurz hintereinander: ein einziges Neuladen.
+    changed = 0;
+    for (var i = 0; i < 10; i++) {
+      state.documentsArrived();
+    }
+    expect(changed, 0);
+    await Future<void>.delayed(
+      AppState.arrivalDelay + const Duration(milliseconds: 200),
+    );
+    expect(changed, 1);
 
     final docs = DocumentsController(client);
     await docs.refresh();
@@ -117,5 +131,16 @@ void main() {
     await docs.loadMore();
     expect(docs.items.length, DocumentsController.pageSize + 5);
     expect(docs.hasMore, isFalse);
+
+    // Neuladen lässt die Liste stehen und holt so viele wie vorher.
+    final pending = docs.refresh();
+    expect(docs.items.length, DocumentsController.pageSize + 5);
+    await pending;
+    expect(docs.items.length, DocumentsController.pageSize + 5);
+    expect(docs.items.map((d) => d.id).toSet().length, docs.items.length);
+    // Neuer Filter leert sofort.
+    final filtered = docs.setFilter(const DocumentFilter(query: 'nummer'));
+    expect(docs.items, isEmpty);
+    await filtered;
   });
 }

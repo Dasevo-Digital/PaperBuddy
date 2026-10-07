@@ -24,19 +24,50 @@ class DocumentsController extends ChangeNotifier {
   Future<void> setFilter(DocumentFilter filter) async {
     if (filter == _filter && items.isNotEmpty) return;
     _filter = filter;
-    await refresh();
+    await refresh(keepItems: false);
   }
 
-  Future<void> refresh() async {
-    _generation++;
-    items.clear();
-    total = 0;
-    _page = 0;
-    hasMore = true;
-    error = null;
-    loading = false;
+  /// Lädt neu. Mit [keepItems] bleibt die bisherige Liste sichtbar, bis die
+  /// neue da ist (kein Aufblitzen, Scrollposition bleibt); es werden so
+  /// viele Einträge geholt wie bisher geladen waren (höchstens 200).
+  Future<void> refresh({bool keepItems = true}) async {
+    final generation = ++_generation;
+    if (!keepItems || items.isEmpty) {
+      items.clear();
+      total = 0;
+      _page = 0;
+      hasMore = true;
+      error = null;
+      loading = false;
+      notifyListeners();
+      await loadMore();
+      return;
+    }
+    final size = ((items.length / pageSize).ceil() * pageSize).clamp(
+      pageSize,
+      200,
+    );
+    try {
+      final result = await _client.documents(
+        filter: _filter,
+        page: 1,
+        pageSize: size,
+      );
+      if (generation != _generation) return;
+      items
+        ..clear()
+        ..addAll(result.results);
+      total = result.count;
+      // Danach weiter seitenweise in normaler Größe; eine angebrochene Seite
+      // wird erneut geholt, Doppelte filtert loadMore heraus.
+      _page = result.results.length ~/ pageSize;
+      hasMore = result.hasNext;
+      error = null;
+    } on ApiException catch (e) {
+      if (generation != _generation) return;
+      error = e.message;
+    }
     notifyListeners();
-    await loadMore();
   }
 
   Future<void> loadMore() async {
@@ -53,7 +84,8 @@ class DocumentsController extends ChangeNotifier {
       );
       if (generation != _generation) return;
       _page++;
-      items.addAll(result.results);
+      final known = {for (final d in items) d.id};
+      items.addAll(result.results.where((d) => !known.contains(d.id)));
       total = result.count;
       hasMore = result.hasNext;
     } on ApiException catch (e) {

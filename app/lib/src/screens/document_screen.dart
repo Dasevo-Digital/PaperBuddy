@@ -527,9 +527,7 @@ class _Field extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(
-            child: Text(v, style: theme.textTheme.bodyMedium),
-          ),
+          Expanded(child: Text(v, style: theme.textTheme.bodyMedium)),
         ],
       ),
     );

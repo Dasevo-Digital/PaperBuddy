@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:paperbuddy/src/app.dart';
+import 'package:paperbuddy/src/app_state.dart';
 import 'package:paperbuddy/src/notifications.dart';
 import 'package:paperbuddy/src/upload_queue.dart';
 
@@ -48,6 +49,9 @@ void main() {
     await center.refresh();
     expect(center.notices.map((n) => n.title), containsAll(['rechnung.txt', 'scan.txt']));
     expect(popups.map((n) => n.title), contains('scan.txt'));
+    await Future<void>.delayed(
+      AppState.arrivalDelay + const Duration(milliseconds: 200),
+    );
     expect(changed, greaterThan(0), reason: 'Listen laden neu');
 
     await center.clearFinished();

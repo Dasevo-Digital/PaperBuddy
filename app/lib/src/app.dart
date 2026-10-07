@@ -20,7 +20,8 @@ class PaperBuddyApp extends StatefulWidget {
   State<PaperBuddyApp> createState() => _PaperBuddyAppState();
 }
 
-class _PaperBuddyAppState extends State<PaperBuddyApp> {
+class _PaperBuddyAppState extends State<PaperBuddyApp>
+    with WidgetsBindingObserver {
   final _navigator = GlobalKey<NavigatorState>();
   final _messenger = GlobalKey<ScaffoldMessengerState>();
   late final _share = ShareIntake(widget.state, _navigator);
@@ -30,6 +31,19 @@ class _PaperBuddyAppState extends State<PaperBuddyApp> {
     super.initState();
     _share.start();
     widget.state.notifications.onPopup = _popup;
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        widget.state.appResumed();
+      case AppLifecycleState.hidden || AppLifecycleState.paused:
+        widget.state.appPaused();
+      default:
+        break;
+    }
   }
 
   /// Kurzer Hinweis zu einem neuen Ergebnis; er verschwindet von selbst,
@@ -68,6 +82,7 @@ class _PaperBuddyAppState extends State<PaperBuddyApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _share.dispose();
     super.dispose();
   }

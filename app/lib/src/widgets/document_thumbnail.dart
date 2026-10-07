@@ -53,12 +53,21 @@ class _DocumentThumbnailState extends State<DocumentThumbnail> {
         builder: (context, snap) {
           final bytes = snap.data;
           if (bytes != null) {
-            return Image.memory(
-              bytes,
-              fit: widget.fit,
-              alignment: Alignment.topCenter,
-              gaplessPlayback: true,
-              errorBuilder: (_, _, _) => _placeholder(scheme),
+            // Nur so groß dekodieren wie angezeigt (die Vorschau ist 500 px
+            // breit, in der Liste aber nur wenige Dutzend Punkte).
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final dpr = MediaQuery.devicePixelRatioOf(context);
+                final w = constraints.maxWidth;
+                return Image.memory(
+                  bytes,
+                  fit: widget.fit,
+                  alignment: Alignment.topCenter,
+                  gaplessPlayback: true,
+                  cacheWidth: w.isFinite && w > 0 ? (w * dpr).ceil() : null,
+                  errorBuilder: (_, _, _) => _placeholder(scheme),
+                );
+              },
             );
           }
           if (snap.connectionState != ConnectionState.done) {

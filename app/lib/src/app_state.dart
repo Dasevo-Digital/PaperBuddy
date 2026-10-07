@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:paperbuddy_api/paperbuddy_api.dart';
@@ -58,20 +60,12 @@ class AppState extends ChangeNotifier {
   final documentsChanged = ValueNotifier(0);
 
   final thumbnails = ThumbnailCache();
-  late final uploads = UploadQueue(
-    onDocumentAdded: () {
-      notifyDocumentsChanged();
-      refreshLabels().ignore();
-    },
-  );
+  late final uploads = UploadQueue(onDocumentAdded: documentsArrived);
 
   /// Benachrichtigungszentrale für Uploads und Importe auf dem Server.
   late final notifications = NotificationCenter(
     uploads: uploads,
-    onDocumentAdded: () {
-      notifyDocumentsChanged();
-      refreshLabels().ignore();
-    },
+    onDocumentAdded: documentsArrived,
     loadSeen: () => _store.noticesSeen,
     saveSeen: _store.setNoticesSeen,
   );
@@ -217,9 +211,48 @@ class AppState extends ChangeNotifier {
 
   void notifyDocumentsChanged() => documentsChanged.value++;
 
+  DateTime? _backgroundSince;
+
+  /// App geht in den Hintergrund: Abfragen pausieren.
+  void appPaused() {
+    _backgroundSince ??= DateTime.now();
+    notifications.pause();
+  }
+
+  /// App kommt zurück: Benachrichtigungen sofort abgleichen, nach längerer
+  /// Pause auch Listen und Labels neu laden.
+  void appResumed() {
+    final since = _backgroundSince;
+    _backgroundSince = null;
+    if (status != SessionStatus.signedIn) return;
+    notifications.resume();
+    if (since != null &&
+        DateTime.now().difference(since) > const Duration(seconds: 30)) {
+      notifyDocumentsChanged();
+      refreshLabels().ignore();
+    }
+  }
+
+  Timer? _arrivedTimer;
+
+  /// Neue Dokumente vom Server (Uploads, Importe). Mehrere kurz
+  /// hintereinander lösen nur ein Neuladen der Listen und Labels aus,
+  /// statt eines je Dokument.
+  void documentsArrived() {
+    _arrivedTimer?.cancel();
+    _arrivedTimer = Timer(arrivalDelay, () {
+      notifyDocumentsChanged();
+      refreshLabels().ignore();
+    });
+  }
+
+  /// Wartezeit zum Bündeln von [documentsArrived].
+  static Duration arrivalDelay = const Duration(milliseconds: 800);
+
   @override
   void dispose() {
     _client?.close();
+    _arrivedTimer?.cancel();
     documentsChanged.dispose();
     themeMode.dispose();
     notifications.dispose();
