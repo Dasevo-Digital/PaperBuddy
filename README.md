@@ -1,8 +1,21 @@
 # PaperBuddy
 
-Selbst gehostete Dokumentenverwaltung in Dart/Flutter, inspiriert von Paperless-ngx.
-Der Server spricht die **REST-API von Paperless-ngx**, dadurch funktionieren vorhandene
-Apps wie Swift Paperless (iOS) oder Paperless Mobile direkt.
+<p align="center">
+  <img src="app/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png" width="112" alt="PaperBuddy App-Symbol">
+</p>
+
+<p align="center">
+  Dokumente scannen, durchsuchbar machen, ordnen und Fristen im Blick
+  behalten – auf dem eigenen Server, kompatibel zu Paperless-ngx.
+</p>
+
+PaperBuddy ist eine selbst gehostete Dokumentenverwaltung in Dart und
+Flutter, inspiriert von Paperless-ngx. Der Server übernimmt Dokumente aus der
+App, per E-Mail, aus einem Eingangsordner oder direkt vom Netzwerkscanner,
+erkennt den Text per OCR und ordnet sie Korrespondenten, Dokumenttypen und
+Tags zu. Er spricht die **REST-API von Paperless-ngx**, dadurch funktionieren
+auch vorhandene Apps wie Swift Paperless (iOS) oder Paperless Mobile direkt.
+Die eigene App gibt es für Android, iOS, macOS, Windows, Linux und den Browser.
 
 Der Quellcode ist einsehbar, aber **nicht Open Source**: Der Projektcode
 steht unter der [PolyForm Strict License 1.0.0](LICENSE) (© 2026 Dasevo
@@ -11,6 +24,36 @@ Prüfen des Quellcodes. Kopieren, Ändern, Weitergeben und jede kommerzielle
 Nutzung sind ohne gesonderte schriftliche Genehmigung nicht gestattet.
 Hinweise zu Komponenten und Diensten Dritter stehen in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Ein Blick in PaperBuddy
+
+<p align="center">
+  <img src="docs/screenshots/desktop.png" width="72%" alt="PaperBuddy am Desktop: Dokumente als Raster mit Vorschaubildern, Korrespondenten und farbigen Tags">
+  <img src="docs/screenshots/mobile-dark.png" width="25%" alt="PaperBuddy auf dem Smartphone im dunklen Design">
+</p>
+<p align="center">
+  <img src="docs/screenshots/detail.png" width="49%" alt="Detailansicht eines Mietvertrags mit Vorschau, Feldern, Frist und Notiz">
+  <img src="docs/screenshots/dashboard.png" width="49%" alt="Übersicht mit Statistiken und den nächsten Fristen">
+</p>
+
+*Die Screenshots zeigen ausgedachte Demo-Dokumente (`app/tool/screenshots.sh`).*
+
+## Herunterladen
+
+Die fertigen Apps und das Server-Paket liegen bei den
+[Releases](../../releases/latest):
+
+| Datei | Für |
+|---|---|
+| `PaperBuddy-<version>-android.apk` | Android 7 und neuer |
+| `PaperBuddy-<version>-macos.zip` | macOS 12 und neuer, Apple Silicon und Intel |
+| `PaperBuddy-<version>-server-linux-<arch>.tar.gz` | Server ohne Docker für x64 und arm64, siehe [unten](#debianubuntu-ohne-docker-z-b-proxmox-lxc) |
+
+Die Builds sind nicht von Apple beglaubigt. macOS öffnet die App beim ersten
+Mal nur über Rechtsklick → *Öffnen*. Für iPhone, iPad, Windows und Linux gibt
+es noch keinen Download; dort lässt sich die App mit Flutter aus dem
+Quellcode bauen. `SHA256SUMS.txt` im Release enthält die Prüfsummen aller
+Dateien.
 
 ## Aufbau
 
