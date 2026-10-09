@@ -1,6 +1,9 @@
 # syntax=docker/dockerfile:1
 
-FROM dart:stable AS build
+# Basis-Images mit Version und Digest, damit jeder Build dasselbe Ergebnis
+# liefert. Beim Anheben beide Werte erneuern
+# (`docker buildx imagetools inspect <image>:<tag>`).
+FROM dart:3.12.2@sha256:5ac89dbcae4327278b257920e2786df0f22c87adc630017266b67cfcceef8348 AS build
 WORKDIR /src
 COPY pubspec.yaml pubspec.lock ./
 RUN dart pub get
@@ -9,7 +12,7 @@ RUN dart build cli -t bin/server.dart -o /out/server \
  && dart build cli -t bin/manage.dart -o /out/manage \
  && cp /out/manage/bundle/bin/manage /out/server/bundle/bin/
 
-FROM debian:trixie-slim
+FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
 # OFFICE=1: LibreOffice für Vorschau und Archiv-PDF von Word, Excel und
 # PowerPoint (macht das Image rund 400 MB größer; Text gibt es auch ohne).
 ARG OFFICE=0
