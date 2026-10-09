@@ -56,15 +56,24 @@ void main() {
       find.widgetWithText(TextFormField, 'Passwort'),
       TestServer.password,
     );
-    Future<void> submit() async {
-      await tester.runAsync(() async {
-        await tester.tap(find.text('Anmelden'));
-        await Future<void>.delayed(const Duration(seconds: 2));
-      });
+    /// Tippt auf „Anmelden“ und wartet in echter Zeit, bis [done] gilt. Die
+    /// Passwortprüfung (PBKDF2) dauert auf langsamen CI-Rechnern mehrere
+    /// Sekunden; mit fester Wartezeit dreht danach noch der Ladekreis und
+    /// `pumpAndSettle` läuft in den Timeout.
+    Future<void> submit(bool Function() done) async {
+      await tester.runAsync(() async => tester.tap(find.text('Anmelden')));
+      for (var i = 0; i < 300 && !done(); i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+        await tester.pump();
+      }
       await tester.pumpAndSettle();
     }
 
-    await submit();
+    bool shows(String text) => find.text(text).evaluate().isNotEmpty;
+
+    await submit(() => shows('Bestätigungscode'));
     expect(find.text('Bestätigungscode'), findsOneWidget);
     expect(state.status, SessionStatus.signedOut);
 
@@ -72,20 +81,14 @@ void main() {
       find.widgetWithText(TextFormField, 'Bestätigungscode'),
       '000000',
     );
-    await submit();
+    await submit(() => shows('Der Code ist falsch oder abgelaufen.'));
     expect(find.text('Der Code ist falsch oder abgelaufen.'), findsOneWidget);
 
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Bestätigungscode'),
       Totp.codeAt(secret, step + 1),
     );
-    await tester.runAsync(() async {
-      await tester.tap(find.text('Anmelden'));
-      for (var i = 0; i < 50 && state.status != SessionStatus.signedIn; i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-      }
-    });
-    await tester.pumpAndSettle();
+    await submit(() => state.status == SessionStatus.signedIn);
     expect(
       state.status,
       SessionStatus.signedIn,
