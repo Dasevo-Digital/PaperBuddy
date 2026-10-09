@@ -84,7 +84,7 @@ Verwaltungsbefehle laufen über `paperbuddy-manage` (z. B. `paperbuddy-manage ex
   Übersicht und Benachrichtigungen, per E-Mail am Fälligkeitstag, wenn `EMAIL_HOST` gesetzt
   ist (PaperBuddy-Erweiterung `/api/reminders/`, Paperless-Apps ignorieren sie)
 - **Teilen:** Mehrbenutzer mit Gruppen, Modell- und Objektrechten, Freigabelinks ohne Anmeldung
-- **Sicherheit:** Zwei-Faktor-Anmeldung (TOTP mit Wiederherstellungscodes), Papierkorb mit Frist, Export/Backup im Paperless-Format, Import aus Paperless-ngx
+- **Sicherheit:** Zwei-Faktor-Anmeldung (TOTP mit Wiederherstellungscodes), Login-Bremse gegen Passwort-Raten, Papierkorb mit Frist, Export/Backup im Paperless-Format, Import aus Paperless-ngx
 - **Speicher:** lokal, S3-kompatibel (AWS, MinIO, RustFS …) oder WebDAV (z. B. Nextcloud)
 
 ## Konfiguration
@@ -102,6 +102,7 @@ Umgebungsvariablen mit Präfix `PAPERBUDDY_`. Die `PAPERLESS_`-Namen werden eben
 | `ADMIN_USER` / `ADMIN_PASSWORD` | – | legt beim ersten Start einen Admin an |
 | `URL` | – | öffentliche Adresse (Links in E-Mails/Webhooks) |
 | `CORS_ALLOWED_HOSTS` | – | kommagetrennte Origins für Web-Clients |
+| `TRUSTED_PROXIES` | – | kommagetrennte Adressen von Reverse-Proxys; nur von dort gilt `X-Forwarded-For` (für die Login-Bremse). `URL` mit https schaltet HSTS ein |
 | `EMPTY_TRASH_DELAY` | `30` | Tage im Papierkorb |
 | `MAIL_INTERVAL` | `10` | Minuten zwischen Mail-Abrufen, `0` = aus |
 | `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_FROM`, `EMAIL_USE_TLS`, `EMAIL_USE_SSL` | – | SMTP für Workflow-E-Mails |
@@ -133,6 +134,15 @@ Wie bei Paperless-ngx erwartet `POST /api/token/` dann zusätzlich `code`
 (TOTP- oder Wiederherstellungscode); Swift Paperless fragt ihn von selbst ab.
 Basic-Auth ist für solche Konten gesperrt, Token funktionieren weiter. Nach
 fünf falschen Codes ist der zweite Faktor zehn Minuten gesperrt.
+
+Login-Bremse: Nach fünf falschen Passwörtern von einer Adresse für ein Konto
+(oder 20 für beliebige Konten bzw. 20 für ein Konto von beliebigen Adressen)
+antwortet `/api/token/` wie Django REST Framework mit `429` und `Retry-After`;
+die Wartezeit beginnt bei 30 Sekunden und verdoppelt sich bis zu einer Stunde.
+Basic-Auth zählt mit. Adressen, die sich in den letzten 30 Tagen erfolgreich
+angemeldet haben, sperrt ein fremder Angreifer damit nicht aus. Hinter einem
+Reverse-Proxy dessen Adresse in `TRUSTED_PROXIES` eintragen, sonst zählen alle
+Anfragen als eine Adresse.
 
 Im Container: `docker compose exec paperbuddy manage <befehl>`.
 

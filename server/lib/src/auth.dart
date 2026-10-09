@@ -7,6 +7,7 @@ import 'package:crypto/crypto.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import 'db.dart';
+import 'security.dart';
 import 'totp.dart';
 
 class User {
@@ -114,6 +115,15 @@ class AuthService {
 
   bool get hasUsers => db.select('SELECT 1 FROM users LIMIT 1').isNotEmpty;
 
+  /// Bremst wiederholte Fehlversuche bei der Passwort-Anmeldung.
+  LoginThrottle throttle = LoginThrottle();
+
+  /// Vergleichswert für unbekannte Benutzer, damit die Antwortzeit nicht
+  /// verrät, welche Namen es gibt. Der Hash selbst passt zu keinem Passwort,
+  /// nur Format und Rundenzahl zählen.
+  static const _dummyHash = 'pbkdf2_sha256\$${PasswordHasher.iterations}\$paperbuddy-dummy\$'
+      'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+
   /// PBKDF2 ist absichtlich langsam; darum in einem eigenen Isolate,
   /// damit der Server währenddessen weiter antwortet.
   Future<User?> authenticate(String username, String password) async {
@@ -121,12 +131,20 @@ class AuthService {
       'SELECT * FROM users WHERE username = ? AND is_active = 1',
       [username],
     );
-    if (rows.isEmpty) return null;
-    final hash = rows.first['password_hash'] as String;
-    if (!await Isolate.run(() => PasswordHasher.verify(password, hash))) {
-      return null;
-    }
+    final hash = rows.firstOrNull?['password_hash'] as String? ?? _dummyHash;
+    final ok = await Isolate.run(() => PasswordHasher.verify(password, hash));
+    if (rows.isEmpty || !ok) return null;
     return _userFromRow(rows.first);
+  }
+
+  /// Wie [authenticate], aber mit [throttle] je Client-Adresse: wirft
+  /// [LoginThrottled], solange Adresse oder Konto gesperrt sind.
+  Future<User?> login(String username, String password, {required String address}) async {
+    final wait = throttle.blockedFor(address, username);
+    if (wait != null) throw LoginThrottled(wait);
+    final user = await authenticate(username, password);
+    if (user == null) throttle.failed(address, username);
+    return user;
   }
 
   // Zwei-Faktor-Anmeldung --------------------------------------------------
@@ -231,7 +249,8 @@ class AuthService {
   );
 
   /// Unterstützt `Authorization: Token …` und `Basic …` wie Paperless-ngx.
-  Future<User?> userForAuthorizationHeader(String? header) async {
+  /// Basic-Auth läuft über [login], ist also ebenfalls gebremst.
+  Future<User?> userForAuthorizationHeader(String? header, {String address = 'unknown'}) async {
     if (header == null) return null;
     final space = header.indexOf(' ');
     if (space < 0) return null;
@@ -255,13 +274,12 @@ class AuthService {
           final decoded = utf8.decode(base64.decode(value));
           final colon = decoded.indexOf(':');
           if (colon < 0) return null;
-          final user = await authenticate(
-            decoded.substring(0, colon),
-            decoded.substring(colon + 1),
-          );
+          final username = decoded.substring(0, colon);
+          final user = await login(username, decoded.substring(colon + 1), address: address);
           // Basic-Auth kennt keinen zweiten Faktor; mit TOTP nur Token.
           if (user != null && mfaEnabled(user.id)) return null;
           if (user != null) {
+            throttle.succeeded(address, username);
             _basicCache.removeWhere((_, v) => v.$2.isBefore(DateTime.now()));
             _basicCache[cacheKey] = (
               user.id,

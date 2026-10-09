@@ -11,6 +11,7 @@ import '../history.dart';
 import '../processing/consumer.dart';
 import '../processing/pdf_ops.dart';
 import '../processing/tools.dart';
+import '../security.dart';
 import '../storage.dart';
 import '../trash.dart';
 import 'custom_fields.dart';
@@ -44,6 +45,8 @@ class PaperlessApi {
     this.onLabelUpdated,
     this.oauthUrls,
     this.corsOrigins = const [],
+    this.clientAddress = const ClientAddress(),
+    this.hsts = false,
   });
 
   final Database db;
@@ -54,6 +57,13 @@ class PaperlessApi {
   final ExternalTools tools;
   final Trash trash;
   final List<String> corsOrigins;
+
+  /// Adresse des Clients für die Login-Bremse (Proxy-Header nur von
+  /// eingetragenen Proxys).
+  final ClientAddress clientAddress;
+
+  /// `Strict-Transport-Security` senden (öffentliche Adresse mit https).
+  final bool hsts;
 
   /// Weitere Ressourcen (Workflows, Mail, Scanner …) hängen sich hier ein.
   final List<void Function(void Function(String method, String path, Function handler) route)> extraRoutes;
@@ -193,6 +203,7 @@ class PaperlessApi {
     }
 
     return const Pipeline()
+        .addMiddleware(securityHeaders(hsts: hsts))
         .addMiddleware(_errors)
         .addMiddleware(_cors)
         .addMiddleware(_versionHeaders)
@@ -264,9 +275,15 @@ class PaperlessApi {
         !request.url.path.startsWith('api')) {
       return inner(request);
     }
-    final user = await auth.userForAuthorizationHeader(
-      request.headers['authorization'],
-    );
+    final User? user;
+    try {
+      user = await auth.userForAuthorizationHeader(
+        request.headers['authorization'],
+        address: clientAddress.of(request),
+      );
+    } on LoginThrottled catch (e) {
+      return ApiError.throttled(e.retryAfter).toResponse();
+    }
     if (user == null) {
       return Response(
         401,
@@ -287,10 +304,14 @@ class PaperlessApi {
 
   Future<Response> _token(Request request) async {
     final body = await readBody(request);
-    final user = await auth.authenticate(
-      body['username']?.toString() ?? '',
-      body['password']?.toString() ?? '',
-    );
+    final username = body['username']?.toString() ?? '';
+    final address = clientAddress.of(request);
+    final User? user;
+    try {
+      user = await auth.login(username, body['password']?.toString() ?? '', address: address);
+    } on LoginThrottled catch (e) {
+      throw ApiError.throttled(e.retryAfter);
+    }
     if (user == null) {
       throw ApiError.badRequest({
         'non_field_errors': ['Unable to log in with provided credentials.'],
@@ -317,6 +338,7 @@ class PaperlessApi {
           });
       }
     }
+    auth.throttle.succeeded(address, username);
     return json({'token': auth.tokenFor(user)});
   }
 

@@ -8,15 +8,26 @@ import 'package:shelf/shelf.dart';
 
 /// Fehler im Stil von Django REST Framework (`{"detail": "…"}`).
 class ApiError implements Exception {
-  ApiError(this.status, this.detail, {this.body});
+  ApiError(this.status, this.detail, {this.body, this.headers = const {}});
   ApiError.notFound() : this(404, 'No Document matches the given query.');
   ApiError.badRequest(Object body) : this(400, 'Bad request', body: body);
+
+  /// Wie Django REST Framework bei gedrosselten Anfragen.
+  ApiError.throttled(Duration wait)
+    : this(
+        429,
+        'Request was throttled. Expected available in ${_seconds(wait)} seconds.',
+        headers: {'retry-after': '${_seconds(wait)}'},
+      );
 
   final int status;
   final String detail;
   final Object? body;
+  final Map<String, String> headers;
 
-  Response toResponse() => json(body ?? {'detail': detail}, status: status);
+  static int _seconds(Duration d) => (d.inMilliseconds / 1000).ceil();
+
+  Response toResponse() => json(body ?? {'detail': detail}, status: status).change(headers: headers);
 }
 
 const _jsonHeaders = {'content-type': 'application/json; charset=utf-8'};

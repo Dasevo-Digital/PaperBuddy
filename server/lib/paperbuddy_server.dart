@@ -17,3 +17,4 @@ export 'src/trash.dart';
 export 'src/filenames.dart';
 export 'src/version.dart';
 export 'src/reminders.dart';
+export 'src/security.dart';

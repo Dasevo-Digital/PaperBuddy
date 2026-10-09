@@ -27,6 +27,7 @@ class Config {
     this.storage = const StorageSettings(),
     this.filenameFormat,
     this.oauth = const OAuthSettings(),
+    this.trustedProxies = const [],
   });
 
   final String host;
@@ -77,6 +78,9 @@ class Config {
 
   /// OAuth-Apps für Gmail und Outlook.
   final OAuthSettings oauth;
+
+  /// Adressen von Reverse-Proxys, deren `X-Forwarded-For` gilt.
+  final List<String> trustedProxies;
 
   String get databasePath => p.join(dataDir, 'paperbuddy.sqlite3');
 
@@ -141,14 +145,14 @@ class Config {
         webdavUser: get('WEBDAV_USER'),
         webdavPassword: get('WEBDAV_PASSWORD'),
       ),
-      corsOrigins: (get('CORS_ALLOWED_HOSTS') ?? '')
-          .split(',')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .toList(),
+      corsOrigins: _list(get('CORS_ALLOWED_HOSTS')),
+      trustedProxies: _list(get('TRUSTED_PROXIES')),
     );
   }
 }
+
+List<String> _list(String? value) =>
+    (value ?? '').split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
 class EmailSettings {
   const EmailSettings({

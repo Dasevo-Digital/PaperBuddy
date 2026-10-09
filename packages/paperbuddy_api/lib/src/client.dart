@@ -79,6 +79,19 @@ class PaperlessClient {
           .timeout(_timeout),
     );
     final body = _decode(response);
+    if (response.statusCode == 429) {
+      // Login-Bremse nach mehreren falschen Passwörtern.
+      final seconds = int.tryParse(response.headers['retry-after'] ?? '');
+      final wait = seconds == null
+          ? 'später'
+          : seconds < 120
+          ? 'in $seconds Sekunden'
+          : 'in ${(seconds / 60).ceil()} Minuten';
+      throw ApiException(
+        'Zu viele Fehlversuche. Bitte $wait erneut versuchen.',
+        statusCode: 429,
+      );
+    }
     if (response.statusCode == 400) {
       final errors = body is Map ? body['non_field_errors'] : null;
       final first = errors is List && errors.isNotEmpty ? '${errors.first}' : '';

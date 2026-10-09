@@ -28,6 +28,7 @@ import 'trash.dart';
 import 'workflows.dart';
 import 'version.dart';
 import 'reminders.dart';
+import 'security.dart';
 
 final _log = Logger('server');
 
@@ -146,6 +147,8 @@ class PaperbuddyServer {
         'outlook': oauth.authorizationUrl('outlook', user.id),
       },
       corsOrigins: config.corsOrigins,
+      clientAddress: ClientAddress(trustedProxies: config.trustedProxies),
+      hsts: config.publicUrl?.startsWith('https://') ?? false,
     );
     final watcher = config.consumeDir == null
         ? null
@@ -191,8 +194,7 @@ class PaperbuddyServer {
     final handler = const Pipeline()
         .addMiddleware(logRequests(logger: (msg, isError) => isError ? _log.severe(msg) : _log.fine(msg)))
         .addHandler(this.handler);
-    _http = await io.serve(handler, config.host, config.port);
-    _http!.autoCompress = true;
+    _http = await bind(handler, config.host, config.port);
     _log.info('PaperBuddy $paperbuddyVersion läuft auf http://${config.host}:${config.port}');
   }
 
@@ -207,6 +209,17 @@ class PaperbuddyServer {
     await _http?.close();
     db.close();
   }
+}
+
+/// Startet den HTTP-Server ohne Angaben zur Technik: kein `X-Powered-By`
+/// und kein veraltetes `X-XSS-Protection` aus den Vorgaben von `dart:io`.
+Future<HttpServer> bind(Handler handler, Object address, int port) async {
+  final http = await io.serve(handler, address, port, poweredByHeader: null);
+  http.autoCompress = true;
+  http.defaultResponseHeaders
+    ..removeAll('x-xss-protection')
+    ..removeAll('x-frame-options');
+  return http;
 }
 
 /// Speicher nach `STORAGE_BACKEND`; entfernte Speicher werden beim Start geprüft.

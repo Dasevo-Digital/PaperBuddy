@@ -185,6 +185,9 @@ class MailOAuth {
             '<meta name="viewport" content="width=device-width,initial-scale=1"><title>PaperBuddy</title>'
             '<style>body{font-family:system-ui,sans-serif;max-width:32rem;margin:4rem auto;padding:0 1rem;line-height:1.5}</style>'
             '</head><body><h1>PaperBuddy</h1><p>${const HtmlEscape().convert(message)}</p></body></html>',
-        headers: {'content-type': 'text/html; charset=utf-8'},
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'",
+        },
       );
 }

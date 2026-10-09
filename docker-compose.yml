@@ -22,6 +22,7 @@ services:
       PAPERBUDDY_OCR_LANGUAGE: ${PAPERBUDDY_OCR_LANGUAGE:-deu+eng}
       PAPERBUDDY_SCANNERS: ${PAPERBUDDY_SCANNERS:-}
       PAPERBUDDY_URL: ${PAPERBUDDY_URL:-}
+      PAPERBUDDY_TRUSTED_PROXIES: ${PAPERBUDDY_TRUSTED_PROXIES:-}
     volumes:
       - ./data:/data
       - ./consume:/consume
