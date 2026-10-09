@@ -1,19 +1,30 @@
 # Nur prüfen: analysieren, testen, bauen. Nichts wird veröffentlicht.
+#
+# Das Repo ist auf GitHub privat, jede Minute zählt also gegen das
+# Kontingent. Darum: kein zweiter Lauf für Tags (der Stand wurde auf main
+# schon geprüft), kein Lauf für reine Doku-Änderungen, und ein neuer Push
+# bricht den noch laufenden Lauf des alten ab.
 name: CI
 
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    paths-ignore: ['**.md', 'docs/**']
   pull_request:
+    paths-ignore: ['**.md', 'docs/**']
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   server:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
@@ -32,9 +43,14 @@ jobs:
           dart pub get
           dart analyze --fatal-infos
           dart test
+      # Im selben Job wie die Server-Tests: ein eigener Job kostete jedes Mal
+      # einen zusätzlichen Start und eine aufgerundete Minute.
+      - name: Image bauen (ohne Push)
+        run: docker build -t paperbuddy:ci server
 
   app:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -49,10 +65,3 @@ jobs:
       - name: Web-Build
         working-directory: app
         run: flutter build web --release
-
-  docker:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Image bauen (ohne Push)
-        run: docker build -t paperbuddy:ci server
