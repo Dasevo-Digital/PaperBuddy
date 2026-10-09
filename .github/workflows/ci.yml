@@ -1,9 +1,8 @@
 # Nur prüfen: analysieren, testen, bauen. Nichts wird veröffentlicht.
 #
-# Das Repo ist auf GitHub privat, jede Minute zählt also gegen das
-# Kontingent. Darum: kein zweiter Lauf für Tags (der Stand wurde auf main
-# schon geprüft), kein Lauf für reine Doku-Änderungen, und ein neuer Push
-# bricht den noch laufenden Lauf des alten ab.
+# Kein zweiter Lauf für Tags (der Stand wurde auf main schon geprüft), kein
+# Lauf für reine Doku-Änderungen, und ein neuer Push bricht den noch
+# laufenden Lauf des alten ab.
 name: CI
 
 on:

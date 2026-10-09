@@ -4,6 +4,14 @@ Selbst gehostete Dokumentenverwaltung in Dart/Flutter, inspiriert von Paperless-
 Der Server spricht die **REST-API von Paperless-ngx**, dadurch funktionieren vorhandene
 Apps wie Swift Paperless (iOS) oder Paperless Mobile direkt.
 
+Der Quellcode ist einsehbar, aber **nicht Open Source**: Der Projektcode
+steht unter der [PolyForm Strict License 1.0.0](LICENSE) (© 2026 Dasevo
+Digital und superkuh). Erlaubt sind die nichtkommerzielle Nutzung und das
+Prüfen des Quellcodes. Kopieren, Ändern, Weitergeben und jede kommerzielle
+Nutzung sind ohne gesonderte schriftliche Genehmigung nicht gestattet.
+Hinweise zu Komponenten und Diensten Dritter stehen in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
 ## Aufbau
 
 | Ordner | Inhalt |
