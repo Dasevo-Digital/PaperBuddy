@@ -562,14 +562,14 @@ packages:
       path: "../packages/paperbuddy_api"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.2.0"
   paperbuddy_server:
     dependency: "direct dev"
     description:
       path: "../server"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.2.0"
   path:
     dependency: "direct main"
     description:

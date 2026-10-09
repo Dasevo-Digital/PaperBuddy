@@ -1,6 +1,6 @@
 name: paperbuddy_api
 description: Client für die Paperless-ngx-kompatible REST-API von PaperBuddy.
-version: 0.1.0
+version: 0.2.0
 publish_to: none
 
 environment:

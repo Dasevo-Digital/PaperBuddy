@@ -3,7 +3,7 @@
 Hier steht je Version, was sich für Nutzer und Betreiber ändert. Die
 ausführliche Fassung mit Hintergründen steht im jeweiligen Release.
 
-## 0.2.0 (in Vorbereitung)
+## 0.2.0 (09.10.2026)
 
 ### Neu in der App
 
