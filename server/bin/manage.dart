@@ -104,6 +104,9 @@ Future<void> main(List<String> args) async {
   } on StateError catch (e) {
     stderr.writeln(e.message);
     exitCode = 1;
+  } on FileSystemException catch (e) {
+    stderr.writeln('${e.path ?? ''}: ${e.osError?.message ?? e.message}');
+    exitCode = 1;
   } finally {
     db.close();
   }
