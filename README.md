@@ -306,7 +306,13 @@ installiert werden.
 cd server && dart test
 cd packages/paperbuddy_api && dart test   # Client gegen den echten Server
 cd app && flutter test                    # App-Logik und Oberfläche gegen den echten Server
+cd app && tool/integration_tests.sh macos # echte App gegen Wegwerf-Server (Linux: xvfb-run … linux)
 ```
+
+Die Integrationstests bauen den Server, starten für jeden Ablauf einen
+frischen und steuern die App als „PaperBuddy E2E“ mit eigener Bundle-ID und
+Speicher nur im Arbeitsspeicher: Anmeldung mit Zwei-Faktor-Code, Hochladen mit
+neu angelegtem Korrespondenten und Tag, Volltextsuche und Fristen.
 
 Integrationstests gegen echte Dienste (S3, WebDAV, IMAP) starten die in
 `server/test/integration_docker_test.dart` beschriebenen Container und laufen mit
