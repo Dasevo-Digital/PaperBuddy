@@ -63,7 +63,7 @@ jobs:
         run: |
           flutter pub get
           flutter analyze
-          flutter test
+          flutter test --reporter github
       - name: Web-Build
         working-directory: app
         run: flutter build web --release
