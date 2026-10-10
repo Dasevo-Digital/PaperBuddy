@@ -117,6 +117,13 @@ class PaperbuddyServer {
       email: config.email,
       publicUrl: config.publicUrl,
     );
+    final backups = BackupService(
+      db: db,
+      store: store,
+      workDir: p.join(config.dataDir, 'work'),
+      settings: config.backup,
+      statusFile: p.join(config.dataDir, 'backup-status.json'),
+    );
     final api = PaperlessApi(
       db: db,
       auth: auth,
@@ -152,6 +159,7 @@ class PaperbuddyServer {
       corsOrigins: config.corsOrigins,
       clientAddress: ClientAddress(trustedProxies: config.trustedProxies),
       hsts: config.publicUrl?.startsWith('https://') ?? false,
+      backups: backups,
     );
     final watcher = config.consumeDir == null
         ? null
@@ -170,13 +178,7 @@ class PaperbuddyServer {
       mail: mail,
       scanners: scanners,
       reminders: reminders,
-      backups: BackupService(
-        db: db,
-        store: store,
-        workDir: p.join(config.dataDir, 'work'),
-        settings: config.backup,
-        statusFile: p.join(config.dataDir, 'backup-status.json'),
-      ),
+      backups: backups,
     );
   }
 

@@ -241,6 +241,31 @@ Die Passphrase unbedingt getrennt vom Server aufbewahren (etwa im
 Passwort-Manager). Ohne sie ist eine Sicherung nicht zu öffnen, auch nicht
 vom Entwickler.
 
+## Überwachung
+
+- **`GET /api/health/`** (ohne Anmeldung): `{"status": "ok", "version": …}`,
+  für Uptime-Monitore und den Docker-Healthcheck. `degraded` heißt, die
+  letzte Sicherung ist fehlgeschlagen oder überfällig; `error` (HTTP 503),
+  die Datenbank antwortet nicht. Mit dem Token eines Administrators kommen
+  die einzelnen Prüfungen dazu (Datenbank, Warteschlange, Sicherung).
+- **`GET /metrics`** im Prometheus-Format, nur mit dem Token eines
+  Administrators: Dokumente, Seiten, Posteingang, Aufgaben, Fristen,
+  Anfragen, fehlgeschlagene Anmeldungen, Arbeitsspeicher und der Stand der
+  Sicherung. In Prometheus:
+
+  ```yaml
+  - job_name: paperbuddy
+    authorization:
+      credentials: <token>   # POST /api/token/ mit Benutzername und Passwort
+    static_configs:
+      - targets: ['paperbuddy.example.org:8000']
+  ```
+
+- **`GET /api/schema/`** (angemeldet): OpenAPI-Beschreibung aller Endpunkte
+  wie bei Paperless-ngx; Pfade, die es nur bei PaperBuddy gibt, tragen
+  `x-paperbuddy-extension`. Eine Kopie liegt in
+  [docs/openapi.json](docs/openapi.json); ein Test hält sie aktuell.
+
 ## Mit einer iOS-App verbinden
 
 In Swift Paperless bzw. Paperless Mobile als Server-URL `http://<host>:8000` eintragen

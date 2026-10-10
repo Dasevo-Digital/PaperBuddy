@@ -34,6 +34,8 @@ ENV PATH="/opt/paperbuddy/bin:$PATH" \
 VOLUME ["/data", "/consume"]
 EXPOSE 8000
 USER paperbuddy
-HEALTHCHECK --interval=30s --timeout=5s \
-  CMD ["sh", "-c", "exec 3<>/dev/tcp/127.0.0.1/8000"]
+# Über /api/health/ (503, wenn die Datenbank nicht antwortet). bash statt sh:
+# dash kennt /dev/tcp nicht, und curl ist nicht im Image.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
+  CMD ["bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/${PAPERBUDDY_PORT:-8000} && printf 'GET /api/health/ HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200 '"]
 CMD ["server"]

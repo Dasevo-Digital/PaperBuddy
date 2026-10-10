@@ -7,6 +7,7 @@ import 'package:sqlite3/sqlite3.dart';
 
 import '../access.dart';
 import '../auth.dart';
+import '../backup/backup.dart';
 import '../history.dart';
 import '../processing/consumer.dart';
 import '../processing/pdf_ops.dart';
@@ -15,6 +16,7 @@ import '../security.dart';
 import '../storage.dart';
 import '../trash.dart';
 import 'custom_fields.dart';
+import 'operations.dart';
 import 'saved_views.dart';
 import 'share_links.dart';
 import 'users.dart';
@@ -47,7 +49,9 @@ class PaperlessApi {
     this.corsOrigins = const [],
     this.clientAddress = const ClientAddress(),
     this.hsts = false,
-  });
+    this.backups,
+    Metrics? metrics,
+  }) : metrics = metrics ?? Metrics();
 
   final Database db;
   final AuthService auth;
@@ -65,6 +69,14 @@ class PaperlessApi {
   /// `Strict-Transport-Security` senden (öffentliche Adresse mit https).
   final bool hsts;
 
+  /// Für den Zustand der Sicherung in `/api/health/` und `/metrics`.
+  final BackupService? backups;
+
+  final Metrics metrics;
+
+  /// Registrierte Routen (Methode, Pfad), für `/api/schema/`.
+  final _routes = <(String, String)>[];
+
   /// Weitere Ressourcen (Workflows, Mail, Scanner …) hängen sich hier ein.
   final List<void Function(void Function(String method, String path, Function handler) route)> extraRoutes;
   final Future<void> Function(int documentId)? onDocumentUpdated;
@@ -80,7 +92,11 @@ class PaperlessApi {
   final History? history;
   final _taxonomies = <String, TaxonomyResource>{};
 
-  static const _public = {'api/token/', 'api/token', 'api/oauth/callback/', 'api/oauth/callback'};
+  static const _public = {
+    'api/token/', 'api/token',
+    'api/oauth/callback/', 'api/oauth/callback',
+    'api/health/', 'api/health',
+  };
 
   Handler get handler {
     final router = Router(
@@ -89,7 +105,9 @@ class PaperlessApi {
 
     // Paperless verwendet abschließende Schrägstriche; manche Clients lassen
     // sie weg. Darum jede Route in beiden Varianten registrieren.
+    _routes.clear();
     void route(String method, String path, Function handler) {
+      _routes.add((method, path));
       router.add(method, path, handler);
       router.add(method, path.substring(0, path.length - 1), handler);
     }
@@ -116,6 +134,7 @@ class PaperlessApi {
     ShareLinksResource(db, access, store).mount(route);
 
     UsersResource(db, auth, access).mount(route);
+    OperationsResource(db: db, auth: auth, metrics: metrics, backups: backups, routes: () => _routes).mount(route);
     customFields.mount(route);
     SavedViewsResource(db, access).mount(route);
     DocumentsResource(
@@ -204,6 +223,7 @@ class PaperlessApi {
 
     return const Pipeline()
         .addMiddleware(securityHeaders(hsts: hsts))
+        .addMiddleware(metrics.middleware)
         .addMiddleware(_errors)
         .addMiddleware(_cors)
         .addMiddleware(_versionHeaders)

@@ -10,6 +10,12 @@ ausführliche Fassung mit Hintergründen steht im jeweiligen Release.
   Aufbewahrung. Dazu `manage backup`, `verify-backup` und `restore-backup`;
   ohne PaperBuddy: `age -d <datei> | tar x`. Unter Debian schaltet
   `PAPERBUDDY_BACKUP=1 sh install.sh` sie ein.
+- **Überwachung:** `/api/health/` für Uptime-Monitore, `/metrics` im
+  Prometheus-Format und `/api/schema/` mit der OpenAPI-Beschreibung aller
+  Endpunkte (Kopie in `docs/openapi.json`).
+- **Behoben:** Der Docker-Healthcheck schlug immer fehl, weil `/bin/sh` im
+  Image `dash` ist und `/dev/tcp` nicht kennt; Container galten dadurch als
+  „unhealthy“. Er fragt jetzt `/api/health/` über `bash` ab.
 
 ## 0.2.0 (09.10.2026)
 

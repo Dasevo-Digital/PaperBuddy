@@ -91,7 +91,11 @@ class LoginThrottle {
     return longest;
   }
 
+  /// Fehlversuche seit dem Start, für die Metriken.
+  int totalFailures = 0;
+
   void failed(String address, String username) {
+    totalFailures++;
     final now = _clock();
     final keys = _keys(address, username);
     final limits = [freeAttempts, addressAttempts, accountAttempts];
