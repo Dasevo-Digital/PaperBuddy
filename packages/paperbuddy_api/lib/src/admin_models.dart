@@ -1,3 +1,5 @@
+import 'texts.dart';
+
 // Modelle für Verwaltung, Freigaben und Automatisierung.
 
 int? _int(Object? v) => v is int ? v : (v is String ? int.tryParse(v) : null);
@@ -8,41 +10,65 @@ List<String> _strings(Object? v) =>
 
 /// Art eines Labels, mit API-Pfad und Rechte-Modell.
 enum LabelKind {
-  tag('tags', 'tag', 'Tag', 'Tags'),
+  tag('tags', 'tag', 'Tag', 'Tags', 'Tag', 'Tags'),
   correspondent(
     'correspondents',
     'correspondent',
     'Korrespondent',
     'Korrespondenten',
+    'Correspondent',
+    'Correspondents',
   ),
   documentType(
     'document_types',
     'documenttype',
     'Dokumenttyp',
     'Dokumenttypen',
+    'Document type',
+    'Document types',
   ),
-  storagePath('storage_paths', 'storagepath', 'Speicherpfad', 'Speicherpfade');
+  storagePath(
+    'storage_paths',
+    'storagepath',
+    'Speicherpfad',
+    'Speicherpfade',
+    'Storage path',
+    'Storage paths',
+  );
 
-  const LabelKind(this.path, this.model, this.singular, this.plural);
+  const LabelKind(
+    this.path,
+    this.model,
+    this._singularDe,
+    this._pluralDe,
+    this._singularEn,
+    this._pluralEn,
+  );
   final String path;
   final String model;
-  final String singular;
-  final String plural;
+  final String _singularDe, _pluralDe, _singularEn, _pluralEn;
+
+  /// Bezeichnungen in der Sprache der App.
+  String get singular => ApiTexts.pick(_singularDe, _singularEn);
+  String get plural => ApiTexts.pick(_pluralDe, _pluralEn);
 }
 
 /// Zuordnungsalgorithmen (Werte wie in Paperless-ngx).
 enum MatchingAlgorithm {
-  none(0, 'Keine'),
-  any(1, 'Eines der Wörter'),
-  all(2, 'Alle Wörter'),
-  literal(3, 'Genauer Ausdruck'),
-  regex(4, 'Regulärer Ausdruck'),
-  fuzzy(5, 'Ungefähr'),
-  auto(6, 'Automatisch (lernend)');
+  none(0, 'Keine', 'None'),
+  any(1, 'Eines der Wörter', 'Any of the words'),
+  all(2, 'Alle Wörter', 'All words'),
+  literal(3, 'Genauer Ausdruck', 'Exact phrase'),
+  regex(4, 'Regulärer Ausdruck', 'Regular expression'),
+  fuzzy(5, 'Ungefähr', 'Fuzzy'),
+  auto(6, 'Automatisch (lernend)', 'Automatic (learning)');
 
-  const MatchingAlgorithm(this.value, this.label);
+  const MatchingAlgorithm(this.value, this._de, this._en);
   final int value;
-  final String label;
+  final String _de, _en;
+
+  /// Bezeichnung in der Sprache der App.
+  String get label => ApiTexts.pick(_de, _en);
 
   static MatchingAlgorithm of(int v) =>
       values.firstWhere((m) => m.value == v, orElse: () => none);

@@ -4,6 +4,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import '../format.dart';
 import 'tag_chip.dart';
+import '../l10n.dart';
 
 /// Auswahl eines Eintrags (Korrespondent, Dokumenttyp, Speicherpfad) mit
 /// Suche und optionalem Neuanlegen.
@@ -143,12 +144,12 @@ class _LabelPickerState<T extends Label> extends State<_LabelPicker<T>> {
                 if (!widget.multi && widget.selected.isNotEmpty)
                   TextButton(
                     onPressed: () => Navigator.pop(context, -1),
-                    child: const Text('Entfernen'),
+                    child: Text(tr.remove),
                   ),
                 if (widget.multi)
                   FilledButton(
                     onPressed: () => Navigator.pop(context, _selected),
-                    child: const Text('Übernehmen'),
+                    child: Text(tr.applyPicker),
                   ),
               ],
             ),
@@ -160,8 +161,8 @@ class _LabelPickerState<T extends Label> extends State<_LabelPicker<T>> {
               autofocus: _options.length > 8,
               decoration: InputDecoration(
                 hintText: widget.onCreate == null
-                    ? 'Suchen'
-                    : 'Suchen oder neu anlegen',
+                    ? tr.search
+                    : tr.searchOrCreate,
                 prefixIcon: const Icon(LucideIcons.search),
                 errorText: _error,
               ),
@@ -184,7 +185,7 @@ class _LabelPickerState<T extends Label> extends State<_LabelPicker<T>> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(LucideIcons.plus),
-                    title: Text('„${_search.text.trim()}“ anlegen'),
+                    title: Text(tr.createNamed(_search.text.trim())),
                     onTap: _creating ? null : _create,
                   ),
                 for (final o in filtered)
@@ -226,7 +227,7 @@ class _LabelPickerState<T extends Label> extends State<_LabelPicker<T>> {
                   Padding(
                     padding: const EdgeInsets.all(24),
                     child: Text(
-                      'Keine Einträge',
+                      tr.noEntries,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium,
                     ),
@@ -329,7 +330,7 @@ class TagsField extends StatelessWidget {
             Expanded(child: Text('Tags', style: theme.textTheme.titleMedium)),
             TextButton.icon(
               icon: const Icon(LucideIcons.tags),
-              label: const Text('Auswählen'),
+              label: Text(tr.select),
               onPressed: () async {
                 final picked = await pickTags(
                   context,
@@ -344,7 +345,7 @@ class TagsField extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         if (selected.isEmpty)
-          Text('Keine Tags', style: theme.textTheme.bodyMedium)
+          Text(tr.noTags, style: theme.textTheme.bodyMedium)
         else
           Wrap(
             spacing: 6,

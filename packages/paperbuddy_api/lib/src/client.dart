@@ -8,6 +8,7 @@ import 'admin_models.dart';
 import 'errors.dart';
 import 'filter.dart';
 import 'models.dart';
+import 'texts.dart';
 
 part 'client_admin.dart';
 
@@ -16,6 +17,10 @@ part 'client_admin.dart';
 /// Erzeugen über [PaperlessClient.login] oder [PaperlessClient.connect];
 /// dabei wird die API-Version mit dem Server ausgehandelt.
 class PaperlessClient {
+  /// Sprache der Meldungen (`de` oder `en`), von der App gesetzt.
+  static String get language => ApiTexts.language;
+  static set language(String code) => ApiTexts.language = code;
+
   PaperlessClient._(
     this.baseUrl,
     this.token,
@@ -41,11 +46,11 @@ class PaperlessClient {
   /// Macht aus einer Benutzereingabe wie `nas:8000/` eine saubere Basis-URL.
   static Uri normalizeBaseUrl(String input) {
     var s = input.trim();
-    if (s.isEmpty) throw ApiException('Bitte eine Server-Adresse angeben.');
+    if (s.isEmpty) throw ApiException(ApiTexts.serverRequired);
     if (!s.contains('://')) s = 'http://$s';
     var uri = Uri.tryParse(s);
     if (uri == null || uri.host.isEmpty) {
-      throw ApiException('Ungültige Server-Adresse: $input');
+      throw ApiException(ApiTexts.invalidServer(input));
     }
     var path = uri.path.replaceAll(RegExp(r'/+$'), '');
     if (path.endsWith('/api')) path = path.substring(0, path.length - 4);
@@ -82,15 +87,7 @@ class PaperlessClient {
     if (response.statusCode == 429) {
       // Login-Bremse nach mehreren falschen Passwörtern.
       final seconds = int.tryParse(response.headers['retry-after'] ?? '');
-      final wait = seconds == null
-          ? 'später'
-          : seconds < 120
-          ? 'in $seconds Sekunden'
-          : 'in ${(seconds / 60).ceil()} Minuten';
-      throw ApiException(
-        'Zu viele Fehlversuche. Bitte $wait erneut versuchen.',
-        statusCode: 429,
-      );
+      throw ApiException(ApiTexts.tooManyAttempts(seconds), statusCode: 429);
     }
     if (response.statusCode == 400) {
       final errors = body is Map ? body['non_field_errors'] : null;
@@ -101,13 +98,10 @@ class PaperlessClient {
       if (first.startsWith('Too many invalid MFA codes')) {
         throw MfaRequiredException(
           invalid: true,
-          message: 'Zu viele falsche Codes. Bitte in einigen Minuten erneut versuchen.',
+          message: ApiTexts.tooManyCodes,
         );
       }
-      throw ApiException(
-        'Benutzername oder Passwort ist falsch.',
-        statusCode: 400,
-      );
+      throw ApiException(ApiTexts.wrongCredentials, statusCode: 400);
     }
     if (response.statusCode != 200 ||
         body is! Map ||
@@ -146,10 +140,7 @@ class PaperlessClient {
     if (response.statusCode != 200 || body is! Map<String, dynamic>) {
       if (response.statusCode == 404 ||
           (body == null && response.statusCode == 200)) {
-        throw ApiException(
-          'Unter dieser Adresse läuft kein PaperBuddy- oder Paperless-Server.',
-          statusCode: response.statusCode,
-        );
+        throw ApiException(ApiTexts.noServer, statusCode: response.statusCode);
       }
       throw _error(response, body);
     }
@@ -192,9 +183,9 @@ class PaperlessClient {
     try {
       return await send();
     } on TimeoutException {
-      throw ApiException('Der Server antwortet nicht.');
+      throw ApiException(ApiTexts.noResponse);
     } on http.ClientException catch (e) {
-      throw ApiException('Server nicht erreichbar: ${e.message}');
+      throw ApiException(ApiTexts.unreachable(e.message));
     }
   }
 
@@ -210,10 +201,7 @@ class PaperlessClient {
 
   static ApiException _error(http.Response r, Object? body) {
     if (r.statusCode == 401) {
-      return ApiException(
-        'Anmeldung abgelaufen oder ungültig.',
-        statusCode: 401,
-      );
+      return ApiException(ApiTexts.sessionExpired, statusCode: 401);
     }
     return ApiException.fromBody(r.statusCode, body);
   }
@@ -490,7 +478,7 @@ class PaperlessClient {
       final t = await task(taskId);
       if (t != null && t.isDone) return t;
       if (DateTime.now().isAfter(deadline)) {
-        throw ApiException('Die Verarbeitung dauert ungewöhnlich lange.');
+        throw ApiException(ApiTexts.processingSlow);
       }
       await Future<void>.delayed(interval);
     }

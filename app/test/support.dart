@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:paperbuddy/src/app_state.dart';
+import 'package:paperbuddy/src/l10n.dart';
 import 'package:paperbuddy/src/session_store.dart';
 import 'package:paperbuddy_server/paperbuddy_server.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -58,6 +59,8 @@ class TestServer {
 }
 
 Future<AppState> newAppState(TestServer server) async {
+  // Die Tests lesen deutsche Texte, auch auf einem englischen Testrechner.
+  deviceLanguage = () => 'de';
   SharedPreferences.setMockInitialValues({});
   FlutterSecureStorage.setMockInitialValues({});
   return AppState(

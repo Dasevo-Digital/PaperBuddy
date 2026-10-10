@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:paperbuddy_api/paperbuddy_api.dart';
+import 'l10n.dart';
 
 enum UploadState { uploading, processing, done, failed }
 
@@ -148,12 +149,12 @@ class UploadQueue extends ChangeNotifier {
 
   /// Verständliche Meldung zu einem fehlgeschlagenen Task.
   static String readableResult(String? result) {
-    if (result == null) return 'Verarbeitung fehlgeschlagen';
+    if (result == null) return tr.processingFailed;
     if (result.contains('duplicate')) {
-      return 'Dieses Dokument ist bereits vorhanden.';
+      return tr.thisDocumentAlreadyExists;
     }
     if (result.contains('Unsupported mime type')) {
-      return 'Dateityp wird nicht unterstützt.';
+      return tr.fileTypeNotSupported;
     }
     return result;
   }

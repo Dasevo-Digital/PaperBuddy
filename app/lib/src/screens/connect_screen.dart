@@ -7,6 +7,7 @@ import '../app_state.dart';
 import '../environment.dart';
 import '../widgets/text_menus.dart';
 import 'offline_screen.dart';
+import '../l10n.dart';
 
 /// Anmeldung an einem PaperBuddy- oder Paperless-ngx-Server.
 class ConnectScreen extends StatefulWidget {
@@ -130,7 +131,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Mit deinem PaperBuddy- oder Paperless-Server verbinden',
+                        tr.connectToYourPaperbuddyOr,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
@@ -145,13 +146,13 @@ class _ConnectScreenState extends State<ConnectScreen> {
                         autocorrect: false,
                         textInputAction: TextInputAction.next,
                         autofillHints: const [AutofillHints.url],
-                        decoration: const InputDecoration(
-                          labelText: 'Server-Adresse',
-                          hintText: 'z. B. nas.local:8000',
+                        decoration: InputDecoration(
+                          labelText: tr.serverAddress,
+                          hintText: tr.serverAddressHint,
                           prefixIcon: Icon(LucideIcons.server),
                         ),
                         validator: (v) => (v ?? '').trim().isEmpty
-                            ? 'Bitte Adresse angeben'
+                            ? tr.pleaseEnterAnAddress
                             : null,
                       ),
                       const SizedBox(height: 16),
@@ -162,12 +163,12 @@ class _ConnectScreenState extends State<ConnectScreen> {
                         autocorrect: false,
                         textInputAction: TextInputAction.next,
                         autofillHints: const [AutofillHints.username],
-                        decoration: const InputDecoration(
-                          labelText: 'Benutzername',
+                        decoration: InputDecoration(
+                          labelText: tr.username,
                           prefixIcon: Icon(LucideIcons.user),
                         ),
                         validator: (v) => (v ?? '').trim().isEmpty
-                            ? 'Bitte Benutzernamen angeben'
+                            ? tr.usernameRequired
                             : null,
                       ),
                       const SizedBox(height: 16),
@@ -179,12 +180,12 @@ class _ConnectScreenState extends State<ConnectScreen> {
                         autofillHints: const [AutofillHints.password],
                         onFieldSubmitted: (_) => _submit(),
                         decoration: InputDecoration(
-                          labelText: 'Passwort',
+                          labelText: tr.password,
                           prefixIcon: const Icon(LucideIcons.keyRound),
                           suffixIcon: IconButton(
                             tooltip: _showPassword
-                                ? 'Passwort verbergen'
-                                : 'Passwort anzeigen',
+                                ? tr.hidePassword
+                                : tr.showPassword,
                             icon: Icon(
                               _showPassword
                                   ? LucideIcons.eyeOff
@@ -195,7 +196,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                           ),
                         ),
                         validator: (v) =>
-                            (v ?? '').isEmpty ? 'Bitte Passwort angeben' : null,
+                            (v ?? '').isEmpty ? tr.pleaseEnterAPassword : null,
                       ),
                       if (_needsCode) ...[
                         const SizedBox(height: 16),
@@ -211,14 +212,14 @@ class _ConnectScreenState extends State<ConnectScreen> {
                             ),
                           ],
                           onFieldSubmitted: (_) => _submit(),
-                          decoration: const InputDecoration(
-                            labelText: 'Bestätigungscode',
+                          decoration: InputDecoration(
+                            labelText: tr.verificationCode,
                             helperText:
-                                'Aus der Authenticator-App oder ein Wiederherstellungscode',
+                                tr.fromTheAuthenticatorAppOr,
                             prefixIcon: Icon(LucideIcons.shieldCheck),
                           ),
                           validator: (v) => (v ?? '').trim().isEmpty
-                              ? 'Bitte den Code eingeben'
+                              ? tr.pleaseEnterTheCode
                               : null,
                         ),
                       ],
@@ -237,7 +238,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                                 ),
                               )
                             : const Icon(LucideIcons.logIn),
-                        label: const Text('Anmelden'),
+                        label: Text(tr.signIn),
                       ),
                       if (_offlineCount > 0 && !_busy) ...[
                         const SizedBox(height: 8),
@@ -250,8 +251,8 @@ class _ConnectScreenState extends State<ConnectScreen> {
                           icon: const Icon(LucideIcons.cloudCheck),
                           label: Text(
                             _offlineCount == 1
-                                ? 'Offline-Dokument öffnen'
-                                : '$_offlineCount Offline-Dokumente öffnen',
+                                ? tr.openOfflineDocument
+                                : tr.openOfflineDocuments(_offlineCount),
                           ),
                         ),
                       ],
@@ -261,8 +262,8 @@ class _ConnectScreenState extends State<ConnectScreen> {
                           onPressed: () =>
                               AppScope.read(context).retryRestore(),
                           icon: const Icon(LucideIcons.refreshCw),
-                          label: const Text(
-                            'Gespeicherte Anmeldung erneut versuchen',
+                          label: Text(
+                            tr.retryTheSavedSignIn,
                           ),
                         ),
                       ],

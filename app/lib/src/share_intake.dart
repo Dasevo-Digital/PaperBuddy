@@ -9,6 +9,7 @@ import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
 import 'app_state.dart';
 import 'file_intake.dart';
+import 'l10n.dart';
 
 /// Nimmt Dateien aus dem Teilen-Menü anderer Apps entgegen (iOS Share
 /// Extension, Android Intents) und bietet sie zum Hochladen an.
@@ -35,10 +36,10 @@ class ShareIntake {
     try {
       _sub = ReceiveSharingIntent.instance.getMediaStream().listen(
         _handle,
-        onError: (Object e) => debugPrint('Teilen nicht verfügbar: $e'),
+        onError: (Object e) => debugPrint(tr.sharingNotAvailable(e)),
       );
     } on MissingPluginException catch (e) {
-      debugPrint('Teilen nicht verfügbar: $e');
+      debugPrint(tr.sharingNotAvailable(e));
       return;
     }
     _initial();
@@ -51,7 +52,7 @@ class ShareIntake {
       await ReceiveSharingIntent.instance.reset();
       await _handle(files);
     } catch (e) {
-      debugPrint('Teilen nicht verfügbar: $e');
+      debugPrint(tr.sharingNotAvailable(e));
     }
   }
 

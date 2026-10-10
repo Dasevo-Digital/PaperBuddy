@@ -5,6 +5,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 import '../app_state.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/label_pickers.dart';
+import '../l10n.dart';
 
 /// Scannen an einem Netzwerkscanner (eSCL/AirScan), den der Server ansteuert.
 class NetworkScanScreen extends StatefulWidget {
@@ -93,16 +94,16 @@ class _NetworkScanScreenState extends State<NetworkScanScreen> {
     setState(() => _busy = false);
     if (taskId != null) {
       state.uploads
-          .trackTask(state.client, taskId, 'Scan an ${s.name}')
+          .trackTask(state.client, taskId, tr.scanAt(s.name))
           .ignore();
       Navigator.pop(context);
     }
   }
 
   static String _colorLabel(String mode) => switch (mode) {
-    'RGB24' || 'RGB48' => 'Farbe',
-    'Grayscale8' || 'Grayscale16' => 'Graustufen',
-    'BlackAndWhite1' => 'Schwarzweiß',
+    'RGB24' || 'RGB48' => tr.color,
+    'Grayscale8' || 'Grayscale16' => tr.grayscale,
+    'BlackAndWhite1' => tr.blackAndWhite,
     _ => mode,
   };
 
@@ -112,10 +113,10 @@ class _NetworkScanScreenState extends State<NetworkScanScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Netzwerkscanner'),
+        title: Text(tr.networkScanner),
         actions: [
           IconButton(
-            tooltip: 'Erneut suchen',
+            tooltip: tr.searchAgain,
             icon: const Icon(LucideIcons.refreshCw),
             onPressed: () => setState(() => _load(refresh: true)),
           ),
@@ -129,8 +130,8 @@ class _NetworkScanScreenState extends State<NetworkScanScreen> {
             return EmptyHint(
               icon: LucideIcons.scanLine,
               text: e is ApiException && e.isNotFound
-                  ? 'Dieser Server unterstützt keine Netzwerkscanner.'
-                  : 'Scanner konnten nicht abgefragt werden: ${e is ApiException ? e.message : e}',
+                  ? tr.thisServerDoesNotSupport
+                  : tr.couldNotQueryScanners(e is ApiException ? e.message : '$e'),
             );
           }
           final list = snap.data;
@@ -138,11 +139,10 @@ class _NetworkScanScreenState extends State<NetworkScanScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (list.isEmpty) {
-            return const EmptyHint(
+            return EmptyHint(
               icon: LucideIcons.scanLine,
               text:
-                  'Kein Scanner gefunden. Der Server sucht im Netz per AirScan/eSCL; '
-                  'alternativ lassen sich Scanner mit PAPERBUDDY_SCANNERS fest eintragen.',
+                  tr.noScannerFoundTheServer,
             );
           }
           return ListView(
@@ -165,8 +165,8 @@ class _NetworkScanScreenState extends State<NetworkScanScreen> {
                             title: Text(s.name),
                             subtitle: Text(
                               s.discovered
-                                  ? 'Im Netz gefunden'
-                                  : 'Fest eingetragen',
+                                  ? tr.foundOnTheNetwork
+                                  : tr.configured,
                             ),
                             onTap: () => _select(s),
                           ),
@@ -177,7 +177,7 @@ class _NetworkScanScreenState extends State<NetworkScanScreen> {
                           builder: (context, capSnap) {
                             if (capSnap.hasError) {
                               return Text(
-                                'Scanner antwortet nicht: ${capSnap.error}',
+                                tr.scannerDoesNotRespond('${capSnap.error}'),
                                 style: TextStyle(
                                   color: theme.colorScheme.error,
                                 ),
@@ -205,7 +205,7 @@ class _NetworkScanScreenState extends State<NetworkScanScreen> {
                                         ButtonSegment(
                                           value: src,
                                           label: Text(
-                                            src == 'Feeder' ? 'Einzug' : 'Glas',
+                                            src == 'Feeder' ? tr.feeder : tr.flatbed,
                                           ),
                                         ),
                                     ],
@@ -216,8 +216,8 @@ class _NetworkScanScreenState extends State<NetworkScanScreen> {
                                 if (c.colorModes.isNotEmpty)
                                   DropdownButtonFormField<String>(
                                     initialValue: _color,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Farbe',
+                                    decoration: InputDecoration(
+                                      labelText: tr.color,
                                     ),
                                     items: [
                                       for (final m in c.colorModes)
@@ -232,8 +232,8 @@ class _NetworkScanScreenState extends State<NetworkScanScreen> {
                                 if (c.resolutions.isNotEmpty)
                                   DropdownButtonFormField<int>(
                                     initialValue: _resolution,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Auflösung',
+                                    decoration: InputDecoration(
+                                      labelText: tr.resolution,
                                     ),
                                     items: [
                                       for (final r in c.resolutions)
@@ -249,15 +249,15 @@ class _NetworkScanScreenState extends State<NetworkScanScreen> {
                                 if (c.duplex && _source == 'Feeder')
                                   SwitchListTile(
                                     contentPadding: EdgeInsets.zero,
-                                    title: const Text('Beidseitig'),
+                                    title: Text(tr.duplex),
                                     value: _duplex,
                                     onChanged: (v) =>
                                         setState(() => _duplex = v),
                                   ),
                                 TextField(
                                   controller: _title,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Titel (optional)',
+                                  decoration: InputDecoration(
+                                    labelText: tr.titleOptional,
                                   ),
                                 ),
                                 TagsField(
@@ -275,7 +275,7 @@ class _NetworkScanScreenState extends State<NetworkScanScreen> {
                                           ),
                                         )
                                       : const Icon(LucideIcons.scanLine),
-                                  label: Text(_busy ? 'Scanne …' : 'Scannen'),
+                                  label: Text(_busy ? tr.scanning : tr.scan),
                                 ),
                               ],
                             );

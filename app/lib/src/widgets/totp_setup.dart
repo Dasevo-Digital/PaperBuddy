@@ -7,6 +7,7 @@ import 'package:qr/qr.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'dialogs.dart';
+import '../l10n.dart';
 
 /// Richtet die Zwei-Faktor-Anmeldung ein: QR-Code bzw. Schlüssel für die
 /// Authenticator-App, Bestätigung mit dem ersten Code, danach die
@@ -54,7 +55,7 @@ class _TotpSetupDialogState extends State<_TotpSetupDialog> {
   Future<void> _confirm() async {
     final code = _code.text.replaceAll(RegExp(r'\s'), '');
     if (code.length != 6) {
-      setState(() => _error = 'Bitte den sechsstelligen Code eingeben');
+      setState(() => _error = tr.pleaseEnterTheSixDigit);
       return;
     }
     setState(() {
@@ -69,7 +70,7 @@ class _TotpSetupDialogState extends State<_TotpSetupDialog> {
         setState(() {
           _busy = false;
           _error =
-              'Der Code passt nicht. Uhrzeit des Telefons prüfen und den aktuellen Code eingeben.';
+              tr.theCodeDoesNotMatch;
         });
       }
     }
@@ -84,7 +85,7 @@ class _TotpSetupDialogState extends State<_TotpSetupDialog> {
         secret.substring(i, (i + 4).clamp(0, secret.length)),
     ].join(' ');
     return AlertDialog(
-      title: const Text('Zwei-Faktor-Anmeldung einrichten'),
+      title: Text(tr.setUpTwoFactorAuthentication),
       content: SizedBox(
         width: 400,
         child: SingleChildScrollView(
@@ -95,9 +96,8 @@ class _TotpSetupDialogState extends State<_TotpSetupDialog> {
             children: [
               Text(
                 _isPhone
-                    ? '1. Mit „In Authenticator-App öffnen“ hinzufügen oder den Schlüssel abtippen.'
-                    : '1. Den QR-Code mit einer Authenticator-App scannen '
-                          '(z. B. Apple Passwörter, Google Authenticator, 2FAS, Aegis).',
+                    ? tr.totpStepOneOpen
+                    : tr.totpStepOneScan,
               ),
               Center(
                 child: Container(
@@ -116,7 +116,7 @@ class _TotpSetupDialogState extends State<_TotpSetupDialog> {
                     mode: LaunchMode.externalApplication,
                   ),
                   icon: const Icon(LucideIcons.externalLink),
-                  label: const Text('In Authenticator-App öffnen'),
+                  label: Text(tr.openInAuthenticatorApp),
                 ),
               Row(
                 children: [
@@ -129,16 +129,16 @@ class _TotpSetupDialogState extends State<_TotpSetupDialog> {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Schlüssel kopieren',
+                    tooltip: tr.copyKey,
                     icon: const Icon(LucideIcons.copy),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: secret));
-                      showInfo(context, 'Schlüssel kopiert');
+                      showInfo(context, tr.keyCopied);
                     },
                   ),
                 ],
               ),
-              const Text('2. Den angezeigten sechsstelligen Code eingeben:'),
+              Text(tr.totpStepTwo),
               TextField(
                 controller: _code,
                 autofocus: !_isPhone,
@@ -151,7 +151,7 @@ class _TotpSetupDialogState extends State<_TotpSetupDialog> {
                 ],
                 onSubmitted: (_) => _confirm(),
                 decoration: InputDecoration(
-                  labelText: 'Code',
+                  labelText: tr.code,
                   errorText: _error,
                   errorMaxLines: 3,
                 ),
@@ -163,11 +163,11 @@ class _TotpSetupDialogState extends State<_TotpSetupDialog> {
       actions: [
         TextButton(
           onPressed: _busy ? null : () => Navigator.pop(context),
-          child: const Text('Abbrechen'),
+          child: Text(tr.cancel),
         ),
         FilledButton(
           onPressed: _busy ? null : _confirm,
-          child: const Text('Aktivieren'),
+          child: Text(tr.activate),
         ),
       ],
     );
@@ -182,7 +182,7 @@ Future<void> showRecoveryCodes(
   context: context,
   barrierDismissible: false,
   builder: (context) => AlertDialog(
-    title: const Text('Wiederherstellungscodes'),
+    title: Text(tr.recoveryCodes),
     content: SizedBox(
       width: 400,
       child: Column(
@@ -190,11 +190,8 @@ Future<void> showRecoveryCodes(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: 12,
         children: [
-          const Text(
-            'Die Zwei-Faktor-Anmeldung ist aktiv. Bewahre diese Codes sicher auf, '
-            'z. B. im Passwortmanager. Jeder Code funktioniert einmal anstelle '
-            'des Codes aus der App, falls das Telefon verloren geht. '
-            'Sie werden nur jetzt angezeigt.',
+          Text(
+            tr.twoFactorAuthenticationIsActive,
           ),
           SelectableText(
             codes.join('\n'),
@@ -211,14 +208,14 @@ Future<void> showRecoveryCodes(
       TextButton.icon(
         onPressed: () {
           Clipboard.setData(ClipboardData(text: codes.join('\n')));
-          showInfo(context, 'Codes kopiert');
+          showInfo(context, tr.codesCopied);
         },
         icon: const Icon(LucideIcons.copy),
-        label: const Text('Kopieren'),
+        label: Text(tr.copy),
       ),
       FilledButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Gespeichert'),
+        child: Text(tr.saved),
       ),
     ],
   ),

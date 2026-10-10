@@ -19,6 +19,7 @@ import 'document_edit_screen.dart';
 import 'document_viewer_screen.dart';
 import '../file_kinds.dart';
 import '../widgets/reminders_section.dart';
+import '../l10n.dart';
 
 /// Was die Detailansicht an die Liste zurückmeldet.
 sealed class DocumentScreenResult {}
@@ -225,14 +226,14 @@ class _DocumentScreenState extends State<DocumentScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Dokument löschen?'),
+        title: Text(tr.deleteDocument),
         content: Text(
-          '„${_doc.title}“ wird in den Papierkorb des Servers verschoben.',
+          tr.willBeMovedToThe(_doc.title),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Abbrechen'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -240,7 +241,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
               foregroundColor: Theme.of(context).colorScheme.onError,
             ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Löschen'),
+            child: Text(tr.delete),
           ),
         ],
       ),
@@ -289,7 +290,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
                 child: FilledButton.tonalIcon(
                   onPressed: _view,
                   icon: const Icon(LucideIcons.maximize2, size: 16),
-                  label: const Text('Öffnen'),
+                  label: Text(tr.open),
                 ),
               ),
             ],
@@ -328,7 +329,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
                     ),
               showCheckmark: false,
               label: Text(
-                _offline! ? 'Offline verfügbar' : 'Offline verfügbar machen',
+                _offline! ? tr.availableOffline : tr.makeAvailableOffline,
               ),
               selected: _offline!,
               onSelected: _offlineBusy ? null : _toggleOffline,
@@ -340,63 +341,63 @@ class _DocumentScreenState extends State<DocumentScreen> {
           FilledButton.tonalIcon(
             onPressed: _removeFromInbox,
             icon: const Icon(LucideIcons.inbox),
-            label: const Text('Aus dem Posteingang entfernen'),
+            label: Text(tr.removeFromInbox),
           ),
           const SizedBox(height: 12),
         ],
-        _Field(LucideIcons.calendar, 'Belegdatum', formatDay(_doc.created)),
+        _Field(LucideIcons.calendar, tr.documentDate, formatDay(_doc.created)),
         _Field(
           LucideIcons.user,
-          'Korrespondent',
+          tr.correspondent,
           state.correspondents[_doc.correspondent]?.name,
         ),
         _Field(
           LucideIcons.fileType,
-          'Dokumenttyp',
+          tr.documentType,
           state.documentTypes[_doc.documentType]?.name,
         ),
         _Field(
           LucideIcons.folderTree,
-          'Speicherpfad',
+          tr.storagePath,
           state.storagePaths[_doc.storagePath]?.name,
         ),
         _Field(
           LucideIcons.hash,
-          'Archivnummer',
+          tr.archiveSerialNumber,
           _doc.archiveSerialNumber?.toString(),
         ),
         _Field(
           LucideIcons.filePlus,
-          'Hinzugefügt',
+          tr.added,
           _doc.added == null ? null : formatDayTime(_doc.added!),
         ),
-        _Field(LucideIcons.paperclip, 'Originaldatei', _doc.originalFileName),
+        _Field(LucideIcons.paperclip, tr.originalFile, _doc.originalFileName),
         if (_doc.mimeType != null)
           _Field(
             FileKinds.icon(_doc.mimeType),
-            'Dateityp',
+            tr.fileType,
             FileKinds.describe(_doc.mimeType!),
           ),
         if (_doc.pageCount != null)
-          _Field(LucideIcons.layers, 'Seiten', '${_doc.pageCount}'),
+          _Field(LucideIcons.layers, tr.pages, '${_doc.pageCount}'),
         _Field(
           LucideIcons.userRound,
-          'Eigentümer',
+          tr.owner,
           _doc.owner == null
-              ? 'Alle'
+              ? tr.everyone
               : (state.users[_doc.owner]?.displayName ??
-                    (_doc.owner == user.id ? 'Ich' : '#${_doc.owner}')),
+                    (_doc.owner == user.id ? tr.me : '#${_doc.owner}')),
         ),
         for (final v in _doc.customFields)
           _Field(
             LucideIcons.textCursorInput,
-            state.customFields[v.field]?.name ?? 'Feld ${v.field}',
+            state.customFields[v.field]?.name ?? tr.fieldId(v.field),
             formatCustomValue(state.customFields[v.field], v.value),
           ),
         const SizedBox(height: 20),
         RemindersSection(documentId: _doc.id),
         const SizedBox(height: 12),
-        Text('Notizen', style: theme.textTheme.titleMedium),
+        Text(tr.notes, style: theme.textTheme.titleMedium),
         for (final n in _doc.notes)
           ListTile(
             contentPadding: EdgeInsets.zero,
@@ -410,7 +411,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
             ),
             trailing: user.can('delete', 'note')
                 ? IconButton(
-                    tooltip: 'Notiz löschen',
+                    tooltip: tr.deleteNote,
                     icon: const Icon(LucideIcons.x),
                     onPressed: () => _deleteNote(n),
                   )
@@ -426,9 +427,9 @@ class _DocumentScreenState extends State<DocumentScreen> {
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => _addNote(),
               decoration: InputDecoration(
-                hintText: 'Notiz hinzufügen',
+                hintText: tr.addNote,
                 suffixIcon: IconButton(
-                  tooltip: 'Notiz speichern',
+                  tooltip: tr.saveNote,
                   icon: const Icon(LucideIcons.send),
                   onPressed: _addNote,
                 ),
@@ -446,7 +447,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
         HistorySection(key: ValueKey(_doc.modified), documentId: _doc.id),
         AccessLogSection(documentId: _doc.id),
         const SizedBox(height: 20),
-        Text('Inhalt', style: theme.textTheme.titleMedium),
+        Text(tr.content, style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         if (_loading)
           const LinearProgressIndicator()
@@ -454,7 +455,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
           Text(_error!, style: TextStyle(color: theme.colorScheme.error))
         else
           SelectableText(
-            _doc.content.isEmpty ? 'Kein Text erkannt.' : _doc.content,
+            _doc.content.isEmpty ? tr.noTextRecognized : _doc.content,
             style: theme.textTheme.bodyMedium,
           ),
       ],
@@ -471,13 +472,13 @@ class _DocumentScreenState extends State<DocumentScreen> {
           actions: [
             if (canChange)
               IconButton(
-                tooltip: 'Bearbeiten',
+                tooltip: tr.edit,
                 icon: const Icon(LucideIcons.pencil),
                 onPressed: _edit,
               ),
             Builder(
               builder: (anchor) => IconButton(
-                tooltip: 'Teilen oder speichern',
+                tooltip: tr.shareOrSave,
                 icon: _busy
                     ? const SizedBox.square(
                         dimension: 18,
@@ -499,13 +500,13 @@ class _DocumentScreenState extends State<DocumentScreen> {
               ),
             if (user.can('view', 'sharelink'))
               IconButton(
-                tooltip: 'Freigabelinks',
+                tooltip: tr.shareLinks,
                 icon: const Icon(LucideIcons.link),
                 onPressed: () => showShareLinksSheet(context, _doc),
               ),
             if (canChange)
               IconButton(
-                tooltip: 'Freigaben',
+                tooltip: tr.sharePermissions,
                 icon: const Icon(LucideIcons.userPlus),
                 onPressed: () async {
                   final updated = await showShareSheet(context, _doc);
@@ -514,13 +515,13 @@ class _DocumentScreenState extends State<DocumentScreen> {
                       _doc = updated;
                       _changed = true;
                     });
-                    showInfo(this.context, 'Freigaben gespeichert');
+                    showInfo(this.context, tr.permissionsSaved);
                   }
                 },
               ),
             if (user.can('delete', 'document'))
               IconButton(
-                tooltip: 'Löschen',
+                tooltip: tr.delete,
                 icon: const Icon(LucideIcons.trash2),
                 onPressed: _delete,
               ),

@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:share_plus/share_plus.dart';
+import 'l10n.dart';
 
 /// Gibt eine Datei weiter: auf dem Telefon über das Teilen-Menü, auf dem
 /// Desktop und im Browser über „Speichern unter“ bzw. einen Download.
@@ -38,7 +39,7 @@ Future<bool> exportFile(
     fileName: fileName,
     bytes: bytes,
     mimeType: mimeType,
-    dialogTitle: 'Dokument speichern',
+    dialogTitle: tr.saveDocument,
   );
   return saved != null || kIsWeb;
 }
@@ -101,7 +102,7 @@ Future<bool> exportFiles(
     return true;
   }
   final dir = await FilePicker.getDirectoryPath(
-    dialogTitle: 'Ordner für die Dokumente wählen',
+    dialogTitle: tr.chooseAFolderForThe,
   );
   if (dir == null) return false;
   for (final f in named) {

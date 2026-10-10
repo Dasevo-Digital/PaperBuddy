@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:paperbuddy/src/app_state.dart';
 import 'package:paperbuddy/src/file_cache.dart';
+import 'package:paperbuddy/src/l10n.dart';
 import 'package:paperbuddy/src/session_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,7 +26,9 @@ const skipWithoutServer = e2eServer == '';
 
 /// Frischer, abgemeldeter App-Zustand mit Speichern nur im Arbeitsspeicher.
 Future<AppState> freshState() async {
-  await initializeDateFormatting('de');
+  await initializeDateFormatting();
+  // Die Tests lesen deutsche Texte, auch auf einem englischen Testrechner.
+  deviceLanguage = () => 'de';
   SharedPreferences.setMockInitialValues({});
   FlutterSecureStorage.setMockInitialValues({});
   FileCache.testBase = await Directory.systemTemp.createTemp('paperbuddy-e2e-');

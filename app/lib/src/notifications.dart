@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import 'upload_queue.dart';
+import 'l10n.dart';
 
 enum NoticeKind {
   running,
@@ -283,10 +284,10 @@ class NotificationCenter extends ChangeNotifier {
     },
     title: job.fileName,
     detail: switch (job.state) {
-      UploadState.uploading => 'Wird hochgeladen …',
-      UploadState.processing => 'Texterkennung läuft …',
-      UploadState.done => 'Dokument hinzugefügt',
-      UploadState.failed => job.message ?? 'Fehlgeschlagen',
+      UploadState.uploading => tr.uploading,
+      UploadState.processing => tr.recognizingText,
+      UploadState.done => tr.documentAdded,
+      UploadState.failed => job.message ?? tr.failed,
     },
     time: job.finishedAt ?? job.started,
     documentId: job.documentId,
@@ -300,10 +301,10 @@ class NotificationCenter extends ChangeNotifier {
     return Notice(
       key: 'reminder:${r.id}',
       kind: NoticeKind.reminder,
-      title: r.note.isEmpty ? 'Frist: ${r.documentTitle}' : r.note,
+      title: r.note.isEmpty ? tr.deadlineTitled(r.documentTitle) : r.note,
       detail: r.note.isEmpty
-          ? 'Fällig am $date'
-          : 'Fällig am $date · ${r.documentTitle}',
+          ? tr.dueDate(date)
+          : tr.dueDateWithTitle(date, r.documentTitle),
       time: DateTime(d.year, d.month, d.day),
       documentId: r.document,
       reminderId: r.id,
@@ -317,12 +318,12 @@ class NotificationCenter extends ChangeNotifier {
       TaskStatus.failure => NoticeKind.failure,
       _ => NoticeKind.running,
     },
-    title: t.fileName ?? 'Import',
+    title: t.fileName ?? tr.import,
     detail: switch (t.status) {
-      TaskStatus.success => 'Dokument hinzugefügt',
+      TaskStatus.success => tr.documentAdded,
       TaskStatus.failure => UploadQueue.readableResult(t.result),
-      TaskStatus.pending => 'Wartet auf Verarbeitung …',
-      _ => 'Wird verarbeitet …',
+      TaskStatus.pending => tr.waitingForProcessing,
+      _ => tr.processingRunning,
     },
     time: t.done ?? t.created ?? DateTime.now(),
     documentId: t.documentId,

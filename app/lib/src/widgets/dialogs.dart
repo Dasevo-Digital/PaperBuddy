@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:paperbuddy_api/paperbuddy_api.dart';
+import '../l10n.dart';
 
 /// Rückfrage vor einer Aktion; liefert `true` bei Bestätigung.
 Future<bool> confirm(
@@ -18,7 +19,7 @@ Future<bool> confirm(
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Abbrechen'),
+              child: Text(tr.cancel),
             ),
             FilledButton(
               style: destructive
@@ -138,9 +139,9 @@ class _TextDialogState extends State<_TextDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Abbrechen'),
+        child: Text(tr.cancel),
       ),
-      FilledButton(onPressed: _submit, child: const Text('Speichern')),
+      FilledButton(onPressed: _submit, child: Text(tr.save)),
     ],
   );
 }
@@ -159,7 +160,7 @@ Future<T?> choose<T>(
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Abbrechen'),
+        child: Text(tr.cancel),
       ),
       for (final (i, (value, label)) in options.indexed)
         i == options.length - 1

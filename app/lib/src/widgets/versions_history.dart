@@ -8,6 +8,7 @@ import '../format.dart';
 import '../screens/document_viewer_screen.dart';
 import 'dialogs.dart';
 import '../file_kinds.dart';
+import '../l10n.dart';
 
 /// Fassungen eines Dokuments: ansehen, neue hochladen, alte entfernen.
 class VersionsSection extends StatelessWidget {
@@ -31,9 +32,9 @@ class VersionsSection extends StatelessWidget {
     if (!context.mounted) return;
     final label = await askText(
       context,
-      title: 'Neue Version',
-      label: 'Bezeichnung (optional)',
-      hint: 'z. B. unterschrieben',
+      title: tr.newVersion,
+      label: tr.labelOptional,
+      hint: tr.eGSigned,
     );
     if (!context.mounted) return;
     final state = AppScope.read(context);
@@ -47,23 +48,23 @@ class VersionsSection extends StatelessWidget {
       ),
     );
     if (task == null || !context.mounted) return;
-    showInfo(context, 'Neue Version wird verarbeitet …');
+    showInfo(context, tr.newVersionIsBeingProcessed);
     final result = await guarded(context, () => state.client.waitForTask(task));
     if (!context.mounted || result == null) return;
     if (result.status == TaskStatus.success) {
       state.thumbnails.evict(document.id);
-      showInfo(context, 'Neue Version gespeichert');
+      showInfo(context, tr.newVersionSaved);
       onChanged();
     } else {
-      showError(context, result.result ?? 'Verarbeitung fehlgeschlagen');
+      showError(context, result.result ?? tr.processingFailed);
     }
   }
 
   Future<void> _delete(BuildContext context, DocumentVersion v) async {
     final ok = await confirm(
       context,
-      title: 'Version entfernen?',
-      action: 'Entfernen',
+      title: tr.removeVersionQuestion,
+      action: tr.remove,
       destructive: true,
     );
     if (!ok || !context.mounted) return;
@@ -88,19 +89,19 @@ class VersionsSection extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text('Versionen', style: theme.textTheme.titleMedium),
+              child: Text(tr.versions, style: theme.textTheme.titleMedium),
             ),
             if (canChange)
               TextButton.icon(
                 onPressed: () => _upload(context),
                 icon: const Icon(LucideIcons.filePlus2),
-                label: const Text('Neue Version'),
+                label: Text(tr.newVersion),
               ),
           ],
         ),
         if (versions.isEmpty)
           Text(
-            'Nur die ursprüngliche Fassung',
+            tr.onlyTheOriginalVersion,
             style: theme.textTheme.bodyMedium,
           )
         else
@@ -114,7 +115,7 @@ class VersionsSection extends StatelessWidget {
                 [
                   v.label ??
                       (v.isRoot
-                          ? 'Ursprüngliche Fassung'
+                          ? tr.originalVersion
                           : 'Version ${versions.length - i}'),
                   if (v == current) '(aktuell)',
                 ].join(' '),
@@ -130,7 +131,7 @@ class VersionsSection extends StatelessWidget {
               ),
               trailing: canChange && v != current
                   ? IconButton(
-                      tooltip: 'Version entfernen',
+                      tooltip: tr.removeVersion,
                       icon: const Icon(LucideIcons.trash2),
                       onPressed: () => _delete(context, v),
                     )
@@ -153,18 +154,18 @@ class HistorySection extends StatefulWidget {
 class _HistorySectionState extends State<HistorySection> {
   Future<List<HistoryEntry>>? _entries;
 
-  static const _labels = {
-    'title': 'Titel',
-    'correspondent': 'Korrespondent',
-    'document_type': 'Dokumenttyp',
-    'storage_path': 'Speicherpfad',
-    'created': 'Belegdatum',
-    'archive_serial_number': 'Archivnummer',
-    'owner': 'Eigentümer',
-    'checksum': 'Datei',
-    'original_filename': 'Dateiname',
-    'content': 'Inhalt',
-    'deleted_at': 'Papierkorb',
+  static Map<String, String> get _labels => {
+    'title': tr.title,
+    'correspondent': tr.correspondent,
+    'document_type': tr.documentType,
+    'storage_path': tr.storagePath,
+    'created': tr.documentDate,
+    'archive_serial_number': tr.archiveSerialNumber,
+    'owner': tr.owner,
+    'checksum': tr.file,
+    'original_filename': tr.fileName,
+    'content': tr.content,
+    'deleted_at': tr.trash,
     'tags': 'Tags',
     'tags_removed': 'Tags',
     'version': 'Version',
@@ -193,15 +194,15 @@ class _HistorySectionState extends State<HistorySection> {
           if (name != null) return name;
         }
         if (key == 'checksum') return '${'$v'.substring(0, 8)}…';
-        if (key == 'deleted_at') return 'gelöscht';
+        if (key == 'deleted_at') return tr.deleted;
         return '$v';
       }
 
-      if (key == 'version') return 'Neue Version: ${show(change[1])}';
+      if (key == 'version') return tr.newVersionNamed(show(change[1]));
       if (key == 'deleted_at') {
         return change[1] == null || change[1] == 'null'
-            ? 'Wiederhergestellt'
-            : 'In den Papierkorb';
+            ? tr.restored
+            : tr.moveToTrash;
       }
       return '$label: ${show(change[0])} → ${show(change[1])}';
     }
@@ -214,7 +215,7 @@ class _HistorySectionState extends State<HistorySection> {
     final theme = Theme.of(context);
     return ExpansionTile(
       tilePadding: EdgeInsets.zero,
-      title: Text('Verlauf', style: theme.textTheme.titleMedium),
+      title: Text(tr.history, style: theme.textTheme.titleMedium),
       onExpansionChanged: (open) {
         if (open && _entries == null) {
           setState(() {
@@ -230,7 +231,7 @@ class _HistorySectionState extends State<HistorySection> {
               final e = snap.error;
               return Text(
                 e is ApiException && e.isNotFound
-                    ? 'Der Server führt keinen Verlauf.'
+                    ? tr.theServerKeepsNoHistory
                     : '$e',
               );
             }
@@ -241,7 +242,7 @@ class _HistorySectionState extends State<HistorySection> {
                 child: LinearProgressIndicator(),
               );
             }
-            if (entries.isEmpty) return const Text('Noch keine Einträge');
+            if (entries.isEmpty) return Text(tr.noEntriesYet);
             return Column(
               children: [
                 for (final e in entries)
@@ -254,7 +255,7 @@ class _HistorySectionState extends State<HistorySection> {
                     ),
                     title: Text(
                       e.action == 'create'
-                          ? 'Angelegt'
+                          ? tr.created
                           : e.changes.entries
                                 .map((c) => _describe(state, c.key, c.value))
                                 .join('\n'),
@@ -294,7 +295,7 @@ class _AccessLogSectionState extends State<AccessLogSection> {
     final theme = Theme.of(context);
     return ExpansionTile(
       tilePadding: EdgeInsets.zero,
-      title: Text('Zugriffe', style: theme.textTheme.titleMedium),
+      title: Text(tr.accessLog, style: theme.textTheme.titleMedium),
       onExpansionChanged: (open) {
         if (open && _entries == null) {
           setState(() {
@@ -312,9 +313,9 @@ class _AccessLogSectionState extends State<AccessLogSection> {
               final e = snap.error;
               return Text(switch (e) {
                 ApiException(isNotFound: true) =>
-                  'Der Server protokolliert keine Zugriffe.',
+                  tr.theServerDoesNotLog,
                 ApiException(statusCode: 403) =>
-                  'Nur für den Eigentümer sichtbar.',
+                  tr.visibleToTheOwnerOnly,
                 _ => '$e',
               });
             }
@@ -325,7 +326,7 @@ class _AccessLogSectionState extends State<AccessLogSection> {
                 child: LinearProgressIndicator(),
               );
             }
-            if (entries.isEmpty) return const Text('Noch keine Zugriffe');
+            if (entries.isEmpty) return Text(tr.noAccessYet);
             return Column(
               children: [
                 for (final e in entries)
@@ -337,9 +338,9 @@ class _AccessLogSectionState extends State<AccessLogSection> {
                       _ => LucideIcons.eye,
                     }),
                     title: Text(switch (e.action) {
-                      'download' => 'Heruntergeladen',
-                      'share' => 'Über Freigabelink abgerufen',
-                      _ => 'Angesehen',
+                      'download' => tr.downloaded,
+                      'share' => tr.openedViaShareLink,
+                      _ => tr.viewed,
                     }),
                     subtitle: Text(
                       [

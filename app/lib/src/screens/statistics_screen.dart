@@ -10,6 +10,7 @@ import '../widgets/notification_bell.dart';
 import 'document_screen.dart';
 import 'documents_screen.dart';
 import '../widgets/dialogs.dart';
+import '../l10n.dart';
 
 /// Übersicht mit Kennzahlen wie im Dashboard von Paperless-ngx.
 class StatisticsScreen extends StatefulWidget {
@@ -71,7 +72,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Übersicht',
+                      tr.dashboard,
                       style: theme.textTheme.headlineSmall,
                     ),
                   ),
@@ -154,7 +155,7 @@ class StatisticsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final number = NumberFormat.decimalPattern('de');
+    final number = NumberFormat.decimalPattern();
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -163,24 +164,24 @@ class StatisticsCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 16,
           children: [
-            Text('Statistiken', style: theme.textTheme.titleLarge),
+            Text(tr.statistics, style: theme.textTheme.titleLarge),
             _Panel(
               children: [
                 if (stats.documentsInbox != null)
                   _CountRow(
-                    label: 'Dokumente im Posteingang',
+                    label: tr.documentsInInbox,
                     value: number.format(stats.documentsInbox),
                     highlight: true,
                     onTap: onOpenInbox,
                   ),
                 _CountRow(
-                  label: 'Dokumente insgesamt',
+                  label: tr.totalDocuments,
                   value: number.format(stats.documentsTotal),
                   highlight: true,
                   onTap: onOpenDocuments,
                 ),
                 _CountRow(
-                  label: 'Zeichen insgesamt',
+                  label: tr.totalCharacters,
                   value: number.format(stats.characterCount),
                 ),
                 if (stats.fileTypes.isNotEmpty) FileTypeBar(stats: stats),
@@ -190,20 +191,20 @@ class StatisticsCard extends StatelessWidget {
               children: [
                 _CountRow(label: 'Tags', value: number.format(stats.tagCount)),
                 _CountRow(
-                  label: 'Korrespondenten',
+                  label: tr.correspondents,
                   value: number.format(stats.correspondentCount),
                 ),
                 _CountRow(
-                  label: 'Dokumenttypen',
+                  label: tr.documentTypes,
                   value: number.format(stats.documentTypeCount),
                 ),
                 _CountRow(
-                  label: 'Speicherpfade',
+                  label: tr.storagePaths,
                   value: number.format(stats.storagePathCount),
                 ),
                 if (stats.currentAsn > 0)
                   _CountRow(
-                    label: 'Aktuelle Archivnummer',
+                    label: tr.currentArchiveSerialNumber,
                     value: '${stats.currentAsn}',
                   ),
               ],
@@ -312,7 +313,7 @@ class FileTypeBar extends StatelessWidget {
         .fold<int>(0, (s, t) => s + t.count);
     final entries = [
       for (final t in shown) (label: label(t.mimeType), count: t.count),
-      if (rest > 0) (label: 'Andere', count: rest),
+      if (rest > 0) (label: tr.other, count: rest),
     ];
     // Abstufungen der Hauptfarbe, dunkler je seltener.
     final base = theme.brightness == Brightness.dark
@@ -320,7 +321,7 @@ class FileTypeBar extends StatelessWidget {
         : scheme.primary;
     Color colorAt(int i) =>
         Color.lerp(base, scheme.surface, (i * 0.22).clamp(0, 0.8))!;
-    final percent = NumberFormat('#0.0', 'de');
+    final percent = NumberFormat('#0.0');
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
@@ -483,7 +484,7 @@ class _SavedViewCardState extends State<SavedViewCard> {
                 ),
                 if (page != null)
                   Text(
-                    NumberFormat.decimalPattern('de').format(page.count),
+                    NumberFormat.decimalPattern().format(page.count),
                     style: theme.textTheme.labelLarge?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -497,7 +498,7 @@ class _SavedViewCardState extends State<SavedViewCard> {
                       ),
                     ),
                   ),
-                  child: const Text('Alle anzeigen'),
+                  child: Text(tr.showAll),
                 ),
               ],
             ),
@@ -512,7 +513,7 @@ class _SavedViewCardState extends State<SavedViewCard> {
               Padding(
                 padding: const EdgeInsets.all(8),
                 child: Text(
-                  'Keine Dokumente',
+                  tr.noDocuments,
                   style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                 ),
               )
@@ -617,7 +618,7 @@ class _UpcomingRemindersCardState extends State<UpcomingRemindersCard> {
                     size: 18,
                     color: theme.colorScheme.primary,
                   ),
-                  Text('Fristen', style: theme.textTheme.titleMedium),
+                  Text(tr.deadlines, style: theme.textTheme.titleMedium),
                 ],
               ),
               const SizedBox(height: 4),

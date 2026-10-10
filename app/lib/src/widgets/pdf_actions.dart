@@ -4,6 +4,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import '../app_state.dart';
 import 'dialogs.dart';
+import '../l10n.dart';
 
 enum PdfAction { rotateLeft, rotateRight, rotate180, deletePages, split }
 
@@ -35,26 +36,26 @@ class PdfActionsMenu extends StatelessWidget {
               .bulkEdit([id], 'rotate', {'degrees': degrees})
               .then((_) => true),
         );
-        if (ok == true && context.mounted) showInfo(context, 'Gedreht');
+        if (ok == true && context.mounted) showInfo(context, tr.rotated);
       case PdfAction.deletePages:
         final text = await askText(
           context,
-          title: 'Seiten löschen',
-          label: 'Seiten',
+          title: tr.deletePages,
+          label: tr.pages,
           hint: document.pageCount == null
-              ? 'z. B. 2, 4-5'
-              : '1–${document.pageCount}, z. B. 2, 4-5',
+              ? tr.pageRangeExample
+              : tr.pageRangeHint(document.pageCount!),
         );
         if (text == null || !context.mounted) return;
         final pages = parsePages(text);
         if (pages.isEmpty) {
-          return showError(context, 'Keine gültigen Seitenzahlen');
+          return showError(context, tr.noValidPageNumbers);
         }
         final confirmed = await confirm(
           context,
-          title: 'Seiten ${pages.join(', ')} löschen?',
-          message: 'Die Seiten werden aus Original und Archiv-PDF entfernt.',
-          action: 'Löschen',
+          title: tr.deletePagesQuestion(pages.join(', ')),
+          message: tr.thePagesWillBeRemoved,
+          action: tr.delete,
           destructive: true,
         );
         if (!confirmed || !context.mounted) return;
@@ -64,19 +65,19 @@ class PdfActionsMenu extends StatelessWidget {
               .bulkEdit([id], 'delete_pages', {'pages': pages})
               .then((_) => true),
         );
-        if (ok == true && context.mounted) showInfo(context, 'Seiten gelöscht');
+        if (ok == true && context.mounted) showInfo(context, tr.pagesDeleted);
       case PdfAction.split:
         final text = await askText(
           context,
-          title: 'Dokument teilen',
-          label: 'Teile',
+          title: tr.splitDocument,
+          label: tr.parts,
           hint: 'z. B. 1-2, 3, 4-6',
         );
         if (text == null || !context.mounted) return;
         final trashOriginal = await choose<bool>(
           context,
-          title: 'Original danach',
-          options: [(false, 'Behalten'), (true, 'In den Papierkorb')],
+          title: tr.originalAfterwards,
+          options: [(false, tr.keep), (true, tr.moveToTrash)],
         );
         if (trashOriginal == null) return;
         if (!context.mounted) return;
@@ -91,7 +92,7 @@ class PdfActionsMenu extends StatelessWidget {
               .then((_) => true),
         );
         if (ok == true && context.mounted) {
-          showInfo(context, 'Teile werden verarbeitet');
+          showInfo(context, tr.partsAreBeingProcessed);
           state.notifyDocumentsChanged();
         }
     }
@@ -115,43 +116,43 @@ class PdfActionsMenu extends StatelessWidget {
         document.mimeType == 'application/pdf' || document.hasArchiveVersion;
     if (!isPdf) return const SizedBox.shrink();
     return PopupMenuButton<PdfAction>(
-      tooltip: 'PDF bearbeiten',
+      tooltip: tr.editPdf,
       icon: const Icon(LucideIcons.fileCog),
       onSelected: (a) => _run(context, a),
-      itemBuilder: (_) => const [
+      itemBuilder: (_) => [
         PopupMenuItem(
           value: PdfAction.rotateLeft,
           child: ListTile(
             leading: Icon(LucideIcons.rotateCcw),
-            title: Text('Nach links drehen'),
+            title: Text(tr.rotateLeft),
           ),
         ),
         PopupMenuItem(
           value: PdfAction.rotateRight,
           child: ListTile(
             leading: Icon(LucideIcons.rotateCw),
-            title: Text('Nach rechts drehen'),
+            title: Text(tr.rotateRight),
           ),
         ),
         PopupMenuItem(
           value: PdfAction.rotate180,
           child: ListTile(
             leading: Icon(LucideIcons.refreshCw),
-            title: Text('Um 180° drehen'),
+            title: Text(tr.rotate180),
           ),
         ),
         PopupMenuItem(
           value: PdfAction.deletePages,
           child: ListTile(
             leading: Icon(LucideIcons.fileMinus),
-            title: Text('Seiten löschen'),
+            title: Text(tr.deletePages),
           ),
         ),
         PopupMenuItem(
           value: PdfAction.split,
           child: ListTile(
             leading: Icon(LucideIcons.scissors),
-            title: Text('Teilen'),
+            title: Text(tr.split),
           ),
         ),
       ],

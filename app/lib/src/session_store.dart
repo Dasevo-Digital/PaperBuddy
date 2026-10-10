@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'environment.dart';
+import 'l10n.dart';
 
 /// Gespeicherte Anmeldung: Serveradresse und Token.
 class SavedSession {
@@ -41,6 +42,10 @@ class SessionStore {
 
   bool get appLock => _prefs.getBool('appLock') ?? false;
   Future<void> setAppLock(bool value) => _prefs.setBool('appLock', value);
+
+  /// Sprache der Oberfläche: `system`, `de` oder `en`.
+  String? get language => _prefs.getString('language');
+  Future<void> setLanguage(String code) => _prefs.setString('language', code);
 
   /// Hell, dunkel oder wie das System (`system`, `light`, `dark`).
   String? get themeMode => _prefs.getString('themeMode');
@@ -89,7 +94,7 @@ class SessionStore {
     try {
       return await _storage.read(key: AppEnv.vaultEntry);
     } catch (e) {
-      debugPrint('Schlüsselspeicher nicht lesbar: $e');
+      debugPrint(tr.keychainNotReadable(e));
       return null;
     }
   }

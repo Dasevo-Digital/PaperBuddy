@@ -8,7 +8,7 @@ import 'src/session_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('de');
+  await initializeDateFormatting();
   final prefs = await SharedPreferences.getInstance();
   final state = AppState(SessionStore(prefs));
   runApp(PaperBuddyApp(state: state));

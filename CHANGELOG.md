@@ -5,6 +5,9 @@ ausführliche Fassung mit Hintergründen steht im jeweiligen Release.
 
 ## Unveröffentlicht
 
+- **Englische Oberfläche:** Die App spricht Deutsch und Englisch, je nach
+  Gerät oder unter Einstellungen → Sprache. Datum und Zahlen folgen der
+  Sprache, ebenso die Meldungen des API-Clients.
 - **Sicherung:** täglich, verschlüsselt im age-Format und nach jedem Lauf
   geprüft (Prüfsummen, Datenbank zurückgespielt und gezählt), mit
   Aufbewahrung. Dazu `manage backup`, `verify-backup` und `restore-backup`;

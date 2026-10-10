@@ -24,6 +24,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:paperbuddy/src/app.dart';
 import 'package:paperbuddy/src/app_state.dart';
 import 'package:paperbuddy/src/file_cache.dart';
+import 'package:paperbuddy/src/l10n.dart';
 import 'package:paperbuddy/src/session_store.dart';
 import 'package:paperbuddy_api/paperbuddy_api.dart';
 import 'package:pdf/pdf.dart';
@@ -37,6 +38,7 @@ const _server = String.fromEnvironment(
 );
 const _user = 'demo';
 const _password = String.fromEnvironment('PAPERBUDDY_SHOTS_PASSWORD');
+const _language = String.fromEnvironment('PAPERBUDDY_SHOTS_LANG', defaultValue: 'de');
 
 /// Ein ausgedachter Brief: Absender, Betreff, Text und Zuordnung.
 class _Letter {
@@ -372,7 +374,8 @@ void main() {
 
   testWidgets('README-Screenshots', skip: _shots.isEmpty, (tester) async {
     expect(_password, isNotEmpty, reason: 'PAPERBUDDY_SHOTS_PASSWORD fehlt');
-    await initializeDateFormatting('de');
+    await initializeDateFormatting();
+    deviceLanguage = () => _language;
     SharedPreferences.setMockInitialValues({});
     FlutterSecureStorage.setMockInitialValues({});
     FileCache.testBase = await Directory.systemTemp.createTemp('paperbuddy-shots-');
@@ -413,10 +416,10 @@ void main() {
     await state.setThemeMode(ThemeMode.light);
     await shot('desktop');
 
-    await tester.tap(find.text('Übersicht').first);
+    await tester.tap(find.text(tr.dashboard).first);
     await shot('dashboard');
 
-    await tester.tap(find.text('Dokumente').first);
+    await tester.tap(find.text(tr.documents).first);
     await _wait(tester, 800);
     await tester.tap(find.text('Mietvertrag Wohnung Lindenhof').first);
     await shot('detail');

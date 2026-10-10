@@ -7,6 +7,7 @@ import '../../format.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/label_pickers.dart';
 import '../../widgets/tag_chip.dart';
+import '../../l10n.dart';
 
 /// Tags, Korrespondenten, Dokumenttypen oder Speicherpfade verwalten.
 class LabelsScreen extends StatefulWidget {
@@ -45,10 +46,10 @@ class _LabelsScreenState extends State<LabelsScreen> {
   Future<void> _delete(Label label) async {
     final ok = await confirm(
       context,
-      title: '${widget.kind.singular} löschen?',
+      title: tr.deleteKindQuestion(widget.kind.singular),
       message:
-          '„${label.name}“ wird entfernt. Betroffene Dokumente (${label.documentCount}) bleiben erhalten.',
-      action: 'Löschen',
+          tr.willBeRemovedAffectedDocuments(label.name, label.documentCount),
+      action: tr.delete,
       destructive: true,
     );
     if (!ok || !mounted) return;
@@ -68,7 +69,7 @@ class _LabelsScreenState extends State<LabelsScreen> {
       appBar: AppBar(title: Text(widget.kind.plural)),
       floatingActionButton: user.can('add', widget.kind.model)
           ? FloatingActionButton(
-              tooltip: '${widget.kind.singular} anlegen',
+              tooltip: tr.createKind(widget.kind.singular),
               onPressed: () => _edit(),
               child: const Icon(LucideIcons.plus),
             )
@@ -78,8 +79,8 @@ class _LabelsScreenState extends State<LabelsScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'Suchen',
+              decoration: InputDecoration(
+                hintText: tr.search,
                 prefixIcon: Icon(LucideIcons.search),
               ),
               onChanged: (v) =>
@@ -112,7 +113,7 @@ class _LabelsScreenState extends State<LabelsScreen> {
                 if (shown.isEmpty) {
                   return EmptyHint(
                     icon: LucideIcons.tags,
-                    text: 'Keine ${widget.kind.plural}',
+                    text: tr.noKind(widget.kind.plural),
                   );
                 }
                 return RefreshIndicator(
@@ -141,12 +142,12 @@ class _LabelsScreenState extends State<LabelsScreen> {
                             : Text(l.name),
                         subtitle: Text(
                           [
-                            '${l.documentCount} Dokument${l.documentCount == 1 ? '' : 'e'}',
+                            tr.documentsCount(l.documentCount),
                             if (algorithm != MatchingAlgorithm.none)
                               algorithm == MatchingAlgorithm.auto
                                   ? algorithm.label
                                   : '${algorithm.label}: ${l.match}',
-                            if (l is Tag && l.isInboxTag) 'Posteingang',
+                            if (l is Tag && l.isInboxTag) tr.inbox,
                             if (l is StoragePath && l.path.isNotEmpty) l.path,
                           ].join(' · '),
                         ),
@@ -159,7 +160,7 @@ class _LabelsScreenState extends State<LabelsScreen> {
                             l.userCanChange &&
                                 user.can('delete', widget.kind.model)
                             ? IconButton(
-                                tooltip: 'Löschen',
+                                tooltip: tr.delete,
                                 icon: const Icon(LucideIcons.trash2),
                                 onPressed: () => _delete(l),
                               )
@@ -236,7 +237,7 @@ class _LabelEditDialogState extends State<LabelEditDialog> {
 
   Future<void> _save() async {
     if (_name.text.trim().isEmpty) {
-      setState(() => _error = 'Bitte einen Namen angeben');
+      setState(() => _error = tr.pleaseEnterAName);
       return;
     }
     setState(() {
@@ -277,8 +278,8 @@ class _LabelEditDialogState extends State<LabelEditDialog> {
     return AlertDialog(
       title: Text(
         widget.label == null
-            ? '${widget.kind.singular} anlegen'
-            : '${widget.kind.singular} bearbeiten',
+            ? tr.createKind(widget.kind.singular)
+            : tr.editKind(widget.kind.singular),
       ),
       content: SizedBox(
         width: 420,
@@ -292,7 +293,7 @@ class _LabelEditDialogState extends State<LabelEditDialog> {
                 controller: _name,
                 autofocus: true,
                 decoration: InputDecoration(
-                  labelText: 'Name',
+                  labelText: tr.name,
                   errorText: _error,
                 ),
               ),
@@ -321,8 +322,8 @@ class _LabelEditDialogState extends State<LabelEditDialog> {
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Posteingangs-Tag'),
-                  subtitle: const Text('Wird jedem neuen Dokument zugewiesen'),
+                  title: Text(tr.inboxTag),
+                  subtitle: Text(tr.assignedToEveryNewDocument),
                   value: _inbox,
                   onChanged: (v) => setState(() => _inbox = v),
                 ),
@@ -330,15 +331,15 @@ class _LabelEditDialogState extends State<LabelEditDialog> {
               if (widget.kind == LabelKind.storagePath)
                 TextField(
                   controller: _path,
-                  decoration: const InputDecoration(
-                    labelText: 'Pfad',
+                  decoration: InputDecoration(
+                    labelText: tr.path,
                     hintText: '{created_year}/{correspondent}/{title}',
                   ),
                 ),
               DropdownButtonFormField<MatchingAlgorithm>(
                 initialValue: _algorithm,
-                decoration: const InputDecoration(
-                  labelText: 'Automatisch zuordnen',
+                decoration: InputDecoration(
+                  labelText: tr.assignAutomatically,
                 ),
                 items: [
                   for (final m in MatchingAlgorithm.values)
@@ -349,22 +350,22 @@ class _LabelEditDialogState extends State<LabelEditDialog> {
               ),
               if (_algorithm == MatchingAlgorithm.auto)
                 Text(
-                  'Lernt aus den Dokumenten, denen du dieses Label bereits zugewiesen hast.',
+                  tr.learnsFromTheDocumentsYou,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               if (needsMatch) ...[
                 TextField(
                   controller: _match,
                   decoration: InputDecoration(
-                    labelText: 'Suchbegriff',
+                    labelText: tr.searchTerm,
                     hintText: _algorithm == MatchingAlgorithm.regex
                         ? r'Rechnung\s+Nr'
-                        : 'Stadtwerke',
+                        : tr.utilityCompany,
                   ),
                 ),
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Groß-/Kleinschreibung ignorieren'),
+                  title: Text(tr.ignoreCase),
                   value: _insensitive,
                   onChanged: (v) => setState(() => _insensitive = v ?? true),
                 ),
@@ -376,11 +377,11 @@ class _LabelEditDialogState extends State<LabelEditDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Abbrechen'),
+          child: Text(tr.cancel),
         ),
         FilledButton(
           onPressed: _saving ? null : _save,
-          child: const Text('Speichern'),
+          child: Text(tr.save),
         ),
       ],
     );

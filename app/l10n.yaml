@@ -1,0 +1,8 @@
+# Deutsch ist die Vorlage, Englisch folgt (tool/l10n_report.dart zeigt, was
+# noch fest im Code steht). Der erzeugte Code liegt neben den ARB-Dateien und
+# wird nicht eingecheckt (flutter pub get erzeugt ihn).
+arb-dir: lib/l10n
+template-arb-file: app_de.arb
+output-localization-file: app_localizations.dart
+output-class: L10n
+nullable-getter: false

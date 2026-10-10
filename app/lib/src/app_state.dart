@@ -6,6 +6,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import 'app_lock.dart';
 import 'file_cache.dart';
+import 'l10n.dart';
 import 'notifications.dart';
 import 'session_store.dart';
 import 'thumbnail_cache.dart';
@@ -16,7 +17,9 @@ enum SessionStatus { starting, signedOut, signedIn }
 /// Sitzung und Stammdaten (Tags, Korrespondenten, Dokumenttypen).
 /// Screens erreichen sie über [AppScope].
 class AppState extends ChangeNotifier {
-  AppState(this._store, {this._httpClient, this.authenticator});
+  AppState(this._store, {this._httpClient, this.authenticator}) {
+    useLanguage(resolveLanguage(_store.language));
+  }
 
   final SessionStore _store;
 
@@ -61,6 +64,15 @@ class AppState extends ChangeNotifier {
       orElse: () => ThemeMode.system,
     ),
   );
+
+  /// Sprache der Oberfläche (`system`, `de`, `en`); gilt sofort.
+  late final language = ValueNotifier<String>(_store.language ?? 'system');
+
+  Future<void> setLanguage(String choice) async {
+    useLanguage(resolveLanguage(choice));
+    language.value = choice;
+    await _store.setLanguage(choice);
+  }
 
   Future<void> setThemeMode(ThemeMode mode) async {
     themeMode.value = mode;

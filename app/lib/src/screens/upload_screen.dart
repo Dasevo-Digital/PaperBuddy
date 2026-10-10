@@ -9,6 +9,7 @@ import '../format.dart';
 import '../scan/scan_service.dart';
 import '../upload_queue.dart';
 import '../widgets/label_pickers.dart';
+import '../l10n.dart';
 
 /// Neues Dokument hochladen: gescannte Seiten (werden zu einem PDF) oder
 /// eine einzelne Datei, jeweils mit optionalen Metadaten.
@@ -123,7 +124,7 @@ class _UploadScreenState extends State<UploadScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isScan ? 'Scan hochladen' : 'Datei hochladen'),
+        title: Text(_isScan ? tr.uploadScan : tr.uploadFile),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -135,7 +136,7 @@ class _UploadScreenState extends State<UploadScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(LucideIcons.upload),
-              label: const Text('Hochladen'),
+              label: Text(tr.upload),
             ),
           ),
         ],
@@ -159,9 +160,9 @@ class _UploadScreenState extends State<UploadScreen> {
                     if (_isScan) _pagesStrip(theme) else _fileInfo(theme),
                     TextField(
                       controller: _title,
-                      decoration: const InputDecoration(
-                        labelText: 'Titel',
-                        hintText: 'Leer lassen: vom Server bestimmen',
+                      decoration: InputDecoration(
+                        labelText: tr.title,
+                        hintText: tr.leaveEmptyDeterminedByThe,
                         prefixIcon: Icon(LucideIcons.type),
                       ),
                     ),
@@ -178,12 +179,12 @@ class _UploadScreenState extends State<UploadScreen> {
                       },
                       child: InputDecorator(
                         decoration: InputDecoration(
-                          labelText: 'Belegdatum',
+                          labelText: tr.documentDate,
                           prefixIcon: const Icon(LucideIcons.calendar),
                           suffixIcon: _created == null
                               ? null
                               : IconButton(
-                                  tooltip: 'Automatisch erkennen',
+                                  tooltip: tr.detectAutomatically,
                                   icon: const Icon(LucideIcons.x),
                                   onPressed: () =>
                                       setState(() => _created = null),
@@ -191,13 +192,13 @@ class _UploadScreenState extends State<UploadScreen> {
                         ),
                         child: Text(
                           _created == null
-                              ? 'Automatisch aus dem Text'
+                              ? tr.automaticallyFromTheText
                               : formatDay(_created!),
                         ),
                       ),
                     ),
                     LabelField<Correspondent>(
-                      label: 'Korrespondent',
+                      label: tr.correspondent,
                       icon: LucideIcons.user,
                       options: state.correspondents,
                       value: _correspondent,
@@ -207,7 +208,7 @@ class _UploadScreenState extends State<UploadScreen> {
                           : null,
                     ),
                     LabelField<DocumentType>(
-                      label: 'Dokumenttyp',
+                      label: tr.documentType,
                       icon: LucideIcons.fileType,
                       options: state.documentTypes,
                       value: _documentType,
@@ -217,7 +218,7 @@ class _UploadScreenState extends State<UploadScreen> {
                           : null,
                     ),
                     LabelField<StoragePath>(
-                      label: 'Speicherpfad',
+                      label: tr.storagePath,
                       icon: LucideIcons.folderTree,
                       options: state.storagePaths,
                       value: _storagePath,
@@ -238,7 +239,7 @@ class _UploadScreenState extends State<UploadScreen> {
                           : null,
                     ),
                     Text(
-                      'Was du hier leer lässt, ergänzt der Server über seine Zuordnungsregeln.',
+                      tr.whateverYouLeaveEmptyHere,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -271,7 +272,7 @@ class _UploadScreenState extends State<UploadScreen> {
           children: [
             Expanded(
               child: Text(
-                pages.length == 1 ? '1 Seite' : '${pages.length} Seiten',
+                pages.length == 1 ? tr.onePage : tr.pagesCount(pages.length),
                 style: theme.textTheme.titleMedium,
               ),
             ),
@@ -279,7 +280,7 @@ class _UploadScreenState extends State<UploadScreen> {
               TextButton.icon(
                 onPressed: _busy ? null : _addPages,
                 icon: const Icon(LucideIcons.scanLine),
-                label: const Text('Seiten hinzufügen'),
+                label: Text(tr.addPages),
               ),
           ],
         ),
@@ -323,7 +324,7 @@ class _UploadScreenState extends State<UploadScreen> {
                       right: 0,
                       top: 0,
                       child: IconButton.filledTonal(
-                        tooltip: 'Seite entfernen',
+                        tooltip: tr.removePage,
                         iconSize: 16,
                         visualDensity: VisualDensity.compact,
                         icon: const Icon(LucideIcons.trash2),
@@ -337,7 +338,7 @@ class _UploadScreenState extends State<UploadScreen> {
           ),
         ),
         Text(
-          'Zum Umsortieren lange drücken und ziehen.',
+          tr.longPressAndDragTo,
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),

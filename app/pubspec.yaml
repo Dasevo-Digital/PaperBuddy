@@ -44,3 +44,5 @@ dev_dependencies:
   shelf: ^1.4.2
 flutter:
   uses-material-design: true
+  # Texte in lib/l10n/*.arb (Deutsch ist die Vorlage), siehe l10n.yaml.
+  generate: true

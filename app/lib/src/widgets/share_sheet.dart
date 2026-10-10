@@ -4,6 +4,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import '../app_state.dart';
 import 'dialogs.dart';
+import '../l10n.dart';
 
 /// Eigentümer und Freigaben eines Dokuments bearbeiten.
 /// Liefert das aktualisierte Dokument oder `null`.
@@ -119,11 +120,10 @@ class _ShareSheetState extends State<_ShareSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Freigaben', style: theme.textTheme.titleLarge),
+            Text(tr.sharePermissions, style: theme.textTheme.titleLarge),
             const SizedBox(height: 4),
             Text(
-              'Ohne Eigentümer sehen alle Benutzer mit Dokumentrechten das Dokument. '
-              'Mit Eigentümer nur er selbst, Administratoren und die hier Freigegebenen.',
+              tr.withoutAnOwnerAllUsers,
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
@@ -133,21 +133,21 @@ class _ShareSheetState extends State<_ShareSheet> {
               const Center(child: CircularProgressIndicator()),
             if (p != null) ...[
               if (!isOwner)
-                const ListTile(
+                ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(LucideIcons.lock),
-                  title: Text('Nur der Eigentümer kann Freigaben ändern.'),
+                  title: Text(tr.onlyTheOwnerCanChange),
                 )
               else ...[
                 if (state.users.isNotEmpty)
                   DropdownButtonFormField<int?>(
                     isExpanded: true,
                     initialValue: _owner,
-                    decoration: const InputDecoration(labelText: 'Eigentümer'),
+                    decoration: InputDecoration(labelText: tr.owner),
                     items: [
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                         value: null,
-                        child: Text('Kein Eigentümer (für alle sichtbar)'),
+                        child: Text(tr.noOwnerVisibleToEveryone),
                       ),
                       for (final u in state.users.values)
                         DropdownMenuItem(
@@ -158,19 +158,19 @@ class _ShareSheetState extends State<_ShareSheet> {
                     onChanged: (v) => setState(() => _owner = v),
                   ),
                 const SizedBox(height: 16),
-                _chips('Ansehen: Benutzer', users, p.viewUsers),
-                _chips('Ansehen: Gruppen', groups, p.viewGroups),
-                _chips('Ändern: Benutzer', users, p.changeUsers),
-                _chips('Ändern: Gruppen', groups, p.changeGroups),
+                _chips(tr.viewUsers, users, p.viewUsers),
+                _chips(tr.viewGroups, groups, p.viewGroups),
+                _chips(tr.changeUsers, users, p.changeUsers),
+                _chips(tr.changeGroups, groups, p.changeGroups),
                 if (users.isEmpty && groups.isEmpty)
                   Text(
-                    'Es gibt keine weiteren Benutzer oder Gruppen, oder dir fehlt das Recht, sie zu sehen.',
+                    tr.thereAreNoOtherUsers,
                     style: theme.textTheme.bodyMedium,
                   ),
                 const SizedBox(height: 8),
                 FilledButton(
                   onPressed: _saving ? null : _save,
-                  child: const Text('Speichern'),
+                  child: Text(tr.save),
                 ),
               ],
             ],
@@ -281,8 +281,8 @@ class _BulkShareSheetState extends State<_BulkShareSheet> {
           children: [
             Text(
               n == 1
-                  ? 'Freigaben für 1 Dokument'
-                  : 'Freigaben für $n Dokumente',
+                  ? tr.permissionsForOneDocument
+                  : tr.permissionsForDocuments(n),
               style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
@@ -290,15 +290,15 @@ class _BulkShareSheetState extends State<_BulkShareSheet> {
               DropdownButtonFormField<int?>(
                 isExpanded: true,
                 initialValue: _owner,
-                decoration: const InputDecoration(labelText: 'Eigentümer'),
+                decoration: InputDecoration(labelText: tr.owner),
                 items: [
-                  const DropdownMenuItem(
+                  DropdownMenuItem(
                     value: _keepOwner,
-                    child: Text('Unverändert lassen'),
+                    child: Text(tr.leaveUnchanged),
                   ),
-                  const DropdownMenuItem(
+                  DropdownMenuItem(
                     value: null,
-                    child: Text('Kein Eigentümer (für alle sichtbar)'),
+                    child: Text(tr.noOwnerVisibleToEveryone),
                   ),
                   for (final u in state.users.values)
                     DropdownMenuItem(value: u.id, child: Text(u.displayName)),
@@ -307,17 +307,17 @@ class _BulkShareSheetState extends State<_BulkShareSheet> {
               ),
               const SizedBox(height: 16),
             ],
-            _chips('Ansehen: Benutzer', users, _perms.viewUsers),
-            _chips('Ansehen: Gruppen', groups, _perms.viewGroups),
-            _chips('Ändern: Benutzer', users, _perms.changeUsers),
-            _chips('Ändern: Gruppen', groups, _perms.changeGroups),
+            _chips(tr.viewUsers, users, _perms.viewUsers),
+            _chips(tr.viewGroups, groups, _perms.viewGroups),
+            _chips(tr.changeUsers, users, _perms.changeUsers),
+            _chips(tr.changeGroups, groups, _perms.changeGroups),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Bestehende Freigaben behalten'),
+              title: Text(tr.keepExistingPermissions),
               subtitle: Text(
                 _merge
-                    ? 'Die gewählten Freigaben kommen hinzu.'
-                    : 'Die gewählten Freigaben ersetzen die bisherigen.',
+                    ? tr.theSelectedPermissionsAreAdded
+                    : tr.theSelectedPermissionsReplaceThe,
               ),
               value: _merge,
               onChanged: (v) => setState(() => _merge = v),
@@ -325,7 +325,7 @@ class _BulkShareSheetState extends State<_BulkShareSheet> {
             const SizedBox(height: 8),
             FilledButton(
               onPressed: _saving ? null : _save,
-              child: const Text('Speichern'),
+              child: Text(tr.save),
             ),
           ],
         ),

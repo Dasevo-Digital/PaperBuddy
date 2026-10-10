@@ -22,6 +22,7 @@ import 'upload_screen.dart';
 import '../file_kinds.dart';
 import '../widgets/share_sheet.dart';
 import '../file_export.dart';
+import '../l10n.dart';
 
 /// Dokumentliste mit Suche, Filtern und Upload.
 ///
@@ -199,7 +200,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         case _BulkAction.correspondent:
           final picked = await pickLabel<Correspondent>(
             context,
-            title: 'Korrespondent setzen',
+            title: tr.setCorrespondent,
             options: _state.correspondents.values.toList(),
           );
           if (picked == null) return;
@@ -209,7 +210,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         case _BulkAction.documentType:
           final picked = await pickLabel<DocumentType>(
             context,
-            title: 'Dokumenttyp setzen',
+            title: tr.setDocumentType,
             options: _state.documentTypes.values.toList(),
           );
           if (picked == null) return;
@@ -219,7 +220,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         case _BulkAction.storagePath:
           final picked = await pickLabel<StoragePath>(
             context,
-            title: 'Speicherpfad setzen',
+            title: tr.setStoragePath,
             options: _state.storagePaths.values.toList(),
           );
           if (picked == null) return;
@@ -232,12 +233,12 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           final degrees = await choose<int>(
             context,
             title: ids.length == 1
-                ? '1 Dokument drehen'
-                : '${ids.length} Dokumente drehen',
+                ? tr.rotateOneDocument
+                : tr.rotateDocuments(ids.length),
             options: [
-              (90, 'Um 90° nach rechts'),
-              (180, 'Um 180°'),
-              (270, 'Um 90° nach links'),
+              (90, tr.rotateClockwise),
+              (180, tr.rotateHalf),
+              (270, tr.rotateCounterclockwise),
             ],
           );
           if (degrees == null) return;
@@ -250,12 +251,11 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           if (!await confirm(
             context,
             title: ids.length == 1
-                ? '1 Dokument neu verarbeiten?'
-                : '${ids.length} Dokumente neu verarbeiten?',
+                ? tr.reprocessOneDocument
+                : tr.reprocessDocuments(ids.length),
             message:
-                'Texterkennung, Archiv-PDF und Vorschau werden neu erstellt. '
-                'Titel, Tags und andere Angaben bleiben.',
-            action: 'Neu verarbeiten',
+                tr.textRecognitionArchivePdfAnd,
+            action: tr.reprocess,
           )) {
             return;
           }
@@ -285,12 +285,12 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         case _BulkAction.merge:
           final trashOriginals = await choose<bool>(
             context,
-            title: '${ids.length} Dokumente zusammenführen?',
+            title: tr.mergeDocuments(ids.length),
             message:
-                'Es entsteht ein neues Dokument mit den Metadaten des ersten.',
+                tr.aNewDocumentIsCreated,
             options: [
-              (false, 'Einzeldokumente behalten'),
-              (true, 'Einzeldokumente in den Papierkorb'),
+              (false, tr.keepTheIndividualDocuments),
+              (true, tr.moveTheIndividualDocumentsTo),
             ],
           );
           if (trashOriginals == null) return;
@@ -306,20 +306,20 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
             builder: (context) => AlertDialog(
               title: Text(
                 ids.length == 1
-                    ? '1 Dokument löschen?'
-                    : '${ids.length} Dokumente löschen?',
+                    ? tr.deleteOneDocument
+                    : tr.deleteDocuments(ids.length),
               ),
-              content: const Text(
-                'Die Dokumente werden in den Papierkorb des Servers verschoben.',
+              content: Text(
+                tr.theDocumentsWillBeMoved,
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Abbrechen'),
+                  child: Text(tr.cancel),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Löschen'),
+                  child: Text(tr.delete),
                 ),
               ],
             ),
@@ -350,20 +350,20 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
             if (ScanService.available)
               ListTile(
                 leading: const Icon(LucideIcons.scanLine),
-                title: const Text('Dokument scannen'),
-                subtitle: const Text('Mit Kantenerkennung, mehrere Seiten'),
+                title: Text(tr.scanDocument),
+                subtitle: Text(tr.withEdgeDetectionSeveralPages),
                 onTap: () => Navigator.pop(context, 'scan'),
               ),
             ListTile(
               leading: const Icon(LucideIcons.folderOpen),
-              title: const Text('Datei auswählen'),
-              subtitle: const Text('PDF, Bild oder Text'),
+              title: Text(tr.chooseFile),
+              subtitle: Text(tr.pdfImageOrText),
               onTap: () => Navigator.pop(context, 'file'),
             ),
             ListTile(
               leading: const Icon(LucideIcons.printer),
-              title: const Text('Am Netzwerkscanner scannen'),
-              subtitle: const Text('Scanner im Heimnetz über den Server'),
+              title: Text(tr.scanWithANetworkScanner),
+              subtitle: Text(tr.scannersInTheHomeNetwork),
               onTap: () => Navigator.pop(context, 'network'),
             ),
           ],
@@ -423,7 +423,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
               if (canSave)
                 ActionChip(
                   avatar: const Icon(LucideIcons.bookmarkPlus, size: 16),
-                  label: const Text('Ansicht speichern'),
+                  label: Text(tr.saveView),
                   onPressed: _saveView,
                 ),
             ],
@@ -443,9 +443,9 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   Future<void> _saveView() async {
     final text = await askText(
       context,
-      title: 'Ansicht speichern',
-      label: 'Name',
-      hint: 'z. B. Offene Rechnungen',
+      title: tr.saveView,
+      label: tr.name,
+      hint: tr.eGOpenInvoices,
     );
     if (text == null || !mounted) return;
     final filter = _controller.filter.copyWith(query: _search.text);
@@ -473,7 +473,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
             if (user.can('change', 'savedview'))
               SwitchListTile(
                 secondary: const Icon(LucideIcons.layoutDashboard),
-                title: const Text('Auf der Übersicht zeigen'),
+                title: Text(tr.showOnTheDashboard),
                 value: view.showOnDashboard,
                 onChanged: (v) async {
                   Navigator.pop(sheet);
@@ -490,7 +490,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
             if (user.can('delete', 'savedview'))
               ListTile(
                 leading: const Icon(LucideIcons.trash2),
-                title: const Text('Löschen'),
+                title: Text(tr.delete),
                 onTap: () {
                   Navigator.pop(sheet);
                   _deleteView(view);
@@ -505,8 +505,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   Future<void> _deleteView(SavedView view) async {
     final ok = await confirm(
       context,
-      title: 'Ansicht „${view.name}“ löschen?',
-      action: 'Löschen',
+      title: tr.deleteView(view.name),
+      action: tr.delete,
       destructive: true,
     );
     if (!ok || !mounted) return;
@@ -528,7 +528,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Scanner nicht verfügbar: $e')));
+        ).showSnackBar(SnackBar(content: Text(tr.scannerNotAvailable(e))));
       }
     }
   }
@@ -574,7 +574,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
               heroTag: 'upload-${widget.title}',
               onPressed: _upload,
               icon: const Icon(LucideIcons.plus),
-              label: const Text('Neu'),
+              label: Text(tr.newLabel),
             )
           : null,
       body: SafeArea(
@@ -605,8 +605,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                     ),
                     IconButton(
                       tooltip: layout == _Layout.list
-                          ? 'Rasteransicht'
-                          : 'Listenansicht',
+                          ? tr.gridView
+                          : tr.listView,
                       icon: Icon(
                         layout == _Layout.list
                             ? LucideIcons.layoutGrid
@@ -630,14 +630,14 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                   final count = _userFilter.activeFilterCount;
                   return SearchBar(
                     controller: _search,
-                    hintText: 'Volltextsuche',
+                    hintText: tr.fullTextSearch,
                     leading: const Icon(LucideIcons.search),
                     elevation: const WidgetStatePropertyAll(0),
                     onChanged: _onSearchChanged,
                     trailing: [
                       if (_search.text.isNotEmpty)
                         IconButton(
-                          tooltip: 'Suche löschen',
+                          tooltip: tr.clearSearch,
                           icon: const Icon(LucideIcons.x),
                           onPressed: () {
                             _search.clear();
@@ -646,7 +646,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                           },
                         ),
                       IconButton(
-                        tooltip: 'Filter',
+                        tooltip: tr.filter,
                         onPressed: _openFilters,
                         icon: Badge(
                           isLabelVisible: count > 0,
@@ -711,13 +711,13 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           text: c.error!,
           action: FilledButton.tonal(
             onPressed: c.refresh,
-            child: const Text('Erneut versuchen'),
+            child: Text(tr.tryAgain),
           ),
         );
       } else if (!_userFilter.isEmpty) {
-        child = const _Message(
+        child = _Message(
           icon: LucideIcons.searchX,
-          text: 'Keine passenden Dokumente gefunden.',
+          text: tr.noMatchingDocumentsFound,
         );
       } else {
         child = _Message(
@@ -725,8 +725,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
               ? LucideIcons.inbox
               : LucideIcons.fileStack,
           text: widget.baseFilter.inboxOnly
-              ? 'Der Posteingang ist leer.'
-              : 'Noch keine Dokumente. Lade eins hoch oder lege Scans in den Eingangsordner des Servers.',
+              ? tr.theInboxIsEmpty
+              : tr.noDocumentsYetUploadOne,
         );
       }
       // Scrollbar, damit Ziehen zum Aktualisieren auch hier funktioniert.
@@ -745,7 +745,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
               child: c.error != null
                   ? TextButton(
                       onPressed: c.loadMore,
-                      child: Text('${c.error} – erneut versuchen'),
+                      child: Text(tr.errorTryAgain(c.error ?? '')),
                     )
                   : const CircularProgressIndicator(),
             ),
@@ -753,7 +753,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         : Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             child: Text(
-              c.total == 1 ? '1 Dokument' : '${c.total} Dokumente',
+              c.total == 1 ? tr.oneDocument : tr.documentsTotal(c.total),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall,
             ),
@@ -824,7 +824,7 @@ class _ActiveFilters extends StatelessWidget {
         final f = controller.filter;
         final chips = <Widget>[
           if (f.inboxOnly && !hideInbox)
-            _chip('Posteingang', () => onChanged(f.copyWith(inboxOnly: false))),
+            _chip(tr.inbox, () => onChanged(f.copyWith(inboxOnly: false))),
           if (f.createdFrom != null)
             _chip(
               '${formatDay(f.createdFrom!)} – ${formatDay(f.createdTo!)}',
@@ -839,14 +839,14 @@ class _ActiveFilters extends StatelessWidget {
             ),
           for (final id in f.correspondents)
             _chip(
-              state.correspondents[id]?.name ?? 'Korrespondent $id',
+              state.correspondents[id]?.name ?? tr.correspondentId(id),
               () => onChanged(
                 f.copyWith(correspondents: {...f.correspondents}..remove(id)),
               ),
             ),
           for (final id in f.documentTypes)
             _chip(
-              state.documentTypes[id]?.name ?? 'Typ $id',
+              state.documentTypes[id]?.name ?? tr.type(id),
               () => onChanged(
                 f.copyWith(documentTypes: {...f.documentTypes}..remove(id)),
               ),
@@ -944,71 +944,71 @@ class _SelectionBar extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            tooltip: 'Auswahl aufheben',
+            tooltip: tr.clearSelection,
             icon: const Icon(LucideIcons.x),
             onPressed: onClear,
           ),
           Expanded(
-            child: Text('$count ausgewählt', style: theme.textTheme.titleLarge),
+            child: Text(tr.selectedCount(count), style: theme.textTheme.titleLarge),
           ),
           IconButton(
-            tooltip: 'Alle auswählen',
+            tooltip: tr.selectAll,
             icon: const Icon(LucideIcons.listChecks),
             onPressed: onSelectAll,
           ),
           if (user.can('change', 'document'))
             IconButton(
-              tooltip: 'Tags hinzufügen',
+              tooltip: tr.addTags,
               icon: const Icon(LucideIcons.tag),
               onPressed: () => onAction(_BulkAction.addTags),
             ),
           PopupMenuButton<_BulkAction>(
-            tooltip: 'Weitere Aktionen',
+            tooltip: tr.moreActions,
             onSelected: onAction,
             itemBuilder: (context) => [
               if (user.can('change', 'document')) ...[
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: _BulkAction.removeTags,
-                  child: Text('Tags entfernen'),
+                  child: Text(tr.removeTags),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: _BulkAction.correspondent,
-                  child: Text('Korrespondent setzen'),
+                  child: Text(tr.setCorrespondent),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: _BulkAction.documentType,
-                  child: Text('Dokumenttyp setzen'),
+                  child: Text(tr.setDocumentType),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: _BulkAction.storagePath,
-                  child: Text('Speicherpfad setzen'),
+                  child: Text(tr.setStoragePath),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: _BulkAction.permissions,
-                  child: Text('Freigaben setzen'),
+                  child: Text(tr.setPermissions),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: _BulkAction.rotate,
-                  child: Text('Drehen'),
+                  child: Text(tr.rotate),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: _BulkAction.reprocess,
-                  child: Text('Neu verarbeiten'),
+                  child: Text(tr.reprocess),
                 ),
                 if (count >= 2)
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: _BulkAction.merge,
-                    child: Text('Zu einem PDF zusammenführen'),
+                    child: Text(tr.mergeIntoOnePdf),
                   ),
               ],
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: _BulkAction.share,
-                child: Text('Teilen bzw. speichern'),
+                child: Text(tr.shareOrSaveSelection),
               ),
               if (user.can('delete', 'document'))
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: _BulkAction.delete,
-                  child: Text('Löschen'),
+                  child: Text(tr.delete),
                 ),
             ],
           ),

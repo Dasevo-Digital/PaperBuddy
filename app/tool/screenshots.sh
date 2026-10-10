@@ -5,6 +5,7 @@
 # Arbeitsspeicher bleibt. Installierte Apps und ihre Daten bleiben unberührt.
 #
 #   tool/screenshots.sh
+#   SHOTS_LANG=en SHOTS_OUT=/tmp/shots tool/screenshots.sh   # englisch, anderer Ordner
 set -euo pipefail
 cd "$(dirname "$0")/.."
 port=18090
@@ -32,13 +33,15 @@ done
 
 export FLUTTER_XCODE_PAPERBUDDY_APP_NAME="PaperBuddy Shots"
 export FLUTTER_XCODE_PAPERBUDDY_BUNDLE_ID="de.status403.paperbuddy.shots"
-mkdir -p ../docs/screenshots
+out="${SHOTS_OUT:-../docs/screenshots}"
+mkdir -p "$out"
 flutter test integration_test/screenshots_test.dart -d macos \
   --dart-define=PAPERBUDDY_SHOTS=1 \
   --dart-define=PAPERBUDDY_SHOTS_SERVER="http://127.0.0.1:$port" \
-  --dart-define=PAPERBUDDY_SHOTS_PASSWORD="$password" | tee "$log"
+  --dart-define=PAPERBUDDY_SHOTS_PASSWORD="$password" \
+  --dart-define=PAPERBUDDY_SHOTS_LANG="${SHOTS_LANG:-de}" | tee "$log"
 for name in $(grep -o 'SHOT [a-z-]* ' "$log" | cut -d' ' -f2 | sort -u); do
   grep -o "SHOT $name [A-Za-z0-9+/=]*" "$log" | cut -d' ' -f3 | tr -d '\n' \
-    | base64 -d >"../docs/screenshots/$name.png"
-  echo "docs/screenshots/$name.png"
+    | base64 -d >"$out/$name.png"
+  echo "$out/$name.png"
 done

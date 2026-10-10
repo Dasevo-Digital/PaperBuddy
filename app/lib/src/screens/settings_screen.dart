@@ -13,6 +13,7 @@ import 'admin/users_screen.dart';
 import 'admin/workflows_screen.dart';
 import 'offline_screen.dart';
 import '../widgets/dialogs.dart';
+import '../l10n.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -21,18 +22,18 @@ class SettingsScreen extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Abmelden?'),
-        content: const Text(
-          'Die gespeicherte Anmeldung wird von diesem Gerät entfernt.',
+        title: Text(tr.signOutQuestion),
+        content: Text(
+          tr.theSavedSignInWill,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Abbrechen'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Abmelden'),
+            child: Text(tr.signOut),
           ),
         ],
       ),
@@ -56,13 +57,13 @@ class SettingsScreen extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text('Einstellungen', style: theme.textTheme.headlineSmall),
+            child: Text(tr.settings, style: theme.textTheme.headlineSmall),
           ),
           ListTile(
             leading: const Icon(LucideIcons.user),
             title: Text(client.user.displayName ?? client.user.username),
             subtitle: Text(
-              client.user.isSuperuser ? 'Administrator' : 'Benutzer',
+              client.user.isSuperuser ? tr.administrator : tr.users,
             ),
           ),
           ListTile(
@@ -83,21 +84,41 @@ class SettingsScreen extends StatelessWidget {
             valueListenable: state.themeMode,
             builder: (context, mode, _) => ListTile(
               leading: const Icon(LucideIcons.sunMoon),
-              title: const Text('Darstellung'),
+              title: Text(tr.appearance),
               subtitle: Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: SegmentedButton<ThemeMode>(
                   showSelectedIcon: false,
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                       value: ThemeMode.system,
-                      label: Text('System'),
+                      label: Text(tr.system),
                     ),
-                    ButtonSegment(value: ThemeMode.light, label: Text('Hell')),
-                    ButtonSegment(value: ThemeMode.dark, label: Text('Dunkel')),
+                    ButtonSegment(value: ThemeMode.light, label: Text(tr.light)),
+                    ButtonSegment(value: ThemeMode.dark, label: Text(tr.dark)),
                   ],
                   selected: {mode},
                   onSelectionChanged: (s) => state.setThemeMode(s.single),
+                ),
+              ),
+            ),
+          ),
+          ValueListenableBuilder<String>(
+            valueListenable: state.language,
+            builder: (context, choice, _) => ListTile(
+              leading: const Icon(LucideIcons.languages),
+              title: Text(tr.settingsLanguage),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: SegmentedButton<String>(
+                  showSelectedIcon: false,
+                  segments: [
+                    ButtonSegment(value: 'system', label: Text(tr.system)),
+                    for (final MapEntry(key: code, value: name) in appLanguages.entries)
+                      ButtonSegment(value: code, label: Text(name)),
+                  ],
+                  selected: {appLanguages.containsKey(choice) ? choice : 'system'},
+                  onSelectionChanged: (s) => state.setLanguage(s.single),
                 ),
               ),
             ),
@@ -106,22 +127,22 @@ class SettingsScreen extends StatelessWidget {
           if (state.files != null) ...[
             ListTile(
               leading: const Icon(LucideIcons.cloudCheck),
-              title: const Text('Offline verfügbar'),
-              subtitle: const Text('Dokumente ohne Verbindung öffnen'),
+              title: Text(tr.availableOffline),
+              subtitle: Text(tr.openDocumentsWithoutAConnection),
               onTap: () => _open(context, const OfflineScreen()),
             ),
             const _StorageTile(),
           ],
           ListTile(
             leading: const Icon(LucideIcons.userCog),
-            title: const Text('Profil'),
-            subtitle: const Text('Name, E-Mail, Passwort'),
+            title: Text(tr.profile),
+            subtitle: Text(tr.nameEmailPassword),
             onTap: () => _open(context, const ProfileScreen()),
           ),
           const Divider(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text('Verwaltung', style: theme.textTheme.titleSmall),
+            child: Text(tr.administration, style: theme.textTheme.titleSmall),
           ),
           for (final kind in LabelKind.values)
             if (user.can('view', kind.model))
@@ -151,36 +172,36 @@ class SettingsScreen extends StatelessWidget {
           if (user.can('view', 'workflow'))
             ListTile(
               leading: const Icon(LucideIcons.workflow),
-              title: const Text('Workflows'),
-              subtitle: const Text('Automatisch zuordnen, benachrichtigen'),
+              title: Text(tr.workflows),
+              subtitle: Text(tr.assignAutomaticallyNotify),
               onTap: () => _open(context, const WorkflowsScreen()),
             ),
           if (user.can('view', 'mailaccount'))
             ListTile(
               leading: const Icon(LucideIcons.mail),
-              title: const Text('E-Mail-Abruf'),
-              subtitle: const Text('Anhänge aus Postfächern übernehmen'),
+              title: Text(tr.emailImport),
+              subtitle: Text(tr.importAttachmentsFromMailboxes),
               onTap: () => _open(context, const MailScreen()),
             ),
           if (user.can('view', 'user'))
             ListTile(
               leading: const Icon(LucideIcons.users),
-              title: const Text('Benutzer und Gruppen'),
+              title: Text(tr.usersAndGroups),
               subtitle: Text(
-                '${state.users.length} Benutzer · ${state.groups.length} Gruppen',
+                tr.usersGroups(state.users.length, state.groups.length),
               ),
               onTap: () => _open(context, const UsersScreen()),
             ),
           if (user.can('delete', 'document'))
             ListTile(
               leading: const Icon(LucideIcons.trash),
-              title: const Text('Papierkorb'),
+              title: Text(tr.trash),
               onTap: () => _open(context, const TrashScreen()),
             ),
           const Divider(),
           ListTile(
             leading: const Icon(LucideIcons.logOut),
-            title: const Text('Abmelden'),
+            title: Text(tr.signOut),
             onTap: () => _logout(context),
           ),
           const Divider(),
@@ -188,7 +209,7 @@ class SettingsScreen extends StatelessWidget {
             icon: const Icon(LucideIcons.info),
             applicationName: AppEnv.appName,
             applicationLegalese:
-                'Dokumente verwalten mit PaperBuddy- und Paperless-ngx-Servern.',
+                tr.manageDocumentsWithPaperbuddyAnd,
           ),
         ],
       ),
@@ -233,9 +254,9 @@ class _StorageTileState extends State<_StorageTile> {
         : (_bytes! / (1024 * 1024)).toStringAsFixed(1);
     return ListTile(
       leading: const Icon(LucideIcons.hardDrive),
-      title: const Text('Speicher auf dem Gerät'),
-      subtitle: Text('$mb MB für Vorschauen und Dokumente'),
-      trailing: TextButton(onPressed: _clear, child: const Text('Leeren')),
+      title: Text(tr.storageOnThisDevice),
+      subtitle: Text(tr.mbForPreviewsAndDocuments(mb)),
+      trailing: TextButton(onPressed: _clear, child: Text(tr.empty)),
     );
   }
 }
@@ -262,16 +283,15 @@ class _AppLockTileState extends State<_AppLockTile> {
           listenable: lock,
           builder: (context, _) => SwitchListTile(
             secondary: const Icon(LucideIcons.lock),
-            title: const Text('App-Sperre'),
-            subtitle: const Text(
-              'Beim Öffnen und nach 30 Sekunden im Hintergrund mit Face ID, '
-              'Touch ID, Fingerabdruck oder Geräte-Code entsperren',
+            title: Text(tr.appLock),
+            subtitle: Text(
+              tr.unlockWithFaceIdTouch,
             ),
             value: lock.enabled,
             onChanged: (v) async {
               final ok = await lock.setEnabled(v);
               if (!ok && context.mounted) {
-                showInfo(context, 'Die Prüfung wurde abgebrochen.');
+                showInfo(context, tr.theCheckWasCancelled);
               }
             },
           ),

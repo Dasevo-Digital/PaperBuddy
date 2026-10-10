@@ -6,6 +6,7 @@ import '../file_cache.dart';
 import '../file_kinds.dart';
 import '../format.dart';
 import 'document_viewer_screen.dart';
+import '../l10n.dart';
 
 /// Offline gespeicherte Dokumente; funktioniert auch ohne Verbindung.
 class OfflineScreen extends StatefulWidget {
@@ -40,7 +41,7 @@ class _OfflineScreenState extends State<OfflineScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Offline verfügbar')),
+      appBar: AppBar(title: Text(tr.availableOffline)),
       body: FutureBuilder<List<OfflineDocument>>(
         future: _docs,
         builder: (context, snap) {
@@ -61,10 +62,8 @@ class _OfflineScreenState extends State<OfflineScreen> {
                       size: 40,
                       color: scheme.onSurfaceVariant,
                     ),
-                    const Text(
-                      'Noch keine Dokumente offline verfügbar. In der '
-                      'Detailansicht eines Dokuments auf „Offline verfügbar“ '
-                      'tippen, um es auch ohne Verbindung öffnen zu können.',
+                    Text(
+                      tr.noDocumentsAvailableOfflineYet,
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -87,7 +86,7 @@ class _OfflineScreenState extends State<OfflineScreen> {
                     ),
                   ),
                   trailing: IconButton(
-                    tooltip: 'Vom Gerät entfernen',
+                    tooltip: tr.removeFromDevice,
                     icon: const Icon(LucideIcons.x),
                     onPressed: () => _remove(d),
                   ),

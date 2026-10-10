@@ -6,6 +6,7 @@ import 'app_state.dart';
 import 'design/theme.dart';
 import 'environment.dart';
 import 'file_intake.dart';
+import 'l10n.dart';
 import 'notifications.dart';
 import 'screens/connect_screen.dart';
 import 'screens/home_shell.dart';
@@ -67,12 +68,12 @@ class _PaperBuddyAppState extends State<PaperBuddyApp>
           content: Text(switch (n.kind) {
             NoticeKind.failure ||
             NoticeKind.reminder => '${n.title}: ${n.detail}',
-            _ => '${n.title}: Dokument hinzugefügt',
+            _ => tr.documentAddedTitled(n.title),
           }),
           action: n.documentId == null || _navigator.currentState == null
               ? null
               : SnackBarAction(
-                  label: 'Öffnen',
+                  label: tr.open,
                   onPressed: () => openDocument(
                     widget.state,
                     _navigator.currentState!,
@@ -94,19 +95,22 @@ class _PaperBuddyAppState extends State<PaperBuddyApp>
   Widget build(BuildContext context) {
     return AppScope(
       state: widget.state,
-      child: ValueListenableBuilder<ThemeMode>(
-        valueListenable: widget.state.themeMode,
-        builder: (context, themeMode, _) => MaterialApp(
-          themeMode: themeMode,
+      child: ListenableBuilder(
+        listenable: Listenable.merge([widget.state.themeMode, widget.state.language]),
+        builder: (context, _) => MaterialApp(
+          // Beim Sprachwechsel komplett neu aufbauen, damit kein Widget alte
+          // Texte behält.
+          key: ValueKey(appLanguage),
+          themeMode: widget.state.themeMode.value,
           navigatorKey: _navigator,
           scaffoldMessengerKey: _messenger,
           title: AppEnv.appName,
           debugShowCheckedModeBanner: false,
           theme: buildTheme(Brightness.light),
           darkTheme: buildTheme(Brightness.dark),
-          locale: const Locale('de'),
-          supportedLocales: const [Locale('de')],
-          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          locale: Locale(appLanguage),
+          supportedLocales: [for (final code in appLanguages.keys) Locale(code)],
+          localizationsDelegates: const [L10n.delegate, ...GlobalMaterialLocalizations.delegates],
           builder: (context, child) {
             // Dateien auf das Fenster ziehen, um sie hochzuladen (Desktop, Web).
             Widget app = DropZone(navigator: _navigator, child: child!);

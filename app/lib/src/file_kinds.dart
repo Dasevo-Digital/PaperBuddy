@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'l10n.dart';
 
 /// Dateitypen, die der Server verarbeitet: Endungen für die Dateiauswahl,
 /// kurze Bezeichnungen und Symbole. Den Typ selbst bestimmt der Server am
@@ -26,7 +27,7 @@ abstract final class FileKinds {
     'ppt',
   ];
 
-  static const _labels = {
+  static Map<String, String> get _labels => {
     'application/pdf': 'PDF',
     'text/plain': 'TXT',
     'text/csv': 'CSV',
@@ -35,7 +36,7 @@ abstract final class FileKinds {
     'image/tiff': 'TIFF',
     'image/webp': 'WEBP',
     'image/heic': 'HEIC',
-    'message/rfc822': 'E-Mail',
+    'message/rfc822': tr.email,
     'text/html': 'HTML',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
@@ -58,13 +59,13 @@ abstract final class FileKinds {
   static String describe(String mimeType) {
     final short = label(mimeType);
     final kind = switch (short) {
-      'PDF' => 'PDF-Dokument',
-      'TXT' => 'Textdatei',
-      'CSV' => 'CSV-Tabelle',
-      'JPG' || 'PNG' || 'TIFF' || 'WEBP' || 'HEIC' => 'Bild',
-      'DOCX' || 'DOC' || 'ODT' => 'Textdokument',
-      'XLSX' || 'XLS' || 'ODS' => 'Tabelle',
-      'PPTX' || 'PPT' || 'ODP' => 'Präsentation',
+      'PDF' => tr.pdfDocument,
+      'TXT' => tr.textFile,
+      'CSV' => tr.csvSpreadsheet,
+      'JPG' || 'PNG' || 'TIFF' || 'WEBP' || 'HEIC' => tr.image,
+      'DOCX' || 'DOC' || 'ODT' => tr.textDocument,
+      'XLSX' || 'XLS' || 'ODS' => tr.spreadsheet,
+      'PPTX' || 'PPT' || 'ODP' => tr.presentation,
       _ => null,
     };
     return kind == null ? short : '$kind ($short)';

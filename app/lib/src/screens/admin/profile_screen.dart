@@ -6,6 +6,7 @@ import '../../app_state.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/text_menus.dart';
 import '../../widgets/totp_setup.dart';
+import '../../l10n.dart';
 
 /// Eigenen Namen, E-Mail und Passwort ändern, Zwei-Faktor-Anmeldung.
 class ProfileScreen extends StatefulWidget {
@@ -58,11 +59,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _save() async {
     if (_password.text.isNotEmpty && _password.text != _repeat.text) {
-      setState(() => _error = 'Die Passwörter stimmen nicht überein');
+      setState(() => _error = tr.thePasswordsDoNotMatch);
       return;
     }
     if (_password.text.isNotEmpty && _password.text.length < 8) {
-      setState(() => _error = 'Das Passwort braucht mindestens 8 Zeichen');
+      setState(() => _error = tr.thePasswordNeedsAtLeast);
       return;
     }
     setState(() {
@@ -83,7 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (ok != null) {
       _password.clear();
       _repeat.clear();
-      showInfo(context, 'Profil gespeichert');
+      showInfo(context, tr.profileSaved);
     }
   }
 
@@ -96,11 +97,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final client = AppScope.read(context).client;
     if (!await confirm(
       context,
-      title: 'Zwei-Faktor-Anmeldung ausschalten?',
+      title: tr.turnOffTwoFactorAuthentication,
       message:
-          'Danach reicht wieder das Passwort zur Anmeldung. '
-          'Die Wiederherstellungscodes werden ungültig.',
-      action: 'Ausschalten',
+          tr.afterThatThePasswordAlone,
+      action: tr.turnOff,
       destructive: true,
     )) {
       return;
@@ -112,14 +112,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
     if (ok == true && mounted) {
       setState(() => _mfa = false);
-      showInfo(context, 'Zwei-Faktor-Anmeldung ausgeschaltet');
+      showInfo(context, tr.twoFactorAuthenticationTurnedOff);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profil')),
+      appBar: AppBar(title: Text(tr.profile)),
       body: _loading && _error == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -141,21 +141,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         TextField(
                           controller: _first,
-                          decoration: const InputDecoration(
-                            labelText: 'Vorname',
+                          decoration: InputDecoration(
+                            labelText: tr.firstName,
                           ),
                         ),
                         TextField(
                           controller: _last,
-                          decoration: const InputDecoration(
-                            labelText: 'Nachname',
+                          decoration: InputDecoration(
+                            labelText: tr.lastName,
                           ),
                         ),
                         TextField(
                           controller: _email,
                           keyboardType: TextInputType.emailAddress,
-                          decoration: const InputDecoration(
-                            labelText: 'E-Mail',
+                          decoration: InputDecoration(
+                            labelText: tr.email,
                           ),
                         ),
                         const Divider(),
@@ -163,22 +163,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           controller: _password,
                           obscureText: true,
                           contextMenuBuilder: passwordContextMenu,
-                          decoration: const InputDecoration(
-                            labelText: 'Neues Passwort',
-                            helperText: 'Leer lassen, um es zu behalten',
+                          decoration: InputDecoration(
+                            labelText: tr.newPassword,
+                            helperText: tr.leaveEmptyToKeepIt,
                           ),
                         ),
                         TextField(
                           controller: _repeat,
                           obscureText: true,
                           contextMenuBuilder: passwordContextMenu,
-                          decoration: const InputDecoration(
-                            labelText: 'Passwort wiederholen',
+                          decoration: InputDecoration(
+                            labelText: tr.repeatPassword,
                           ),
                         ),
                         FilledButton(
                           onPressed: _saving ? null : _save,
-                          child: const Text('Speichern'),
+                          child: Text(tr.save),
                         ),
                         const Divider(),
                         ListTile(
@@ -189,24 +189,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ? Theme.of(context).colorScheme.primary
                                 : null,
                           ),
-                          title: const Text('Zwei-Faktor-Anmeldung'),
+                          title: Text(tr.twoFactorAuthentication),
                           subtitle: Text(
                             _mfa
-                                ? 'Aktiv: Zur Anmeldung ist zusätzlich ein Code aus der Authenticator-App nötig.'
-                                : 'Aus: Ein Code aus einer Authenticator-App schützt das Konto zusätzlich zum Passwort.',
+                                ? tr.activeSigningInAlsoRequires
+                                : tr.offACodeFromAn,
                           ),
                         ),
                         if (_mfa)
                           OutlinedButton.icon(
                             onPressed: _disableMfa,
                             icon: const Icon(LucideIcons.shieldOff),
-                            label: const Text('Ausschalten'),
+                            label: Text(tr.turnOff),
                           )
                         else
                           FilledButton.tonalIcon(
                             onPressed: _enableMfa,
                             icon: const Icon(LucideIcons.shieldPlus),
-                            label: const Text('Einrichten'),
+                            label: Text(tr.setUp),
                           ),
                       ],
                     ),

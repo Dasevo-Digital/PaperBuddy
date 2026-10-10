@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../app_state.dart';
 import '../notifications.dart';
 import '../screens/document_screen.dart';
+import '../l10n.dart';
 
 /// Glocke mit Zähler; öffnet die Benachrichtigungen als Pop-up (breit) bzw.
 /// als Blatt von unten (Telefon).
@@ -58,7 +59,7 @@ class _NotificationBellState extends State<NotificationBell> {
             ),
           ],
           builder: (context, controller, _) => IconButton(
-            tooltip: 'Benachrichtigungen',
+            tooltip: tr.notifications,
             onPressed: () => _open(center),
             icon: Badge(
               isLabelVisible: unread > 0 || running,
@@ -98,14 +99,14 @@ class NotificationList extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Benachrichtigungen',
+                      tr.notifications,
                       style: theme.textTheme.titleMedium,
                     ),
                   ),
                   if (hasFinished)
                     TextButton(
                       onPressed: center.clearFinished,
-                      child: const Text('Alle entfernen'),
+                      child: Text(tr.removeAll),
                     ),
                 ],
               ),
@@ -122,7 +123,7 @@ class NotificationList extends StatelessWidget {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                     Text(
-                      'Keine Benachrichtigungen',
+                      tr.noNotifications,
                       style: TextStyle(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -181,7 +182,7 @@ class _NoticeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final time = DateFormat('d.M. HH:mm', 'de').format(notice.time.toLocal());
+    final time = DateFormat.Md().add_Hm().format(notice.time.toLocal());
     return ListTile(
       dense: true,
       tileColor: unread
@@ -215,7 +216,7 @@ class _NoticeTile extends StatelessWidget {
       trailing: notice.kind == NoticeKind.running
           ? null
           : IconButton(
-              tooltip: 'Entfernen',
+              tooltip: tr.remove,
               icon: const Icon(LucideIcons.x, size: 18),
               onPressed: onDismiss,
             ),

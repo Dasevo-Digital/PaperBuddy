@@ -9,6 +9,7 @@ import 'package:pdfrx/pdfrx.dart';
 import '../app_state.dart';
 import '../file_cache.dart';
 import '../file_export.dart';
+import '../l10n.dart';
 
 /// Vollbildansicht: Archiv-PDF bzw. Original (Bild, Text).
 class DocumentViewerScreen extends StatefulWidget {
@@ -62,7 +63,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
           anyVersion: true,
         );
         if (file == null) {
-          throw ApiException('Dieses Dokument ist nicht mehr auf dem Gerät.');
+          throw ApiException(tr.thisDocumentIsNoLonger);
         }
         return file;
       }();
@@ -83,7 +84,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
         actions: [
           if (widget.document?.hasArchiveVersion ?? false)
             IconButton(
-              tooltip: _original ? 'Archiv-PDF anzeigen' : 'Original anzeigen',
+              tooltip: _original ? tr.showArchivePdf : tr.showOriginal,
               icon: Icon(
                 _original ? LucideIcons.fileCheck : LucideIcons.fileImage,
               ),
@@ -95,7 +96,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
           FutureBuilder<DownloadedFile>(
             future: _file,
             builder: (context, snap) => IconButton(
-              tooltip: 'Teilen oder speichern',
+              tooltip: tr.shareOrSave,
               icon: const Icon(LucideIcons.share),
               onPressed: snap.data == null
                   ? null
@@ -126,7 +127,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                   const SizedBox(height: 12),
                   FilledButton.tonal(
                     onPressed: () => setState(_load),
-                    child: const Text('Erneut versuchen'),
+                    child: Text(tr.tryAgain),
                   ),
                 ],
               ),
@@ -170,8 +171,8 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                 spacing: 12,
                 children: [
                   const Icon(LucideIcons.fileQuestionMark, size: 48),
-                  const Text(
-                    'Für diesen Dateityp gibt es hier keine Vorschau.',
+                  Text(
+                    tr.thereIsNoPreviewFor,
                     textAlign: TextAlign.center,
                   ),
                   FilledButton.tonalIcon(
@@ -182,7 +183,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                       file.mimeType,
                     ),
                     icon: const Icon(LucideIcons.share),
-                    label: const Text('Teilen oder öffnen'),
+                    label: Text(tr.shareOrOpen),
                   ),
                 ],
               ),

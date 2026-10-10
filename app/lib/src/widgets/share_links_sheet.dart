@@ -6,6 +6,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 import '../app_state.dart';
 import '../format.dart';
 import 'dialogs.dart';
+import '../l10n.dart';
 
 /// Freigabelinks eines Dokuments: anlegen, kopieren, löschen.
 Future<void> showShareLinksSheet(BuildContext context, Document document) =>
@@ -42,7 +43,7 @@ class _ShareLinksSheetState extends State<_ShareLinksSheet> {
   Future<void> _copy(ShareLink link) async {
     final url = AppScope.read(context).client.shareLinkUrl(link).toString();
     await Clipboard.setData(ClipboardData(text: url));
-    if (mounted) showInfo(context, 'Link kopiert');
+    if (mounted) showInfo(context, tr.linkCopied);
   }
 
   Future<void> _create() async {
@@ -72,10 +73,10 @@ class _ShareLinksSheetState extends State<_ShareLinksSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Freigabelinks', style: theme.textTheme.titleLarge),
+          Text(tr.shareLinks, style: theme.textTheme.titleLarge),
           const SizedBox(height: 4),
           Text(
-            'Wer den Link kennt, kann das Dokument ohne Anmeldung öffnen.',
+            tr.anyoneWhoKnowsTheLink,
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 12),
@@ -99,24 +100,24 @@ class _ShareLinksSheetState extends State<_ShareLinksSheet> {
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(LucideIcons.link),
                       title: Text(
-                        l.fileVersion == 'original' ? 'Original' : 'Archiv-PDF',
+                        l.fileVersion == 'original' ? tr.original : tr.archivePdf,
                       ),
                       subtitle: Text(
                         l.expiration == null
-                            ? 'Unbegrenzt gültig'
-                            : 'Gültig bis ${formatDayTime(l.expiration!)}',
+                            ? tr.validIndefinitely
+                            : tr.validUntil(formatDayTime(l.expiration!)),
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            tooltip: 'Kopieren',
+                            tooltip: tr.copy,
                             icon: const Icon(LucideIcons.copy),
                             onPressed: () => _copy(l),
                           ),
                           if (user.can('delete', 'sharelink'))
                             IconButton(
-                              tooltip: 'Löschen',
+                              tooltip: tr.delete,
                               icon: const Icon(LucideIcons.trash2),
                               onPressed: () async {
                                 await guarded(
@@ -143,12 +144,12 @@ class _ShareLinksSheetState extends State<_ShareLinksSheet> {
                 Expanded(
                   child: DropdownButtonFormField<int?>(
                     initialValue: _days,
-                    decoration: const InputDecoration(labelText: 'Gültig'),
-                    items: const [
-                      DropdownMenuItem(value: 1, child: Text('1 Tag')),
-                      DropdownMenuItem(value: 7, child: Text('7 Tage')),
-                      DropdownMenuItem(value: 30, child: Text('30 Tage')),
-                      DropdownMenuItem(value: null, child: Text('Unbegrenzt')),
+                    decoration: InputDecoration(labelText: tr.valid),
+                    items: [
+                      DropdownMenuItem(value: 1, child: Text(tr.oneDay)),
+                      DropdownMenuItem(value: 7, child: Text(tr.sevenDays)),
+                      DropdownMenuItem(value: 30, child: Text(tr.thirtyDays)),
+                      DropdownMenuItem(value: null, child: Text(tr.indefinitely)),
                     ],
                     onChanged: (v) => setState(() => _days = v),
                   ),
@@ -156,10 +157,10 @@ class _ShareLinksSheetState extends State<_ShareLinksSheet> {
                 Expanded(
                   child: DropdownButtonFormField<bool>(
                     initialValue: _original,
-                    decoration: const InputDecoration(labelText: 'Datei'),
-                    items: const [
-                      DropdownMenuItem(value: false, child: Text('Archiv-PDF')),
-                      DropdownMenuItem(value: true, child: Text('Original')),
+                    decoration: InputDecoration(labelText: tr.file),
+                    items: [
+                      DropdownMenuItem(value: false, child: Text(tr.archivePdf)),
+                      DropdownMenuItem(value: true, child: Text(tr.original)),
                     ],
                     onChanged: (v) => setState(() => _original = v ?? false),
                   ),
@@ -170,7 +171,7 @@ class _ShareLinksSheetState extends State<_ShareLinksSheet> {
             FilledButton.icon(
               onPressed: _create,
               icon: const Icon(LucideIcons.link),
-              label: const Text('Link erstellen und kopieren'),
+              label: Text(tr.createAndCopyLink),
             ),
           ],
         ],

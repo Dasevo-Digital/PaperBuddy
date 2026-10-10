@@ -48,3 +48,6 @@ app.*.map.json
 macos/Runner/Configs/Signing.xcconfig
 build.noindex/
 /build
+
+# Erzeugt von flutter gen-l10n (siehe l10n.yaml)
+/lib/l10n/app_localizations*.dart

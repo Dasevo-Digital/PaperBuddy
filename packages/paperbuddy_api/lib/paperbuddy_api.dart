@@ -8,3 +8,4 @@ export 'src/client.dart';
 export 'src/errors.dart';
 export 'src/filter.dart';
 export 'src/models.dart';
+export 'src/texts.dart';

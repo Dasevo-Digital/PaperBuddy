@@ -4,6 +4,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import '../../app_state.dart';
 import '../../widgets/dialogs.dart';
+import '../../l10n.dart';
 
 /// Custom Fields anlegen, umbenennen, Auswahloptionen pflegen, löschen.
 class CustomFieldsScreen extends StatelessWidget {
@@ -22,10 +23,10 @@ class CustomFieldsScreen extends StatelessWidget {
   Future<void> _delete(BuildContext context, CustomField f) async {
     final ok = await confirm(
       context,
-      title: 'Feld löschen?',
+      title: tr.deleteField,
       message:
-          '„${f.name}“ und seine Werte an ${f.documentCount} Dokument(en) werden entfernt.',
-      action: 'Löschen',
+          tr.andItsValuesOnDocument(f.name, f.documentCount),
+      action: tr.delete,
       destructive: true,
     );
     if (!ok || !context.mounted) return;
@@ -44,16 +45,16 @@ class CustomFieldsScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Custom Fields')),
       floatingActionButton: user.can('add', 'customfield')
           ? FloatingActionButton(
-              tooltip: 'Feld anlegen',
+              tooltip: tr.createField,
               onPressed: () => _edit(context),
               child: const Icon(LucideIcons.plus),
             )
           : null,
       body: fields.isEmpty
-          ? const EmptyHint(
+          ? EmptyHint(
               icon: LucideIcons.textCursorInput,
               text:
-                  'Noch keine eigenen Felder. Damit lassen sich z. B. Betrag, Fälligkeit oder Vertragsnummer erfassen.',
+                  tr.noCustomFieldsYetThey,
             )
           : ListView.separated(
               padding: const EdgeInsets.only(bottom: 88),
@@ -69,7 +70,7 @@ class CustomFieldsScreen extends StatelessWidget {
                       f.type.label,
                       if (f.type == CustomFieldType.select)
                         f.options.map((o) => o.label).join(', '),
-                      '${f.documentCount} Dokument${f.documentCount == 1 ? '' : 'e'}',
+                      tr.documentsCount(f.documentCount),
                     ].join(' · '),
                   ),
                   onTap: user.can('change', 'customfield')
@@ -77,7 +78,7 @@ class CustomFieldsScreen extends StatelessWidget {
                       : null,
                   trailing: user.can('delete', 'customfield')
                       ? IconButton(
-                          tooltip: 'Löschen',
+                          tooltip: tr.delete,
                           icon: const Icon(LucideIcons.trash2),
                           onPressed: () => _delete(context, f),
                         )
@@ -136,7 +137,7 @@ class _FieldDialogState extends State<_FieldDialog> {
 
   Future<void> _save() async {
     if (_name.text.trim().isEmpty) {
-      setState(() => _error = 'Bitte einen Namen angeben');
+      setState(() => _error = tr.pleaseEnterAName);
       return;
     }
     setState(() => _saving = true);
@@ -167,7 +168,7 @@ class _FieldDialogState extends State<_FieldDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.field == null ? 'Feld anlegen' : 'Feld bearbeiten'),
+      title: Text(widget.field == null ? tr.createField : tr.editField),
       content: SizedBox(
         width: 400,
         child: SingleChildScrollView(
@@ -180,16 +181,16 @@ class _FieldDialogState extends State<_FieldDialog> {
                 controller: _name,
                 autofocus: true,
                 decoration: InputDecoration(
-                  labelText: 'Name',
+                  labelText: tr.name,
                   errorText: _error,
                 ),
               ),
               DropdownButtonFormField<CustomFieldType>(
                 initialValue: _type,
                 decoration: InputDecoration(
-                  labelText: 'Datentyp',
+                  labelText: tr.dataType,
                   helperText: widget.field != null
-                      ? 'Lässt sich nachträglich nicht ändern'
+                      ? tr.cannotBeChangedLater
                       : null,
                 ),
                 items: [
@@ -203,8 +204,8 @@ class _FieldDialogState extends State<_FieldDialog> {
               if (_type == CustomFieldType.monetary && widget.field == null)
                 TextField(
                   controller: _currency,
-                  decoration: const InputDecoration(
-                    labelText: 'Standardwährung',
+                  decoration: InputDecoration(
+                    labelText: tr.defaultCurrency,
                   ),
                 ),
               if (_type == CustomFieldType.select) ...[
@@ -214,7 +215,7 @@ class _FieldDialogState extends State<_FieldDialog> {
                     dense: true,
                     title: Text(o.label),
                     trailing: IconButton(
-                      tooltip: 'Option entfernen',
+                      tooltip: tr.removeOption,
                       icon: const Icon(LucideIcons.x),
                       onPressed: () => setState(() => _options.removeAt(i)),
                     ),
@@ -222,7 +223,7 @@ class _FieldDialogState extends State<_FieldDialog> {
                 TextField(
                   controller: _option,
                   decoration: InputDecoration(
-                    labelText: 'Option hinzufügen',
+                    labelText: tr.addOption,
                     suffixIcon: IconButton(
                       icon: const Icon(LucideIcons.plus),
                       onPressed: _addOption,
@@ -238,11 +239,11 @@ class _FieldDialogState extends State<_FieldDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Abbrechen'),
+          child: Text(tr.cancel),
         ),
         FilledButton(
           onPressed: _saving ? null : _save,
-          child: const Text('Speichern'),
+          child: Text(tr.save),
         ),
       ],
     );

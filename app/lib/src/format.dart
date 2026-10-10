@@ -1,10 +1,8 @@
 import 'package:intl/intl.dart';
 
-final _day = DateFormat('d. MMM yyyy', 'de');
-final _dayTime = DateFormat('d. MMM yyyy, HH:mm', 'de');
-
-String formatDay(DateTime d) => _day.format(d);
-String formatDayTime(DateTime d) => _dayTime.format(d.toLocal());
+/// Datum in der Sprache der App (`Intl.defaultLocale`, siehe `useLanguage`).
+String formatDay(DateTime d) => DateFormat.yMMMd().format(d);
+String formatDayTime(DateTime d) => DateFormat.yMMMd().add_Hm().format(d.toLocal());
 
 /// `#a6cee3` → Farbwert für `Color`.
 int parseHexColor(String hex, {int fallback = 0xFFA6CEE3}) {

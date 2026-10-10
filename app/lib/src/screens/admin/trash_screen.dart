@@ -6,6 +6,7 @@ import '../../app_state.dart';
 import '../../format.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/document_thumbnail.dart';
+import '../../l10n.dart';
 
 /// Gelöschte Dokumente wiederherstellen oder endgültig löschen.
 class TrashScreen extends StatefulWidget {
@@ -39,8 +40,8 @@ class _TrashScreenState extends State<TrashScreen> {
       showInfo(
         context,
         ids.length == 1
-            ? 'Dokument wiederhergestellt'
-            : '${ids.length} Dokumente wiederhergestellt',
+            ? tr.documentRestored
+            : tr.documentsRestored(ids.length),
       );
       setState(_reload);
     }
@@ -49,10 +50,10 @@ class _TrashScreenState extends State<TrashScreen> {
   Future<void> _empty(List<int> ids, {required bool all}) async {
     final ok = await confirm(
       context,
-      title: all ? 'Papierkorb leeren?' : 'Endgültig löschen?',
+      title: all ? tr.emptyTrash : tr.deletePermanentlyQuestion,
       message:
-          'Dokumente und Dateien werden unwiderruflich vom Server gelöscht.',
-      action: 'Endgültig löschen',
+          tr.documentsAndFilesWillBe,
+      action: tr.deletePermanently,
       destructive: true,
     );
     if (!ok || !mounted) return;
@@ -69,17 +70,17 @@ class _TrashScreenState extends State<TrashScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _selected.isEmpty ? 'Papierkorb' : '${_selected.length} ausgewählt',
+          _selected.isEmpty ? tr.trash : tr.trashSelected(_selected.length),
         ),
         actions: [
           if (_selected.isNotEmpty) ...[
             IconButton(
-              tooltip: 'Wiederherstellen',
+              tooltip: tr.restore,
               icon: const Icon(LucideIcons.undo2),
               onPressed: () => _restore(_selected.toList()),
             ),
             IconButton(
-              tooltip: 'Endgültig löschen',
+              tooltip: tr.deletePermanently,
               icon: const Icon(LucideIcons.trash2),
               onPressed: () => _empty(_selected.toList(), all: false),
             ),
@@ -90,7 +91,7 @@ class _TrashScreenState extends State<TrashScreen> {
                 onPressed: (snap.data?.count ?? 0) == 0
                     ? null
                     : () => _empty(const [], all: true),
-                child: const Text('Leeren'),
+                child: Text(tr.empty),
               ),
             ),
         ],
@@ -106,9 +107,9 @@ class _TrashScreenState extends State<TrashScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (page.results.isEmpty) {
-            return const EmptyHint(
+            return EmptyHint(
               icon: LucideIcons.trash,
-              text: 'Der Papierkorb ist leer.',
+              text: tr.theTrashIsEmpty,
             );
           }
           return RefreshIndicator(
@@ -121,7 +122,7 @@ class _TrashScreenState extends State<TrashScreen> {
                   return Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
-                      'Dokumente im Papierkorb werden nach der vom Server eingestellten Frist automatisch gelöscht.',
+                      tr.documentsInTheTrashAre,
                       style: theme.textTheme.bodySmall,
                       textAlign: TextAlign.center,
                     ),
@@ -142,7 +143,7 @@ class _TrashScreenState extends State<TrashScreen> {
                   ),
                   title: Text(d.title),
                   subtitle: Text(
-                    'Gelöscht ${d.deletedAt == null ? '' : formatDayTime(d.deletedAt!)}',
+                    tr.deletedAt(d.deletedAt == null ? '' : formatDayTime(d.deletedAt!)),
                   ),
                   onTap: () => setState(
                     () =>
@@ -150,7 +151,7 @@ class _TrashScreenState extends State<TrashScreen> {
                   ),
                   trailing: _selected.isEmpty
                       ? IconButton(
-                          tooltip: 'Wiederherstellen',
+                          tooltip: tr.restore,
                           icon: const Icon(LucideIcons.undo2),
                           onPressed: () => _restore([d.id]),
                         )

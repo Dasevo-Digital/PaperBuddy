@@ -15,7 +15,8 @@ App, per E-Mail, aus einem Eingangsordner oder direkt vom Netzwerkscanner,
 erkennt den Text per OCR und ordnet sie Korrespondenten, Dokumenttypen und
 Tags zu. Er spricht die **REST-API von Paperless-ngx**, dadurch funktionieren
 auch vorhandene Apps wie Swift Paperless (iOS) oder Paperless Mobile direkt.
-Die eigene App gibt es für Android, iOS, macOS, Windows, Linux und den Browser.
+Die eigene App gibt es für Android, iOS, macOS, Windows, Linux und den Browser,
+auf Deutsch und Englisch.
 
 Der Quellcode ist einsehbar, aber **nicht Open Source**: Der Projektcode
 steht unter der [PolyForm Strict License 1.0.0](LICENSE) (© 2026 Dasevo
@@ -292,6 +293,12 @@ der Pfad zum Swift-Paket stimmt.
 
 Für Tests und Probe-Builds immer die Dev-Variante nehmen, damit die installierte
 App und ihre Anmeldung unberührt bleiben.
+
+**Sprachen:** Die Oberfläche folgt der Sprache des Geräts (Deutsch, sonst
+Englisch) oder der Wahl unter Einstellungen → Sprache. Die Texte stehen in
+`app/lib/l10n/app_de.arb` (Vorlage) und `app_en.arb`; `flutter pub get` erzeugt
+daraus den Code. `dart run tool/l10n_report.dart` zeigt, was noch fest im Code
+steht.
 
 Die App verbindet sich mit PaperBuddy und mit Paperless-ngx. Der Token liegt im
 Schlüsselspeicher des Systems; im Browser nur bis zum Schließen der Seite. Für die

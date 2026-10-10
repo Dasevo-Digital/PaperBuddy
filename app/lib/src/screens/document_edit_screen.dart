@@ -6,6 +6,7 @@ import '../app_state.dart';
 import '../format.dart';
 import '../widgets/custom_field_inputs.dart';
 import '../widgets/label_pickers.dart';
+import '../l10n.dart';
 
 /// Metadaten eines Dokuments bearbeiten. Liefert das gespeicherte Dokument.
 class DocumentEditScreen extends StatefulWidget {
@@ -116,15 +117,15 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Änderungen verwerfen?'),
+            title: Text(tr.discardChanges),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Weiter bearbeiten'),
+                child: Text(tr.keepEditing),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Verwerfen'),
+                child: Text(tr.discard),
               ),
             ],
           ),
@@ -209,7 +210,7 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
               size: 16,
               color: theme.colorScheme.primary,
             ),
-            Text('Vorschläge', style: theme.textTheme.labelLarge),
+            Text(tr.suggestions, style: theme.textTheme.labelLarge),
           ],
         ),
         Wrap(spacing: 6, runSpacing: 6, children: chips),
@@ -232,7 +233,7 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Bearbeiten'),
+          title: Text(tr.edit),
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -243,7 +244,7 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                         dimension: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Speichern'),
+                    : Text(tr.save),
               ),
             ),
           ],
@@ -268,12 +269,12 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                           ),
                         TextFormField(
                           controller: _title,
-                          decoration: const InputDecoration(
-                            labelText: 'Titel',
+                          decoration: InputDecoration(
+                            labelText: tr.title,
                             prefixIcon: Icon(LucideIcons.type),
                           ),
                           validator: (v) => (v ?? '').trim().isEmpty
-                              ? 'Bitte einen Titel angeben'
+                              ? tr.pleaseEnterATitle
                               : null,
                         ),
                         ?_suggestionChips(state),
@@ -281,15 +282,15 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                           borderRadius: BorderRadius.circular(4),
                           onTap: _pickDate,
                           child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Belegdatum',
+                            decoration: InputDecoration(
+                              labelText: tr.documentDate,
                               prefixIcon: Icon(LucideIcons.calendar),
                             ),
                             child: Text(formatDay(_created)),
                           ),
                         ),
                         LabelField<Correspondent>(
-                          label: 'Korrespondent',
+                          label: tr.correspondent,
                           icon: LucideIcons.user,
                           options: state.correspondents,
                           value: _correspondent,
@@ -299,7 +300,7 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                               : null,
                         ),
                         LabelField<DocumentType>(
-                          label: 'Dokumenttyp',
+                          label: tr.documentType,
                           icon: LucideIcons.fileType,
                           options: state.documentTypes,
                           value: _documentType,
@@ -309,7 +310,7 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                               : null,
                         ),
                         LabelField<StoragePath>(
-                          label: 'Speicherpfad',
+                          label: tr.storagePath,
                           icon: LucideIcons.folderTree,
                           options: state.storagePaths,
                           value: _storagePath,
@@ -319,10 +320,10 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                           controller: _asn,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
-                            labelText: 'Archivnummer (ASN)',
+                            labelText: tr.archiveSerialNumberAsn,
                             prefixIcon: const Icon(LucideIcons.hash),
                             suffixIcon: IconButton(
-                              tooltip: 'Nächste freie Nummer',
+                              tooltip: tr.nextFreeNumber,
                               icon: const Icon(LucideIcons.listPlus),
                               onPressed: _nextAsn,
                             ),
@@ -332,7 +333,7 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                             if (s.isEmpty) return null;
                             final n = int.tryParse(s);
                             return n == null || n < 0
-                                ? 'Bitte eine ganze Zahl angeben'
+                                ? tr.pleaseEnterAWholeNumber
                                 : null;
                           },
                         ),

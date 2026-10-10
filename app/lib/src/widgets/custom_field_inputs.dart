@@ -4,13 +4,14 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import '../app_state.dart';
 import '../format.dart';
+import '../l10n.dart';
 
 /// Wert eines Custom Fields lesbar machen.
 String formatCustomValue(CustomField? field, Object? value) {
   if (value == null || (value is String && value.isEmpty)) return '–';
   switch (field?.type) {
     case CustomFieldType.boolean:
-      return value == true ? 'Ja' : 'Nein';
+      return value == true ? tr.yes : tr.no;
     case CustomFieldType.date:
       final d = DateTime.tryParse('$value');
       return d == null ? '$value' : formatDay(d);
@@ -68,21 +69,21 @@ class CustomFieldsEditor extends StatelessWidget {
             ),
             if (available.isNotEmpty)
               PopupMenuButton<CustomField>(
-                tooltip: 'Feld hinzufügen',
+                tooltip: tr.addField,
                 onSelected: (f) =>
                     onChanged([...values, CustomFieldValue(f.id, null)]),
                 itemBuilder: (_) => [
                   for (final f in available)
                     PopupMenuItem(value: f, child: Text(f.name)),
                 ],
-                child: const Padding(
+                child: Padding(
                   padding: EdgeInsets.all(8),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(LucideIcons.plus, size: 18),
                       SizedBox(width: 6),
-                      Text('Feld hinzufügen'),
+                      Text(tr.addField),
                     ],
                   ),
                 ),
@@ -90,7 +91,7 @@ class CustomFieldsEditor extends StatelessWidget {
           ],
         ),
         if (values.isEmpty)
-          Text('Keine Felder', style: theme.textTheme.bodyMedium),
+          Text(tr.noFields, style: theme.textTheme.bodyMedium),
         for (final v in values)
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -104,7 +105,7 @@ class CustomFieldsEditor extends StatelessWidget {
                 ),
               ),
               IconButton(
-                tooltip: 'Feld entfernen',
+                tooltip: tr.removeField,
                 icon: const Icon(LucideIcons.x),
                 onPressed: () => onChanged([
                   for (final x in values)
@@ -157,7 +158,7 @@ class _FieldInputState extends State<_FieldInput> {
   @override
   Widget build(BuildContext context) {
     final f = widget.field;
-    final label = f?.name ?? 'Feld';
+    final label = f?.name ?? tr.field;
     switch (f?.type) {
       case CustomFieldType.boolean:
         return CheckboxListTile(
@@ -247,7 +248,7 @@ class _FieldInputState extends State<_FieldInput> {
           controller: _text,
           decoration: InputDecoration(
             labelText: label,
-            hintText: 'Dokument-IDs, z. B. 12, 34',
+            hintText: tr.documentIdsHint,
           ),
           onChanged: (v) => widget.onChanged([
             for (final p in v.split(RegExp(r'[,\s]+')))

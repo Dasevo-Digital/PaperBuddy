@@ -1,3 +1,5 @@
+import 'texts.dart';
+
 /// Fehler vom Server oder bei der Verbindung.
 class ApiException implements Exception {
   ApiException(this.message, {this.statusCode, this.fieldErrors = const {}});
@@ -24,12 +26,12 @@ class ApiException implements Exception {
       };
       final first = fields.values.expand((v) => v).firstOrNull;
       return ApiException(
-        first ?? 'Fehler $status',
+        first ?? ApiTexts.error(status),
         statusCode: status,
         fieldErrors: fields,
       );
     }
-    return ApiException('Fehler $status', statusCode: status);
+    return ApiException(ApiTexts.error(status), statusCode: status);
   }
 
   @override
@@ -43,8 +45,8 @@ class MfaRequiredException extends ApiException {
     : super(
         message ??
             (invalid
-                ? 'Der Code ist falsch oder abgelaufen.'
-                : 'Bitte den Code aus der Authenticator-App eingeben.'),
+                ? ApiTexts.wrongCode
+                : ApiTexts.enterCode),
         statusCode: 400,
       );
 

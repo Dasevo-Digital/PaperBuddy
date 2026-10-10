@@ -1,4 +1,5 @@
 import 'admin_models.dart';
+import 'texts.dart';
 
 /// Filter und Sortierung für die Dokumentliste.
 ///
@@ -190,16 +191,19 @@ class DocumentFilter {
 }
 
 enum DocumentOrdering {
-  createdDesc('-created', 'Belegdatum, neueste zuerst'),
-  createdAsc('created', 'Belegdatum, älteste zuerst'),
-  addedDesc('-added', 'Hinzugefügt, neueste zuerst'),
-  titleAsc('title', 'Titel A–Z'),
-  correspondentAsc('correspondent__name', 'Korrespondent A–Z'),
-  asnAsc('archive_serial_number', 'Archivnummer');
+  createdDesc('-created', 'Belegdatum, neueste zuerst', 'Document date, newest first'),
+  createdAsc('created', 'Belegdatum, älteste zuerst', 'Document date, oldest first'),
+  addedDesc('-added', 'Hinzugefügt, neueste zuerst', 'Added, newest first'),
+  titleAsc('title', 'Titel A–Z', 'Title A–Z'),
+  correspondentAsc('correspondent__name', 'Korrespondent A–Z', 'Correspondent A–Z'),
+  asnAsc('archive_serial_number', 'Archivnummer', 'Archive serial number');
 
-  const DocumentOrdering(this.apiValue, this.label);
+  const DocumentOrdering(this.apiValue, this._de, this._en);
   final String apiValue;
-  final String label;
+  final String _de, _en;
+
+  /// Bezeichnung in der Sprache der App.
+  String get label => ApiTexts.pick(_de, _en);
 }
 
 /// Regeltypen gespeicherter Ansichten (Paperless-ngx `FILTER_*`).

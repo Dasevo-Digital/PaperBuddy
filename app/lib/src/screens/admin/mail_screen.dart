@@ -7,6 +7,7 @@ import '../../app_state.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/label_pickers.dart';
 import '../../widgets/text_menus.dart';
+import '../../l10n.dart';
 
 class MailScreen extends StatefulWidget {
   const MailScreen({super.key});
@@ -40,18 +41,18 @@ class _MailScreenState extends State<MailScreen> {
       mode: LaunchMode.externalApplication,
     );
     if (!mounted) return;
-    if (!ok) return showError(context, 'Browser konnte nicht geöffnet werden');
+    if (!ok) return showError(context, tr.couldNotOpenTheBrowser);
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Im Browser anmelden'),
-        content: const Text(
-          'Melde dich im Browser an und erlaube den Zugriff. Danach hier auf „Fertig“ tippen.',
+        title: Text(tr.signInInBrowser),
+        content: Text(
+          tr.signInInBrowserHint,
         ),
         actions: [
           FilledButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Fertig'),
+            child: Text(tr.done),
           ),
         ],
       ),
@@ -83,7 +84,7 @@ class _MailScreenState extends State<MailScreen> {
     if (n != null && mounted) {
       showInfo(
         context,
-        n == 0 ? 'Keine neuen Anhänge' : '$n Datei(en) übernommen',
+        n == 0 ? tr.noNewAttachments : tr.fileSImported(n),
       );
       AppScope.read(context).notifyDocumentsChanged();
     }
@@ -93,7 +94,7 @@ class _MailScreenState extends State<MailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('E-Mail-Abruf')),
+      appBar: AppBar(title: Text(tr.emailImport)),
       body: FutureBuilder<(List<MailAccount>, List<MailRule>)>(
         future: _data,
         builder: (context, snap) {
@@ -111,11 +112,11 @@ class _MailScreenState extends State<MailScreen> {
               padding: const EdgeInsets.only(bottom: 32),
               children: [
                 ListTile(
-                  title: Text('Konten', style: theme.textTheme.titleMedium),
+                  title: Text(tr.accounts, style: theme.textTheme.titleMedium),
                   trailing: TextButton.icon(
                     onPressed: () => _editAccount(),
                     icon: const Icon(LucideIcons.plus),
-                    label: const Text('Konto'),
+                    label: Text(tr.account),
                   ),
                 ),
                 if (_oauth?.gmail != null || _oauth?.outlook != null)
@@ -132,22 +133,22 @@ class _MailScreenState extends State<MailScreen> {
                           OutlinedButton.icon(
                             onPressed: () => _connect(url),
                             icon: const Icon(LucideIcons.mail),
-                            label: const Text('Mit Google verbinden'),
+                            label: Text(tr.connectWithGoogle),
                           ),
                         if (_oauth?.outlook case final url?)
                           OutlinedButton.icon(
                             onPressed: () => _connect(url),
                             icon: const Icon(LucideIcons.mail),
-                            label: const Text('Mit Microsoft verbinden'),
+                            label: Text(tr.connectWithMicrosoft),
                           ),
                       ],
                     ),
                   ),
                 if (accounts.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
-                      'PaperBuddy kann Anhänge aus einem Postfach abholen, z. B. Rechnungen, die per Mail kommen.',
+                      tr.paperbuddyCanFetchAttachmentsFrom,
                     ),
                   ),
                 for (final a in accounts)
@@ -161,20 +162,20 @@ class _MailScreenState extends State<MailScreen> {
                     ),
                     onTap: () => _editAccount(a),
                     trailing: IconButton(
-                      tooltip: 'Jetzt abrufen',
+                      tooltip: tr.fetchNow,
                       icon: const Icon(LucideIcons.refreshCw),
                       onPressed: () => _process(a),
                     ),
                   ),
                 const Divider(),
                 ListTile(
-                  title: Text('Regeln', style: theme.textTheme.titleMedium),
+                  title: Text(tr.rules, style: theme.textTheme.titleMedium),
                   trailing: TextButton.icon(
                     onPressed: accounts.isEmpty
                         ? null
                         : () => _editRule(accounts),
                     icon: const Icon(LucideIcons.plus),
-                    label: const Text('Regel'),
+                    label: Text(tr.rule),
                   ),
                 ),
                 for (final r in rules)
@@ -192,9 +193,9 @@ class _MailScreenState extends State<MailScreen> {
                             '',
                         '${r.json['folder'] ?? 'INBOX'}',
                         if ('${r.json['filter_from'] ?? ''}'.isNotEmpty)
-                          'von ${r.json['filter_from']}',
+                          tr.from(r.json['filter_from']),
                         if ('${r.json['filter_subject'] ?? ''}'.isNotEmpty)
-                          'Betreff „${r.json['filter_subject']}“',
+                          tr.subjectQuoted(r.json['filter_subject']),
                       ].where((s) => s.isNotEmpty).join(' · '),
                     ),
                     onTap: () => _editRule(accounts, r),
@@ -263,7 +264,7 @@ class _MailAccountScreenState extends State<MailAccountScreen> {
       ).client.testMailAccount(_account, password: _passwordOrNull);
       setState(() {
         _ok = true;
-        _message = 'Verbindung erfolgreich. Ordner: ${folders.join(', ')}';
+        _message = tr.connectionSuccessfulFolders(folders.join(', '));
       });
     } on ApiException catch (e) {
       setState(() {
@@ -279,11 +280,11 @@ class _MailAccountScreenState extends State<MailAccountScreen> {
     if (_name.text.trim().isEmpty ||
         _server.text.trim().isEmpty ||
         _user.text.trim().isEmpty) {
-      setState(() => _message = 'Name, Server und Benutzer sind nötig');
+      setState(() => _message = tr.nameServerAndUserAre);
       return;
     }
     if (widget.account == null && _password.text.isEmpty) {
-      setState(() => _message = 'Bitte das Passwort angeben');
+      setState(() => _message = tr.pleaseEnterThePassword);
       return;
     }
     setState(() => _busy = true);
@@ -301,9 +302,9 @@ class _MailAccountScreenState extends State<MailAccountScreen> {
   Future<void> _delete() async {
     final ok = await confirm(
       context,
-      title: 'Konto löschen?',
-      message: 'Zugehörige Regeln werden ebenfalls gelöscht.',
-      action: 'Löschen',
+      title: tr.deleteAccount,
+      message: tr.itsRulesWillBeDeleted,
+      action: tr.delete,
       destructive: true,
     );
     if (!ok || !mounted) return;
@@ -322,12 +323,12 @@ class _MailAccountScreenState extends State<MailAccountScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.account == null ? 'Mailkonto anlegen' : widget.account!.name,
+          widget.account == null ? tr.createMailAccount : widget.account!.name,
         ),
         actions: [
           if (widget.account != null)
             IconButton(
-              tooltip: 'Löschen',
+              tooltip: tr.delete,
               icon: const Icon(LucideIcons.trash2),
               onPressed: _delete,
             ),
@@ -335,7 +336,7 @@ class _MailAccountScreenState extends State<MailAccountScreen> {
             padding: const EdgeInsets.only(right: 8),
             child: FilledButton(
               onPressed: _busy ? null : _save,
-              child: const Text('Speichern'),
+              child: Text(tr.save),
             ),
           ),
         ],
@@ -352,15 +353,15 @@ class _MailAccountScreenState extends State<MailAccountScreen> {
                 children: [
                   TextField(
                     controller: _name,
-                    decoration: const InputDecoration(
-                      labelText: 'Name',
-                      hintText: 'Privat',
+                    decoration: InputDecoration(
+                      labelText: tr.name,
+                      hintText: tr.personal,
                     ),
                   ),
                   TextField(
                     controller: _server,
-                    decoration: const InputDecoration(
-                      labelText: 'IMAP-Server',
+                    decoration: InputDecoration(
+                      labelText: tr.imapServer,
                       hintText: 'imap.example.org',
                     ),
                   ),
@@ -370,13 +371,13 @@ class _MailAccountScreenState extends State<MailAccountScreen> {
                       Expanded(
                         child: DropdownButtonFormField<int>(
                           initialValue: _security,
-                          decoration: const InputDecoration(
-                            labelText: 'Verschlüsselung',
+                          decoration: InputDecoration(
+                            labelText: tr.encryption,
                           ),
-                          items: const [
+                          items: [
                             DropdownMenuItem(value: 2, child: Text('SSL/TLS')),
                             DropdownMenuItem(value: 3, child: Text('STARTTLS')),
-                            DropdownMenuItem(value: 1, child: Text('Keine')),
+                            DropdownMenuItem(value: 1, child: Text(tr.none)),
                           ],
                           onChanged: (v) => setState(() => _security = v ?? 2),
                         ),
@@ -387,7 +388,7 @@ class _MailAccountScreenState extends State<MailAccountScreen> {
                           controller: _port,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
-                            labelText: 'Port',
+                            labelText: tr.port,
                             hintText: _security == 2 ? '993' : '143',
                           ),
                         ),
@@ -396,17 +397,17 @@ class _MailAccountScreenState extends State<MailAccountScreen> {
                   ),
                   TextField(
                     controller: _user,
-                    decoration: const InputDecoration(
-                      labelText: 'Benutzername',
+                    decoration: InputDecoration(
+                      labelText: tr.username,
                     ),
                   ),
                   if (widget.account?.isOAuth ?? false)
-                    const ListTile(
+                    ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: Icon(LucideIcons.keyRound),
-                      title: Text('Angemeldet über OAuth'),
+                      title: Text(tr.signedInViaOauth),
                       subtitle: Text(
-                        'Zum Erneuern das Konto über „Mit Google/Microsoft verbinden“ neu verbinden.',
+                        tr.toRenewReconnectTheAccount,
                       ),
                     )
                   else
@@ -415,10 +416,10 @@ class _MailAccountScreenState extends State<MailAccountScreen> {
                       obscureText: true,
                       contextMenuBuilder: passwordContextMenu,
                       decoration: InputDecoration(
-                        labelText: 'Passwort',
+                        labelText: tr.password,
                         helperText: widget.account == null
-                            ? 'Bei vielen Anbietern ein App-Passwort'
-                            : 'Leer lassen, um es zu behalten',
+                            ? tr.withManyProvidersAnApp
+                            : tr.leaveEmptyToKeepIt,
                       ),
                     ),
                   OutlinedButton.icon(
@@ -429,7 +430,7 @@ class _MailAccountScreenState extends State<MailAccountScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(LucideIcons.plugZap),
-                    label: const Text('Verbindung testen'),
+                    label: Text(tr.testConnection),
                   ),
                   if (_message != null)
                     Text(
@@ -493,7 +494,7 @@ class _MailRuleScreenState extends State<MailRuleScreen> {
 
   Future<void> _save() async {
     if ('${_r['name'] ?? ''}'.trim().isEmpty) {
-      setState(() => _error = 'Bitte einen Namen angeben');
+      setState(() => _error = tr.pleaseEnterAName);
       return;
     }
     setState(() {
@@ -513,8 +514,8 @@ class _MailRuleScreenState extends State<MailRuleScreen> {
   Future<void> _delete() async {
     final ok = await confirm(
       context,
-      title: 'Regel löschen?',
-      action: 'Löschen',
+      title: tr.deleteRule,
+      action: tr.delete,
       destructive: true,
     );
     if (!ok || !mounted) return;
@@ -535,12 +536,12 @@ class _MailRuleScreenState extends State<MailRuleScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.rule == null ? 'Mailregel anlegen' : widget.rule!.name,
+          widget.rule == null ? tr.createMailRule : widget.rule!.name,
         ),
         actions: [
           if (widget.rule != null)
             IconButton(
-              tooltip: 'Löschen',
+              tooltip: tr.delete,
               icon: const Icon(LucideIcons.trash2),
               onPressed: _delete,
             ),
@@ -548,7 +549,7 @@ class _MailRuleScreenState extends State<MailRuleScreen> {
             padding: const EdgeInsets.only(right: 8),
             child: FilledButton(
               onPressed: _saving ? null : _save,
-              child: const Text('Speichern'),
+              child: Text(tr.save),
             ),
           ),
         ],
@@ -568,136 +569,136 @@ class _MailRuleScreenState extends State<MailRuleScreen> {
                       _error!,
                       style: TextStyle(color: theme.colorScheme.error),
                     ),
-                  _field('name', 'Name'),
+                  _field('name', tr.name),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Aktiv'),
+                    title: Text(tr.active),
                     value: _r['enabled'] != false,
                     onChanged: (v) => _set('enabled', v),
                   ),
                   DropdownButtonFormField<int>(
                     initialValue: _r['account'] as int?,
-                    decoration: const InputDecoration(labelText: 'Konto'),
+                    decoration: InputDecoration(labelText: tr.account),
                     items: [
                       for (final a in widget.accounts)
                         DropdownMenuItem(value: a.id, child: Text(a.name)),
                     ],
                     onChanged: (v) => _set('account', v),
                   ),
-                  _field('folder', 'Ordner', hint: 'INBOX'),
-                  Text('Filter', style: theme.textTheme.titleMedium),
-                  _field('filter_from', 'Absender enthält'),
-                  _field('filter_subject', 'Betreff enthält'),
-                  _field('filter_body', 'Text enthält'),
+                  _field('folder', tr.folder, hint: 'INBOX'),
+                  Text(tr.filter, style: theme.textTheme.titleMedium),
+                  _field('filter_from', tr.senderContains),
+                  _field('filter_subject', tr.subjectContains),
+                  _field('filter_body', tr.bodyContains),
                   _field(
                     'filter_attachment_filename_include',
-                    'Anhang-Dateiname',
+                    tr.attachmentFileName,
                     hint: '*.pdf',
                   ),
                   _field(
                     'maximum_age',
-                    'Höchstens … Tage alt',
+                    tr.atMostDaysOld,
                     type: TextInputType.number,
                   ),
-                  Text('Verarbeitung', style: theme.textTheme.titleMedium),
+                  Text(tr.processing, style: theme.textTheme.titleMedium),
                   DropdownButtonFormField<int>(
                     initialValue: _r['consumption_scope'] as int? ?? 1,
-                    decoration: const InputDecoration(labelText: 'Übernehmen'),
-                    items: const [
-                      DropdownMenuItem(value: 1, child: Text('Nur Anhänge')),
+                    decoration: InputDecoration(labelText: tr.mailConsume),
+                    items: [
+                      DropdownMenuItem(value: 1, child: Text(tr.attachmentsOnly)),
                       DropdownMenuItem(
                         value: 2,
-                        child: Text('Nur die Mail selbst (als Text)'),
+                        child: Text(tr.onlyTheEmailItselfAs),
                       ),
                       DropdownMenuItem(
                         value: 3,
-                        child: Text('Mail und Anhänge'),
+                        child: Text(tr.emailAndAttachments),
                       ),
                     ],
                     onChanged: (v) => _set('consumption_scope', v),
                   ),
                   DropdownButtonFormField<int>(
                     initialValue: _r['attachment_type'] as int? ?? 1,
-                    decoration: const InputDecoration(labelText: 'Anhänge'),
-                    items: const [
+                    decoration: InputDecoration(labelText: tr.attachments),
+                    items: [
                       DropdownMenuItem(
                         value: 1,
-                        child: Text('Nur echte Anhänge'),
+                        child: Text(tr.realAttachmentsOnly),
                       ),
                       DropdownMenuItem(
                         value: 2,
-                        child: Text('Auch eingebettete Dateien'),
+                        child: Text(tr.embeddedFilesToo),
                       ),
                     ],
                     onChanged: (v) => _set('attachment_type', v),
                   ),
                   DropdownButtonFormField<int>(
                     initialValue: action,
-                    decoration: const InputDecoration(labelText: 'Danach'),
-                    items: const [
+                    decoration: InputDecoration(labelText: tr.afterwards),
+                    items: [
                       DropdownMenuItem(
                         value: 3,
-                        child: Text('Als gelesen markieren'),
+                        child: Text(tr.markAsRead),
                       ),
                       DropdownMenuItem(
                         value: 4,
-                        child: Text('Markieren (Flagge)'),
+                        child: Text(tr.flag),
                       ),
                       DropdownMenuItem(
                         value: 2,
-                        child: Text('In Ordner verschieben'),
+                        child: Text(tr.moveToFolder),
                       ),
                       DropdownMenuItem(
                         value: 5,
-                        child: Text('Schlagwort setzen'),
+                        child: Text(tr.setKeyword),
                       ),
-                      DropdownMenuItem(value: 1, child: Text('Löschen')),
+                      DropdownMenuItem(value: 1, child: Text(tr.delete)),
                     ],
                     onChanged: (v) => _set('action', v),
                   ),
                   if (action == 2 || action == 5)
                     _field(
                       'action_parameter',
-                      action == 2 ? 'Zielordner' : 'Schlagwort',
-                      hint: action == 2 ? 'Archiv' : 'paperbuddy',
+                      action == 2 ? tr.targetFolder : tr.keyword,
+                      hint: action == 2 ? tr.archive : 'paperbuddy',
                     ),
-                  Text('Zuweisen', style: theme.textTheme.titleMedium),
+                  Text(tr.assign, style: theme.textTheme.titleMedium),
                   DropdownButtonFormField<int>(
                     initialValue: _r['assign_title_from'] as int? ?? 1,
-                    decoration: const InputDecoration(labelText: 'Titel aus'),
-                    items: const [
-                      DropdownMenuItem(value: 1, child: Text('Betreff')),
-                      DropdownMenuItem(value: 2, child: Text('Dateiname')),
-                      DropdownMenuItem(value: 3, child: Text('Automatisch')),
+                    decoration: InputDecoration(labelText: tr.titleFrom),
+                    items: [
+                      DropdownMenuItem(value: 1, child: Text(tr.subject)),
+                      DropdownMenuItem(value: 2, child: Text(tr.fileName)),
+                      DropdownMenuItem(value: 3, child: Text(tr.automatic)),
                     ],
                     onChanged: (v) => _set('assign_title_from', v),
                   ),
                   DropdownButtonFormField<int>(
                     initialValue: _r['assign_correspondent_from'] as int? ?? 1,
-                    decoration: const InputDecoration(
-                      labelText: 'Korrespondent',
+                    decoration: InputDecoration(
+                      labelText: tr.correspondent,
                     ),
-                    items: const [
-                      DropdownMenuItem(value: 1, child: Text('Automatisch')),
+                    items: [
+                      DropdownMenuItem(value: 1, child: Text(tr.automatic)),
                       DropdownMenuItem(
                         value: 2,
-                        child: Text('Absenderadresse'),
+                        child: Text(tr.senderAddress),
                       ),
-                      DropdownMenuItem(value: 3, child: Text('Absendername')),
-                      DropdownMenuItem(value: 4, child: Text('Fest gewählt')),
+                      DropdownMenuItem(value: 3, child: Text(tr.senderName)),
+                      DropdownMenuItem(value: 4, child: Text(tr.fixed)),
                     ],
                     onChanged: (v) => _set('assign_correspondent_from', v),
                   ),
                   if (_r['assign_correspondent_from'] == 4)
                     LabelField<Correspondent>(
-                      label: 'Korrespondent',
+                      label: tr.correspondent,
                       icon: LucideIcons.user,
                       options: state.correspondents,
                       value: _r['assign_correspondent'] as int?,
                       onChanged: (v) => _set('assign_correspondent', v),
                     ),
                   LabelField<DocumentType>(
-                    label: 'Dokumenttyp',
+                    label: tr.documentType,
                     icon: LucideIcons.fileType,
                     options: state.documentTypes,
                     value: _r['assign_document_type'] as int?,

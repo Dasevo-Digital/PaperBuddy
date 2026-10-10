@@ -6,22 +6,23 @@ import '../../app_state.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/label_pickers.dart';
 import '../../widgets/tag_chip.dart';
+import '../../l10n.dart';
 
-const _triggerTypes = {
-  1: 'Verarbeitung gestartet',
-  2: 'Dokument hinzugefügt',
-  3: 'Dokument geändert',
-  4: 'Zeitgesteuert',
+Map<int, String> get _triggerTypes => {
+  1: tr.processingStarted,
+  2: tr.documentAdded,
+  3: tr.documentChanged,
+  4: tr.scheduled,
 };
 
-const _actionTypes = {
-  1: 'Zuweisen',
-  2: 'Entfernen',
-  3: 'E-Mail senden',
-  4: 'Webhook aufrufen',
+Map<int, String> get _actionTypes => {
+  1: tr.assign,
+  2: tr.remove,
+  3: tr.sendEmail,
+  4: tr.callWebhook,
 };
 
-const _sources = {1: 'Eingangsordner', 2: 'Upload', 3: 'E-Mail'};
+Map<int, String> get _sources => {1: tr.consumptionFolder, 2: tr.uploadSource, 3: tr.email};
 
 class WorkflowsScreen extends StatefulWidget {
   const WorkflowsScreen({super.key});
@@ -58,10 +59,10 @@ class _WorkflowsScreenState extends State<WorkflowsScreen> {
   Widget build(BuildContext context) {
     final user = AppScope.of(context).client.user;
     return Scaffold(
-      appBar: AppBar(title: const Text('Workflows')),
+      appBar: AppBar(title: Text(tr.workflows)),
       floatingActionButton: user.can('add', 'workflow')
           ? FloatingActionButton(
-              tooltip: 'Workflow anlegen',
+              tooltip: tr.createWorkflow,
               onPressed: () => _edit(),
               child: const Icon(LucideIcons.plus),
             )
@@ -77,10 +78,10 @@ class _WorkflowsScreenState extends State<WorkflowsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (items.isEmpty) {
-            return const EmptyHint(
+            return EmptyHint(
               icon: LucideIcons.workflow,
               text:
-                  'Workflows ordnen Dokumente automatisch zu, z. B. „alles aus dem Ordner Rechnungen bekommt den Tag Finanzen“.',
+                  tr.workflowsIntro,
             );
           }
           return ListView.separated(
@@ -95,8 +96,8 @@ class _WorkflowsScreenState extends State<WorkflowsScreen> {
                 subtitle: Text(
                   [
                     for (final t in w.triggers)
-                      _triggerTypes[t['type']] ?? 'Auslöser',
-                    '${w.actions.length} Aktion${w.actions.length == 1 ? '' : 'en'}',
+                      _triggerTypes[t['type']] ?? tr.trigger,
+                    tr.actionsCount(w.actions.length),
                   ].join(' · '),
                 ),
                 onTap: user.can('change', 'workflow') ? () => _edit(w) : null,
@@ -155,7 +156,7 @@ class _WorkflowEditScreenState extends State<WorkflowEditScreen> {
   Future<void> _save() async {
     _w.name = _name.text.trim();
     if (_w.name.isEmpty) {
-      setState(() => _error = 'Bitte einen Namen angeben');
+      setState(() => _error = tr.pleaseEnterAName);
       return;
     }
     setState(() {
@@ -175,8 +176,8 @@ class _WorkflowEditScreenState extends State<WorkflowEditScreen> {
   Future<void> _delete() async {
     final ok = await confirm(
       context,
-      title: 'Workflow löschen?',
-      action: 'Löschen',
+      title: tr.deleteWorkflow,
+      action: tr.delete,
       destructive: true,
     );
     if (!ok || !mounted) return;
@@ -195,12 +196,12 @@ class _WorkflowEditScreenState extends State<WorkflowEditScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.workflow == null ? 'Workflow anlegen' : 'Workflow bearbeiten',
+          widget.workflow == null ? tr.createWorkflow : tr.editWorkflow,
         ),
         actions: [
           if (_w.id != null)
             IconButton(
-              tooltip: 'Löschen',
+              tooltip: tr.delete,
               icon: const Icon(LucideIcons.trash2),
               onPressed: _delete,
             ),
@@ -208,7 +209,7 @@ class _WorkflowEditScreenState extends State<WorkflowEditScreen> {
             padding: const EdgeInsets.only(right: 8),
             child: FilledButton(
               onPressed: _saving ? null : _save,
-              child: const Text('Speichern'),
+              child: Text(tr.save),
             ),
           ),
         ],
@@ -230,7 +231,7 @@ class _WorkflowEditScreenState extends State<WorkflowEditScreen> {
                     ),
                   TextField(
                     controller: _name,
-                    decoration: const InputDecoration(labelText: 'Name'),
+                    decoration: InputDecoration(labelText: tr.name),
                   ),
                   Row(
                     children: [
@@ -238,8 +239,8 @@ class _WorkflowEditScreenState extends State<WorkflowEditScreen> {
                         child: TextFormField(
                           initialValue: '${_w.order}',
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Reihenfolge',
+                          decoration: InputDecoration(
+                            labelText: tr.order,
                           ),
                           onChanged: (v) => _w.order = int.tryParse(v) ?? 0,
                         ),
@@ -247,7 +248,7 @@ class _WorkflowEditScreenState extends State<WorkflowEditScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: SwitchListTile(
-                          title: const Text('Aktiv'),
+                          title: Text(tr.active),
                           value: _w.enabled,
                           onChanged: (v) => setState(() => _w.enabled = v),
                         ),
@@ -255,7 +256,7 @@ class _WorkflowEditScreenState extends State<WorkflowEditScreen> {
                     ],
                   ),
                   _Section(
-                    title: 'Auslöser',
+                    title: tr.trigger,
                     onAdd: () => setState(() => _w.triggers.add({'type': 2})),
                     children: [
                       for (final (i, t) in _w.triggers.indexed)
@@ -270,7 +271,7 @@ class _WorkflowEditScreenState extends State<WorkflowEditScreen> {
                     ],
                   ),
                   _Section(
-                    title: 'Aktionen',
+                    title: tr.actions,
                     onAdd: () => setState(() => _w.actions.add({'type': 1})),
                     children: [
                       for (final (i, a) in _w.actions.indexed)
@@ -317,7 +318,7 @@ class _Section extends StatelessWidget {
           TextButton.icon(
             onPressed: onAdd,
             icon: const Icon(LucideIcons.plus),
-            label: const Text('Hinzufügen'),
+            label: Text(tr.add),
           ),
         ],
       ),
@@ -437,7 +438,7 @@ class _TriggerCard extends StatelessWidget {
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     initialValue: type,
-                    decoration: const InputDecoration(labelText: 'Wann'),
+                    decoration: InputDecoration(labelText: tr.when),
                     items: [
                       for (final e in _triggerTypes.entries)
                         DropdownMenuItem(value: e.key, child: Text(e.value)),
@@ -450,7 +451,7 @@ class _TriggerCard extends StatelessWidget {
                 ),
                 if (onRemove != null)
                   IconButton(
-                    tooltip: 'Entfernen',
+                    tooltip: tr.remove,
                     icon: const Icon(LucideIcons.x),
                     onPressed: onRemove,
                   ),
@@ -478,15 +479,15 @@ class _TriggerCard extends StatelessWidget {
             _text(
               trigger,
               'filter_filename',
-              'Dateiname passt zu',
+              tr.fileNameMatches,
               onChanged,
-              hint: '*.pdf oder *rechnung*',
+              hint: tr.pdfOrInvoice,
             ),
             if (type == 1)
               _text(
                 trigger,
                 'filter_path',
-                'Pfad passt zu',
+                tr.pathMatches,
                 onChanged,
                 hint: '*/Rechnungen/*',
               ),
@@ -495,14 +496,14 @@ class _TriggerCard extends StatelessWidget {
                 context,
                 trigger,
                 'filter_has_tags',
-                'Hat alle diese Tags',
+                tr.hasAllTheseTags,
                 onChanged,
               ),
               _labelField<Correspondent>(
                 context,
                 trigger,
                 'filter_has_correspondent',
-                'Hat Korrespondent',
+                tr.hasCorrespondent,
                 state.correspondents,
                 onChanged,
               ),
@@ -510,7 +511,7 @@ class _TriggerCard extends StatelessWidget {
                 context,
                 trigger,
                 'filter_has_document_type',
-                'Hat Dokumenttyp',
+                tr.hasDocumentType,
                 state.documentTypes,
                 onChanged,
               ),
@@ -519,7 +520,7 @@ class _TriggerCard extends StatelessWidget {
                   Expanded(
                     child: DropdownButtonFormField<int>(
                       initialValue: trigger['matching_algorithm'] as int? ?? 0,
-                      decoration: const InputDecoration(labelText: 'Inhalt'),
+                      decoration: InputDecoration(labelText: tr.content),
                       items: [
                         for (final m in MatchingAlgorithm.values.where(
                           (m) => m != MatchingAlgorithm.auto,
@@ -528,7 +529,7 @@ class _TriggerCard extends StatelessWidget {
                             value: m.value,
                             child: Text(
                               m == MatchingAlgorithm.none
-                                  ? 'Beliebig'
+                                  ? tr.any
                                   : m.label,
                             ),
                           ),
@@ -541,7 +542,7 @@ class _TriggerCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _text(trigger, 'match', 'Suchbegriff', onChanged),
+                    child: _text(trigger, 'match', tr.searchTerm, onChanged),
                   ),
                 ],
               ),
@@ -553,21 +554,21 @@ class _TriggerCard extends StatelessWidget {
                     child: DropdownButtonFormField<String>(
                       initialValue:
                           trigger['schedule_date_field'] as String? ?? 'added',
-                      decoration: const InputDecoration(
-                        labelText: 'Ausgehend von',
+                      decoration: InputDecoration(
+                        labelText: tr.basedOn,
                       ),
-                      items: const [
+                      items: [
                         DropdownMenuItem(
                           value: 'added',
-                          child: Text('Hinzugefügt'),
+                          child: Text(tr.added),
                         ),
                         DropdownMenuItem(
                           value: 'created',
-                          child: Text('Belegdatum'),
+                          child: Text(tr.documentDate),
                         ),
                         DropdownMenuItem(
                           value: 'modified',
-                          child: Text('Geändert'),
+                          child: Text(tr.modified),
                         ),
                       ],
                       onChanged: (v) {
@@ -581,8 +582,8 @@ class _TriggerCard extends StatelessWidget {
                     child: TextFormField(
                       initialValue: '${trigger['schedule_offset_days'] ?? 0}',
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Nach Tagen',
+                      decoration: InputDecoration(
+                        labelText: tr.afterDays,
                       ),
                       onChanged: (v) => trigger['schedule_offset_days'] =
                           int.tryParse(v) ?? 0,
@@ -592,7 +593,7 @@ class _TriggerCard extends StatelessWidget {
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Wiederholen'),
+                title: Text(tr.repeat),
                 value: trigger['schedule_is_recurring'] == true,
                 onChanged: (v) {
                   trigger['schedule_is_recurring'] = v;
@@ -604,7 +605,7 @@ class _TriggerCard extends StatelessWidget {
                   initialValue:
                       '${trigger['schedule_recurring_interval_days'] ?? 1}',
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Alle … Tage'),
+                  decoration: InputDecoration(labelText: tr.everyDays),
                   onChanged: (v) =>
                       trigger['schedule_recurring_interval_days'] =
                           int.tryParse(v) ?? 1,
@@ -650,7 +651,7 @@ class _ActionCard extends StatelessWidget {
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     initialValue: type,
-                    decoration: const InputDecoration(labelText: 'Aktion'),
+                    decoration: InputDecoration(labelText: tr.action),
                     items: [
                       for (final e in _actionTypes.entries)
                         DropdownMenuItem(value: e.key, child: Text(e.value)),
@@ -676,7 +677,7 @@ class _ActionCard extends StatelessWidget {
                 ),
                 if (onRemove != null)
                   IconButton(
-                    tooltip: 'Entfernen',
+                    tooltip: tr.remove,
                     icon: const Icon(LucideIcons.x),
                     onPressed: onRemove,
                   ),
@@ -686,7 +687,7 @@ class _ActionCard extends StatelessWidget {
               _text(
                 action,
                 'assign_title',
-                'Titel',
+                tr.title,
                 onChanged,
                 hint: '{correspondent} {created_year}-{created_month}',
               ),
@@ -694,14 +695,14 @@ class _ActionCard extends StatelessWidget {
                 context,
                 action,
                 'assign_tags',
-                'Tags hinzufügen',
+                tr.addTags,
                 onChanged,
               ),
               _labelField<Correspondent>(
                 context,
                 action,
                 'assign_correspondent',
-                'Korrespondent',
+                tr.correspondent,
                 state.correspondents,
                 onChanged,
               ),
@@ -709,7 +710,7 @@ class _ActionCard extends StatelessWidget {
                 context,
                 action,
                 'assign_document_type',
-                'Dokumenttyp',
+                tr.documentType,
                 state.documentTypes,
                 onChanged,
               ),
@@ -717,14 +718,14 @@ class _ActionCard extends StatelessWidget {
                 context,
                 action,
                 'assign_storage_path',
-                'Speicherpfad',
+                tr.storagePath,
                 state.storagePaths,
                 onChanged,
               ),
               if (state.users.isNotEmpty)
                 DropdownButtonFormField<int?>(
                   initialValue: action['assign_owner'] as int?,
-                  decoration: const InputDecoration(labelText: 'Eigentümer'),
+                  decoration: InputDecoration(labelText: tr.owner),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('–')),
                     for (final u in state.users.values)
@@ -743,7 +744,7 @@ class _ActionCard extends StatelessWidget {
             if (type == 2) ...[
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Alle Tags entfernen'),
+                title: Text(tr.removeAllTags),
                 value: action['remove_all_tags'] == true,
                 onChanged: (v) {
                   action['remove_all_tags'] = v;
@@ -755,15 +756,15 @@ class _ActionCard extends StatelessWidget {
                   context,
                   action,
                   'remove_tags',
-                  'Diese Tags entfernen',
+                  tr.removeTheseTags,
                   onChanged,
                 ),
               for (final (key, label) in [
-                ('remove_all_correspondents', 'Korrespondent entfernen'),
-                ('remove_all_document_types', 'Dokumenttyp entfernen'),
-                ('remove_all_storage_paths', 'Speicherpfad entfernen'),
-                ('remove_all_custom_fields', 'Alle Custom Fields entfernen'),
-                ('remove_all_permissions', 'Alle Freigaben entfernen'),
+                ('remove_all_correspondents', tr.removeCorrespondent),
+                ('remove_all_document_types', tr.removeDocumentType),
+                ('remove_all_storage_paths', tr.removeStoragePath),
+                ('remove_all_custom_fields', tr.removeAllCustomFields),
+                ('remove_all_permissions', tr.removeAllPermissions),
               ])
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
@@ -776,21 +777,21 @@ class _ActionCard extends StatelessWidget {
                 ),
             ],
             if (type == 3) ...[
-              _text(email, 'to', 'An (kommagetrennt)', () {
+              _text(email, 'to', tr.toCommaSeparated, () {
                 action['email'] = email;
                 onChanged();
               }),
-              _text(email, 'subject', 'Betreff', () {
+              _text(email, 'subject', tr.subject, () {
                 action['email'] = email;
                 onChanged();
               }),
-              _text(email, 'body', 'Text', () {
+              _text(email, 'body', tr.text, () {
                 action['email'] = email;
                 onChanged();
               }, maxLines: 4),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Dokument anhängen'),
+                title: Text(tr.attachDocument),
                 value: email['include_document'] == true,
                 onChanged: (v) {
                   email['include_document'] = v;
@@ -807,7 +808,7 @@ class _ActionCard extends StatelessWidget {
               _text(
                 webhook,
                 'body',
-                'Inhalt',
+                tr.content,
                 () {
                   action['webhook'] = webhook;
                   onChanged();
@@ -817,7 +818,7 @@ class _ActionCard extends StatelessWidget {
               ),
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Dokument mitsenden'),
+                title: Text(tr.sendDocumentAlong),
                 value: webhook['include_document'] == true,
                 onChanged: (v) {
                   webhook['include_document'] = v;

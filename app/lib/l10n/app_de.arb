@@ -1,0 +1,800 @@
+{
+  "@locale": "de",
+  "settingsLanguage": "Sprache",
+  "sharingNotAvailable": "Teilen nicht verfügbar: {e}",
+  "@sharingNotAvailable": {
+    "placeholders": {
+      "e": {}
+    }
+  },
+  "turnOnAppLockFor": "App-Sperre für {appName} einschalten",
+  "@turnOnAppLockFor": {
+    "placeholders": {
+      "appName": {}
+    }
+  },
+  "unlockApp": "{appName} entsperren",
+  "@unlockApp": {
+    "placeholders": {
+      "appName": {}
+    }
+  },
+  "unlock": "Entsperren",
+  "saveDocument": "Dokument speichern",
+  "chooseAFolderForThe": "Ordner für die Dokumente wählen",
+  "pdfDocument": "PDF-Dokument",
+  "textFile": "Textdatei",
+  "csvSpreadsheet": "CSV-Tabelle",
+  "image": "Bild",
+  "textDocument": "Textdokument",
+  "spreadsheet": "Tabelle",
+  "presentation": "Präsentation",
+  "keychainNotReadable": "Schlüsselspeicher nicht lesbar: {e}",
+  "@keychainNotReadable": {
+    "placeholders": {
+      "e": {}
+    }
+  },
+  "uploading": "Wird hochgeladen …",
+  "recognizingText": "Texterkennung läuft …",
+  "documentAdded": "Dokument hinzugefügt",
+  "failed": "Fehlgeschlagen",
+  "deadlineTitled": "Frist: {documentTitle}",
+  "@deadlineTitled": {
+    "placeholders": {
+      "documentTitle": {}
+    }
+  },
+  "dueDate": "Fällig am {date}",
+  "@dueDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "dueDateWithTitle": "Fällig am {date} · {documentTitle}",
+  "@dueDateWithTitle": {
+    "placeholders": {
+      "date": {},
+      "documentTitle": {}
+    }
+  },
+  "import": "Import",
+  "waitingForProcessing": "Wartet auf Verarbeitung …",
+  "processingRunning": "Wird verarbeitet …",
+  "dashboard": "Übersicht",
+  "statistics": "Statistiken",
+  "documentsInInbox": "Dokumente im Posteingang",
+  "totalDocuments": "Dokumente insgesamt",
+  "totalCharacters": "Zeichen insgesamt",
+  "correspondents": "Korrespondenten",
+  "documentTypes": "Dokumenttypen",
+  "storagePaths": "Speicherpfade",
+  "currentArchiveSerialNumber": "Aktuelle Archivnummer",
+  "other": "Andere",
+  "showAll": "Alle anzeigen",
+  "noDocuments": "Keine Dokumente",
+  "deadlines": "Fristen",
+  "theSavedSignInWill": "Die gespeicherte Anmeldung wird von diesem Gerät entfernt.",
+  "cancel": "Abbrechen",
+  "signOut": "Abmelden",
+  "settings": "Einstellungen",
+  "administrator": "Administrator",
+  "users": "Benutzer",
+  "appearance": "Darstellung",
+  "system": "System",
+  "light": "Hell",
+  "dark": "Dunkel",
+  "availableOffline": "Offline verfügbar",
+  "openDocumentsWithoutAConnection": "Dokumente ohne Verbindung öffnen",
+  "profile": "Profil",
+  "nameEmailPassword": "Name, E-Mail, Passwort",
+  "administration": "Verwaltung",
+  "workflows": "Workflows",
+  "assignAutomaticallyNotify": "Automatisch zuordnen, benachrichtigen",
+  "emailImport": "E-Mail-Abruf",
+  "importAttachmentsFromMailboxes": "Anhänge aus Postfächern übernehmen",
+  "usersAndGroups": "Benutzer und Gruppen",
+  "usersGroups": "{length} Benutzer · {length2} Gruppen",
+  "@usersGroups": {
+    "placeholders": {
+      "length": {},
+      "length2": {}
+    }
+  },
+  "trash": "Papierkorb",
+  "manageDocumentsWithPaperbuddyAnd": "Dokumente verwalten mit PaperBuddy- und Paperless-ngx-Servern.",
+  "storageOnThisDevice": "Speicher auf dem Gerät",
+  "mbForPreviewsAndDocuments": "{mb} MB für Vorschauen und Dokumente",
+  "@mbForPreviewsAndDocuments": {
+    "placeholders": {
+      "mb": {}
+    }
+  },
+  "empty": "Leeren",
+  "appLock": "App-Sperre",
+  "unlockWithFaceIdTouch": "Beim Öffnen und nach 30 Sekunden im Hintergrund mit Face ID, Touch ID, Fingerabdruck oder Geräte-Code entsperren",
+  "theCheckWasCancelled": "Die Prüfung wurde abgebrochen.",
+  "documents": "Dokumente",
+  "notes": "Notizen",
+  "views": "Ansichten",
+  "mailAccounts": "Mailkonten",
+  "mailRules": "Mailregeln",
+  "tasks": "Aufgaben",
+  "shareLinks": "Freigabelinks",
+  "groups": "Gruppen",
+  "createUser": "Benutzer anlegen",
+  "createGroup": "Gruppe anlegen",
+  "twoFactor": "Zwei-Faktor",
+  "noGroupsYetGroupsBundle": "Noch keine Gruppen. Mit Gruppen lassen sich Rechte und Freigaben für mehrere Personen bündeln.",
+  "permissionsMembers": "{length} Rechte · {length2} Mitglieder",
+  "@permissionsMembers": {
+    "placeholders": {
+      "length": {},
+      "length2": {}
+    }
+  },
+  "defaultLabel": "Standard",
+  "readOnly": "Nur lesen",
+  "none": "Keine",
+  "area": "Bereich",
+  "view": "Ansehen",
+  "create": "Anlegen",
+  "change": "Ändern",
+  "delete": "Löschen",
+  "greyedOutCheckmarksComeFrom": "Ausgegraute Häkchen kommen aus Gruppen.",
+  "pleaseEnterAUsername": "Bitte einen Benutzernamen angeben",
+  "thePasswordNeedsAtLeast": "Das Passwort braucht mindestens 8 Zeichen",
+  "resetTwoFactorAuthentication": "Zwei-Faktor-Anmeldung zurücksetzen?",
+  "theUserThenSignsIn": "Der Benutzer meldet sich danach nur mit dem Passwort an und kann die Zwei-Faktor-Anmeldung im Profil neu einrichten.",
+  "reset": "Zurücksetzen",
+  "twoFactorAuthenticationReset": "Zwei-Faktor-Anmeldung zurückgesetzt",
+  "deleteUser": "Benutzer löschen?",
+  "theirDocumentsAreKeptAnd": "Seine Dokumente bleiben erhalten und haben danach keinen Eigentümer mehr.",
+  "save": "Speichern",
+  "username": "Benutzername",
+  "firstName": "Vorname",
+  "lastName": "Nachname",
+  "email": "E-Mail",
+  "password": "Passwort",
+  "newPassword": "Neues Passwort",
+  "leaveEmptyToKeepIt": "Leer lassen, um es zu behalten",
+  "twoFactorAuthenticationActive": "Zwei-Faktor-Anmeldung aktiv",
+  "active": "Aktiv",
+  "mayDoEverythingAndSees": "Darf alles und sieht alle Dokumente",
+  "permissions": "Rechte",
+  "pleaseEnterAName": "Bitte einen Namen angeben",
+  "deleteGroup": "Gruppe löschen?",
+  "name": "Name",
+  "membersPermissions": "Rechte der Mitglieder",
+  "processingStarted": "Verarbeitung gestartet",
+  "documentChanged": "Dokument geändert",
+  "scheduled": "Zeitgesteuert",
+  "assign": "Zuweisen",
+  "remove": "Entfernen",
+  "sendEmail": "E-Mail senden",
+  "callWebhook": "Webhook aufrufen",
+  "consumptionFolder": "Eingangsordner",
+  "uploadSource": "Upload",
+  "createWorkflow": "Workflow anlegen",
+  "workflowsIntro": "Workflows ordnen Dokumente automatisch zu, z. B. „alles aus dem Ordner Rechnungen bekommt den Tag Finanzen“.",
+  "trigger": "Auslöser",
+  "deleteWorkflow": "Workflow löschen?",
+  "editWorkflow": "Workflow bearbeiten",
+  "order": "Reihenfolge",
+  "actions": "Aktionen",
+  "add": "Hinzufügen",
+  "when": "Wann",
+  "fileNameMatches": "Dateiname passt zu",
+  "pdfOrInvoice": "*.pdf oder *rechnung*",
+  "pathMatches": "Pfad passt zu",
+  "hasAllTheseTags": "Hat alle diese Tags",
+  "hasCorrespondent": "Hat Korrespondent",
+  "hasDocumentType": "Hat Dokumenttyp",
+  "content": "Inhalt",
+  "any": "Beliebig",
+  "searchTerm": "Suchbegriff",
+  "basedOn": "Ausgehend von",
+  "added": "Hinzugefügt",
+  "documentDate": "Belegdatum",
+  "modified": "Geändert",
+  "afterDays": "Nach Tagen",
+  "repeat": "Wiederholen",
+  "everyDays": "Alle … Tage",
+  "action": "Aktion",
+  "title": "Titel",
+  "addTags": "Tags hinzufügen",
+  "correspondent": "Korrespondent",
+  "documentType": "Dokumenttyp",
+  "storagePath": "Speicherpfad",
+  "owner": "Eigentümer",
+  "removeAllTags": "Alle Tags entfernen",
+  "removeTheseTags": "Diese Tags entfernen",
+  "removeCorrespondent": "Korrespondent entfernen",
+  "removeDocumentType": "Dokumenttyp entfernen",
+  "removeStoragePath": "Speicherpfad entfernen",
+  "removeAllCustomFields": "Alle Custom Fields entfernen",
+  "removeAllPermissions": "Alle Freigaben entfernen",
+  "toCommaSeparated": "An (kommagetrennt)",
+  "subject": "Betreff",
+  "text": "Text",
+  "attachDocument": "Dokument anhängen",
+  "sendDocumentAlong": "Dokument mitsenden",
+  "couldNotOpenTheBrowser": "Browser konnte nicht geöffnet werden",
+  "signInInBrowser": "Im Browser anmelden",
+  "signInInBrowserHint": "Melde dich im Browser an und erlaube den Zugriff. Danach hier auf „Fertig“ tippen.",
+  "done": "Fertig",
+  "noNewAttachments": "Keine neuen Anhänge",
+  "fileSImported": "{n} Datei(en) übernommen",
+  "@fileSImported": {
+    "placeholders": {
+      "n": {}
+    }
+  },
+  "accounts": "Konten",
+  "account": "Konto",
+  "connectWithGoogle": "Mit Google verbinden",
+  "connectWithMicrosoft": "Mit Microsoft verbinden",
+  "paperbuddyCanFetchAttachmentsFrom": "PaperBuddy kann Anhänge aus einem Postfach abholen, z. B. Rechnungen, die per Mail kommen.",
+  "fetchNow": "Jetzt abrufen",
+  "rules": "Regeln",
+  "rule": "Regel",
+  "from": "von {value}",
+  "@from": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "subjectQuoted": "Betreff „{value}“",
+  "@subjectQuoted": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "connectionSuccessfulFolders": "Verbindung erfolgreich. Ordner: {join}",
+  "@connectionSuccessfulFolders": {
+    "placeholders": {
+      "join": {}
+    }
+  },
+  "nameServerAndUserAre": "Name, Server und Benutzer sind nötig",
+  "pleaseEnterThePassword": "Bitte das Passwort angeben",
+  "deleteAccount": "Konto löschen?",
+  "itsRulesWillBeDeleted": "Zugehörige Regeln werden ebenfalls gelöscht.",
+  "createMailAccount": "Mailkonto anlegen",
+  "personal": "Privat",
+  "imapServer": "IMAP-Server",
+  "encryption": "Verschlüsselung",
+  "port": "Port",
+  "signedInViaOauth": "Angemeldet über OAuth",
+  "toRenewReconnectTheAccount": "Zum Erneuern das Konto über „Mit Google/Microsoft verbinden“ neu verbinden.",
+  "withManyProvidersAnApp": "Bei vielen Anbietern ein App-Passwort",
+  "testConnection": "Verbindung testen",
+  "deleteRule": "Regel löschen?",
+  "createMailRule": "Mailregel anlegen",
+  "folder": "Ordner",
+  "filter": "Filter",
+  "senderContains": "Absender enthält",
+  "subjectContains": "Betreff enthält",
+  "bodyContains": "Text enthält",
+  "attachmentFileName": "Anhang-Dateiname",
+  "atMostDaysOld": "Höchstens … Tage alt",
+  "processing": "Verarbeitung",
+  "applyPicker": "Übernehmen",
+  "attachmentsOnly": "Nur Anhänge",
+  "onlyTheEmailItselfAs": "Nur die Mail selbst (als Text)",
+  "emailAndAttachments": "Mail und Anhänge",
+  "attachments": "Anhänge",
+  "realAttachmentsOnly": "Nur echte Anhänge",
+  "embeddedFilesToo": "Auch eingebettete Dateien",
+  "afterwards": "Danach",
+  "markAsRead": "Als gelesen markieren",
+  "flag": "Markieren (Flagge)",
+  "moveToFolder": "In Ordner verschieben",
+  "setKeyword": "Schlagwort setzen",
+  "targetFolder": "Zielordner",
+  "keyword": "Schlagwort",
+  "archive": "Archiv",
+  "titleFrom": "Titel aus",
+  "fileName": "Dateiname",
+  "automatic": "Automatisch",
+  "senderAddress": "Absenderadresse",
+  "senderName": "Absendername",
+  "fixed": "Fest gewählt",
+  "thePasswordsDoNotMatch": "Die Passwörter stimmen nicht überein",
+  "profileSaved": "Profil gespeichert",
+  "turnOffTwoFactorAuthentication": "Zwei-Faktor-Anmeldung ausschalten?",
+  "afterThatThePasswordAlone": "Danach reicht wieder das Passwort zur Anmeldung. Die Wiederherstellungscodes werden ungültig.",
+  "turnOff": "Ausschalten",
+  "twoFactorAuthenticationTurnedOff": "Zwei-Faktor-Anmeldung ausgeschaltet",
+  "repeatPassword": "Passwort wiederholen",
+  "twoFactorAuthentication": "Zwei-Faktor-Anmeldung",
+  "activeSigningInAlsoRequires": "Aktiv: Zur Anmeldung ist zusätzlich ein Code aus der Authenticator-App nötig.",
+  "offACodeFromAn": "Aus: Ein Code aus einer Authenticator-App schützt das Konto zusätzlich zum Passwort.",
+  "setUp": "Einrichten",
+  "deleteField": "Feld löschen?",
+  "andItsValuesOnDocument": "„{name}“ und seine Werte an {documentCount} Dokument(en) werden entfernt.",
+  "@andItsValuesOnDocument": {
+    "placeholders": {
+      "name": {},
+      "documentCount": {}
+    }
+  },
+  "createField": "Feld anlegen",
+  "noCustomFieldsYetThey": "Noch keine eigenen Felder. Damit lassen sich z. B. Betrag, Fälligkeit oder Vertragsnummer erfassen.",
+  "editField": "Feld bearbeiten",
+  "dataType": "Datentyp",
+  "cannotBeChangedLater": "Lässt sich nachträglich nicht ändern",
+  "defaultCurrency": "Standardwährung",
+  "removeOption": "Option entfernen",
+  "addOption": "Option hinzufügen",
+  "deleteKindQuestion": "{singular} löschen?",
+  "@deleteKindQuestion": {
+    "placeholders": {
+      "singular": {}
+    }
+  },
+  "willBeRemovedAffectedDocuments": "„{name}“ wird entfernt. Betroffene Dokumente ({documentCount}) bleiben erhalten.",
+  "@willBeRemovedAffectedDocuments": {
+    "placeholders": {
+      "name": {},
+      "documentCount": {}
+    }
+  },
+  "createKind": "{singular} anlegen",
+  "@createKind": {
+    "placeholders": {
+      "singular": {}
+    }
+  },
+  "search": "Suchen",
+  "noKind": "Keine {plural}",
+  "@noKind": {
+    "placeholders": {
+      "plural": {}
+    }
+  },
+  "inbox": "Posteingang",
+  "editKind": "{singular} bearbeiten",
+  "@editKind": {
+    "placeholders": {
+      "singular": {}
+    }
+  },
+  "inboxTag": "Posteingangs-Tag",
+  "assignedToEveryNewDocument": "Wird jedem neuen Dokument zugewiesen",
+  "path": "Pfad",
+  "assignAutomatically": "Automatisch zuordnen",
+  "learnsFromTheDocumentsYou": "Lernt aus den Dokumenten, denen du dieses Label bereits zugewiesen hast.",
+  "utilityCompany": "Stadtwerke",
+  "ignoreCase": "Groß-/Kleinschreibung ignorieren",
+  "documentRestored": "Dokument wiederhergestellt",
+  "documentsRestored": "{length} Dokumente wiederhergestellt",
+  "@documentsRestored": {
+    "placeholders": {
+      "length": {}
+    }
+  },
+  "emptyTrash": "Papierkorb leeren?",
+  "deletePermanentlyQuestion": "Endgültig löschen?",
+  "documentsAndFilesWillBe": "Dokumente und Dateien werden unwiderruflich vom Server gelöscht.",
+  "deletePermanently": "Endgültig löschen",
+  "trashSelected": "{length} ausgewählt",
+  "@trashSelected": {
+    "placeholders": {
+      "length": {}
+    }
+  },
+  "restore": "Wiederherstellen",
+  "theTrashIsEmpty": "Der Papierkorb ist leer.",
+  "documentsInTheTrashAre": "Dokumente im Papierkorb werden nach der vom Server eingestellten Frist automatisch gelöscht.",
+  "deletedAt": "Gelöscht {value}",
+  "@deletedAt": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "uploadScan": "Scan hochladen",
+  "uploadFile": "Datei hochladen",
+  "upload": "Hochladen",
+  "leaveEmptyDeterminedByThe": "Leer lassen: vom Server bestimmen",
+  "detectAutomatically": "Automatisch erkennen",
+  "automaticallyFromTheText": "Automatisch aus dem Text",
+  "whateverYouLeaveEmptyHere": "Was du hier leer lässt, ergänzt der Server über seine Zuordnungsregeln.",
+  "onePage": "1 Seite",
+  "pagesCount": "{length} Seiten",
+  "@pagesCount": {
+    "placeholders": {
+      "length": {}
+    }
+  },
+  "addPages": "Seiten hinzufügen",
+  "removePage": "Seite entfernen",
+  "longPressAndDragTo": "Zum Umsortieren lange drücken und ziehen.",
+  "setCorrespondent": "Korrespondent setzen",
+  "setDocumentType": "Dokumenttyp setzen",
+  "setStoragePath": "Speicherpfad setzen",
+  "rotateOneDocument": "1 Dokument drehen",
+  "rotateDocuments": "{length} Dokumente drehen",
+  "@rotateDocuments": {
+    "placeholders": {
+      "length": {}
+    }
+  },
+  "rotateClockwise": "Um 90° nach rechts",
+  "rotateHalf": "Um 180°",
+  "rotateCounterclockwise": "Um 90° nach links",
+  "reprocessOneDocument": "1 Dokument neu verarbeiten?",
+  "reprocessDocuments": "{length} Dokumente neu verarbeiten?",
+  "@reprocessDocuments": {
+    "placeholders": {
+      "length": {}
+    }
+  },
+  "textRecognitionArchivePdfAnd": "Texterkennung, Archiv-PDF und Vorschau werden neu erstellt. Titel, Tags und andere Angaben bleiben.",
+  "reprocess": "Neu verarbeiten",
+  "mergeDocuments": "{length} Dokumente zusammenführen?",
+  "@mergeDocuments": {
+    "placeholders": {
+      "length": {}
+    }
+  },
+  "aNewDocumentIsCreated": "Es entsteht ein neues Dokument mit den Metadaten des ersten.",
+  "keepTheIndividualDocuments": "Einzeldokumente behalten",
+  "moveTheIndividualDocumentsTo": "Einzeldokumente in den Papierkorb",
+  "deleteOneDocument": "1 Dokument löschen?",
+  "deleteDocuments": "{length} Dokumente löschen?",
+  "@deleteDocuments": {
+    "placeholders": {
+      "length": {}
+    }
+  },
+  "theDocumentsWillBeMoved": "Die Dokumente werden in den Papierkorb des Servers verschoben.",
+  "scanDocument": "Dokument scannen",
+  "withEdgeDetectionSeveralPages": "Mit Kantenerkennung, mehrere Seiten",
+  "chooseFile": "Datei auswählen",
+  "pdfImageOrText": "PDF, Bild oder Text",
+  "scanWithANetworkScanner": "Am Netzwerkscanner scannen",
+  "scannersInTheHomeNetwork": "Scanner im Heimnetz über den Server",
+  "saveView": "Ansicht speichern",
+  "eGOpenInvoices": "z. B. Offene Rechnungen",
+  "showOnTheDashboard": "Auf der Übersicht zeigen",
+  "deleteView": "Ansicht „{name}“ löschen?",
+  "@deleteView": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "scannerNotAvailable": "Scanner nicht verfügbar: {e}",
+  "@scannerNotAvailable": {
+    "placeholders": {
+      "e": {}
+    }
+  },
+  "newLabel": "Neu",
+  "gridView": "Rasteransicht",
+  "listView": "Listenansicht",
+  "fullTextSearch": "Volltextsuche",
+  "clearSearch": "Suche löschen",
+  "tryAgain": "Erneut versuchen",
+  "noMatchingDocumentsFound": "Keine passenden Dokumente gefunden.",
+  "theInboxIsEmpty": "Der Posteingang ist leer.",
+  "noDocumentsYetUploadOne": "Noch keine Dokumente. Lade eins hoch oder lege Scans in den Eingangsordner des Servers.",
+  "errorTryAgain": "{error} – erneut versuchen",
+  "@errorTryAgain": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "oneDocument": "1 Dokument",
+  "documentsTotal": "{total} Dokumente",
+  "@documentsTotal": {
+    "placeholders": {
+      "total": {}
+    }
+  },
+  "correspondentId": "Korrespondent {id}",
+  "@correspondentId": {
+    "placeholders": {
+      "id": {}
+    }
+  },
+  "type": "Typ {id}",
+  "@type": {
+    "placeholders": {
+      "id": {}
+    }
+  },
+  "clearSelection": "Auswahl aufheben",
+  "selectedCount": "{count} ausgewählt",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "selectAll": "Alle auswählen",
+  "moreActions": "Weitere Aktionen",
+  "removeTags": "Tags entfernen",
+  "setPermissions": "Freigaben setzen",
+  "rotate": "Drehen",
+  "mergeIntoOnePdf": "Zu einem PDF zusammenführen",
+  "shareOrSaveSelection": "Teilen bzw. speichern",
+  "noDocumentsAvailableOfflineYet": "Noch keine Dokumente offline verfügbar. In der Detailansicht eines Dokuments auf „Offline verfügbar“ tippen, um es auch ohne Verbindung öffnen zu können.",
+  "removeFromDevice": "Vom Gerät entfernen",
+  "thisDocumentIsNoLonger": "Dieses Dokument ist nicht mehr auf dem Gerät.",
+  "showArchivePdf": "Archiv-PDF anzeigen",
+  "showOriginal": "Original anzeigen",
+  "shareOrSave": "Teilen oder speichern",
+  "thereIsNoPreviewFor": "Für diesen Dateityp gibt es hier keine Vorschau.",
+  "shareOrOpen": "Teilen oder öffnen",
+  "connectToYourPaperbuddyOr": "Mit deinem PaperBuddy- oder Paperless-Server verbinden",
+  "serverAddress": "Server-Adresse",
+  "serverAddressHint": "z. B. nas.local:8000",
+  "pleaseEnterAnAddress": "Bitte Adresse angeben",
+  "usernameRequired": "Bitte Benutzernamen angeben",
+  "hidePassword": "Passwort verbergen",
+  "showPassword": "Passwort anzeigen",
+  "pleaseEnterAPassword": "Bitte Passwort angeben",
+  "verificationCode": "Bestätigungscode",
+  "fromTheAuthenticatorAppOr": "Aus der Authenticator-App oder ein Wiederherstellungscode",
+  "pleaseEnterTheCode": "Bitte den Code eingeben",
+  "signIn": "Anmelden",
+  "openOfflineDocument": "Offline-Dokument öffnen",
+  "openOfflineDocuments": "{offlineCount} Offline-Dokumente öffnen",
+  "@openOfflineDocuments": {
+    "placeholders": {
+      "offlineCount": {}
+    }
+  },
+  "retryTheSavedSignIn": "Gespeicherte Anmeldung erneut versuchen",
+  "scanAt": "Scan an {name}",
+  "@scanAt": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "color": "Farbe",
+  "grayscale": "Graustufen",
+  "blackAndWhite": "Schwarzweiß",
+  "networkScanner": "Netzwerkscanner",
+  "searchAgain": "Erneut suchen",
+  "thisServerDoesNotSupport": "Dieser Server unterstützt keine Netzwerkscanner.",
+  "couldNotQueryScanners": "Scanner konnten nicht abgefragt werden: {value}",
+  "@couldNotQueryScanners": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "noScannerFoundTheServer": "Kein Scanner gefunden. Der Server sucht im Netz per AirScan/eSCL; alternativ lassen sich Scanner mit PAPERBUDDY_SCANNERS fest eintragen.",
+  "foundOnTheNetwork": "Im Netz gefunden",
+  "configured": "Fest eingetragen",
+  "scannerDoesNotRespond": "Scanner antwortet nicht: {error}",
+  "@scannerDoesNotRespond": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "feeder": "Einzug",
+  "flatbed": "Glas",
+  "resolution": "Auflösung",
+  "duplex": "Beidseitig",
+  "titleOptional": "Titel (optional)",
+  "scanning": "Scanne …",
+  "scan": "Scannen",
+  "deleteDocument": "Dokument löschen?",
+  "willBeMovedToThe": "„{title}“ wird in den Papierkorb des Servers verschoben.",
+  "@willBeMovedToThe": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "open": "Öffnen",
+  "makeAvailableOffline": "Offline verfügbar machen",
+  "removeFromInbox": "Aus dem Posteingang entfernen",
+  "archiveSerialNumber": "Archivnummer",
+  "originalFile": "Originaldatei",
+  "fileType": "Dateityp",
+  "pages": "Seiten",
+  "everyone": "Alle",
+  "me": "Ich",
+  "fieldId": "Feld {field}",
+  "@fieldId": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "deleteNote": "Notiz löschen",
+  "addNote": "Notiz hinzufügen",
+  "saveNote": "Notiz speichern",
+  "noTextRecognized": "Kein Text erkannt.",
+  "edit": "Bearbeiten",
+  "sharePermissions": "Freigaben",
+  "permissionsSaved": "Freigaben gespeichert",
+  "discardChanges": "Änderungen verwerfen?",
+  "keepEditing": "Weiter bearbeiten",
+  "discard": "Verwerfen",
+  "suggestions": "Vorschläge",
+  "pleaseEnterATitle": "Bitte einen Titel angeben",
+  "archiveSerialNumberAsn": "Archivnummer (ASN)",
+  "nextFreeNumber": "Nächste freie Nummer",
+  "pleaseEnterAWholeNumber": "Bitte eine ganze Zahl angeben",
+  "oneItemWasSkippedFolder": "Ein Eintrag wurde übersprungen (Ordner oder nicht lesbar).",
+  "itemsWereSkippedFoldersOr": "{skipped} Einträge wurden übersprungen (Ordner oder nicht lesbar).",
+  "@itemsWereSkippedFoldersOr": {
+    "placeholders": {
+      "skipped": {}
+    }
+  },
+  "dropToUpload": "Loslassen, um hochzuladen",
+  "processingFailed": "Verarbeitung fehlgeschlagen",
+  "thisDocumentAlreadyExists": "Dieses Dokument ist bereits vorhanden.",
+  "fileTypeNotSupported": "Dateityp wird nicht unterstützt.",
+  "documentAddedTitled": "{title}: Dokument hinzugefügt",
+  "@documentAddedTitled": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "withoutAnOwnerAllUsers": "Ohne Eigentümer sehen alle Benutzer mit Dokumentrechten das Dokument. Mit Eigentümer nur er selbst, Administratoren und die hier Freigegebenen.",
+  "onlyTheOwnerCanChange": "Nur der Eigentümer kann Freigaben ändern.",
+  "noOwnerVisibleToEveryone": "Kein Eigentümer (für alle sichtbar)",
+  "viewUsers": "Ansehen: Benutzer",
+  "viewGroups": "Ansehen: Gruppen",
+  "changeUsers": "Ändern: Benutzer",
+  "changeGroups": "Ändern: Gruppen",
+  "thereAreNoOtherUsers": "Es gibt keine weiteren Benutzer oder Gruppen, oder dir fehlt das Recht, sie zu sehen.",
+  "permissionsForOneDocument": "Freigaben für 1 Dokument",
+  "permissionsForDocuments": "Freigaben für {n} Dokumente",
+  "@permissionsForDocuments": {
+    "placeholders": {
+      "n": {}
+    }
+  },
+  "leaveUnchanged": "Unverändert lassen",
+  "keepExistingPermissions": "Bestehende Freigaben behalten",
+  "theSelectedPermissionsAreAdded": "Die gewählten Freigaben kommen hinzu.",
+  "theSelectedPermissionsReplaceThe": "Die gewählten Freigaben ersetzen die bisherigen.",
+  "yes": "Ja",
+  "no": "Nein",
+  "addField": "Feld hinzufügen",
+  "noFields": "Keine Felder",
+  "removeField": "Feld entfernen",
+  "field": "Feld",
+  "documentIdsHint": "Dokument-IDs, z. B. 12, 34",
+  "searchOrCreate": "Suchen oder neu anlegen",
+  "createNamed": "„{trim}“ anlegen",
+  "@createNamed": {
+    "placeholders": {
+      "trim": {}
+    }
+  },
+  "noEntries": "Keine Einträge",
+  "select": "Auswählen",
+  "noTags": "Keine Tags",
+  "addDeadline": "Frist hinzufügen",
+  "deadline": "Frist",
+  "deleteDeadline": "Frist löschen",
+  "dueOn": "Fällig am",
+  "note": "Notiz",
+  "eGNoticePeriod": "z. B. Kündigungsfrist",
+  "noneYet": "Noch keine vorhanden",
+  "inboxOnly": "Nur Posteingang",
+  "sortOrder": "Sortierung",
+  "periodDocumentDate": "Zeitraum (Belegdatum)",
+  "tagsAllMustMatch": "Tags (alle müssen zutreffen)",
+  "apply": "Anwenden",
+  "notifications": "Benachrichtigungen",
+  "removeAll": "Alle entfernen",
+  "noNotifications": "Keine Benachrichtigungen",
+  "newVersion": "Neue Version",
+  "labelOptional": "Bezeichnung (optional)",
+  "eGSigned": "z. B. unterschrieben",
+  "newVersionIsBeingProcessed": "Neue Version wird verarbeitet …",
+  "newVersionSaved": "Neue Version gespeichert",
+  "removeVersionQuestion": "Version entfernen?",
+  "versions": "Versionen",
+  "onlyTheOriginalVersion": "Nur die ursprüngliche Fassung",
+  "originalVersion": "Ursprüngliche Fassung",
+  "removeVersion": "Version entfernen",
+  "file": "Datei",
+  "deleted": "gelöscht",
+  "newVersionNamed": "Neue Version: {show}",
+  "@newVersionNamed": {
+    "placeholders": {
+      "show": {}
+    }
+  },
+  "restored": "Wiederhergestellt",
+  "moveToTrash": "In den Papierkorb",
+  "history": "Verlauf",
+  "theServerKeepsNoHistory": "Der Server führt keinen Verlauf.",
+  "noEntriesYet": "Noch keine Einträge",
+  "created": "Angelegt",
+  "accessLog": "Zugriffe",
+  "theServerDoesNotLog": "Der Server protokolliert keine Zugriffe.",
+  "visibleToTheOwnerOnly": "Nur für den Eigentümer sichtbar.",
+  "noAccessYet": "Noch keine Zugriffe",
+  "downloaded": "Heruntergeladen",
+  "openedViaShareLink": "Über Freigabelink abgerufen",
+  "viewed": "Angesehen",
+  "pleaseEnterTheSixDigit": "Bitte den sechsstelligen Code eingeben",
+  "theCodeDoesNotMatch": "Der Code passt nicht. Uhrzeit des Telefons prüfen und den aktuellen Code eingeben.",
+  "setUpTwoFactorAuthentication": "Zwei-Faktor-Anmeldung einrichten",
+  "totpStepOneOpen": "1. Mit „In Authenticator-App öffnen“ hinzufügen oder den Schlüssel abtippen.",
+  "totpStepOneScan": "1. Den QR-Code mit einer Authenticator-App scannen (z. B. Apple Passwörter, Google Authenticator, 2FAS, Aegis).",
+  "openInAuthenticatorApp": "In Authenticator-App öffnen",
+  "copyKey": "Schlüssel kopieren",
+  "keyCopied": "Schlüssel kopiert",
+  "totpStepTwo": "2. Den angezeigten sechsstelligen Code eingeben:",
+  "code": "Code",
+  "activate": "Aktivieren",
+  "recoveryCodes": "Wiederherstellungscodes",
+  "twoFactorAuthenticationIsActive": "Die Zwei-Faktor-Anmeldung ist aktiv. Bewahre diese Codes sicher auf, z. B. im Passwortmanager. Jeder Code funktioniert einmal anstelle des Codes aus der App, falls das Telefon verloren geht. Sie werden nur jetzt angezeigt.",
+  "codesCopied": "Codes kopiert",
+  "copy": "Kopieren",
+  "saved": "Gespeichert",
+  "linkCopied": "Link kopiert",
+  "anyoneWhoKnowsTheLink": "Wer den Link kennt, kann das Dokument ohne Anmeldung öffnen.",
+  "original": "Original",
+  "archivePdf": "Archiv-PDF",
+  "validIndefinitely": "Unbegrenzt gültig",
+  "validUntil": "Gültig bis {formatDayTime}",
+  "@validUntil": {
+    "placeholders": {
+      "formatDayTime": {}
+    }
+  },
+  "valid": "Gültig",
+  "oneDay": "1 Tag",
+  "sevenDays": "7 Tage",
+  "thirtyDays": "30 Tage",
+  "indefinitely": "Unbegrenzt",
+  "createAndCopyLink": "Link erstellen und kopieren",
+  "rotated": "Gedreht",
+  "deletePages": "Seiten löschen",
+  "pageRangeHint": "1–{pageCount}, z. B. 2, 4-5",
+  "@pageRangeHint": {
+    "placeholders": {
+      "pageCount": {}
+    }
+  },
+  "noValidPageNumbers": "Keine gültigen Seitenzahlen",
+  "deletePagesQuestion": "Seiten {join} löschen?",
+  "@deletePagesQuestion": {
+    "placeholders": {
+      "join": {}
+    }
+  },
+  "thePagesWillBeRemoved": "Die Seiten werden aus Original und Archiv-PDF entfernt.",
+  "pagesDeleted": "Seiten gelöscht",
+  "splitDocument": "Dokument teilen",
+  "parts": "Teile",
+  "originalAfterwards": "Original danach",
+  "keep": "Behalten",
+  "partsAreBeingProcessed": "Teile werden verarbeitet",
+  "editPdf": "PDF bearbeiten",
+  "rotateLeft": "Nach links drehen",
+  "rotateRight": "Nach rechts drehen",
+  "rotate180": "Um 180° drehen",
+  "split": "Teilen",
+  "paste": "Einsetzen",
+  "selectAllText": "Alles auswählen",
+  "pageRangeExample": "z. B. 2, 4-5",
+  "actionsCount": "{count, plural, =1{1 Aktion} other{{count} Aktionen}}",
+  "@actionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "documentsCount": "{count, plural, =1{1 Dokument} other{{count} Dokumente}}",
+  "@documentsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mailConsume": "Übernehmen",
+  "signOutQuestion": "Abmelden?"
+}

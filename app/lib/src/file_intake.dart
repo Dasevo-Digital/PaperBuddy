@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'app_state.dart';
 import 'screens/upload_screen.dart';
 import 'upload_queue.dart';
+import 'l10n.dart';
 
 typedef IncomingFile = ({String name, Uint8List bytes});
 
@@ -81,8 +82,8 @@ class _DropZoneState extends State<DropZone> {
         SnackBar(
           content: Text(
             skipped == 1
-                ? 'Ein Eintrag wurde übersprungen (Ordner oder nicht lesbar).'
-                : '$skipped Einträge wurden übersprungen (Ordner oder nicht lesbar).',
+                ? tr.oneItemWasSkippedFolder
+                : tr.itemsWereSkippedFoldersOr(skipped),
           ),
         ),
       );
@@ -130,7 +131,7 @@ class _DropZoneState extends State<DropZone> {
                                 size: 32,
                               ),
                               Text(
-                                'Loslassen, um hochzuladen',
+                                tr.dropToUpload,
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                             ],

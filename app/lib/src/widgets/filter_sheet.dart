@@ -4,6 +4,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 
 import '../app_state.dart';
 import '../format.dart';
+import '../l10n.dart';
 
 /// Öffnet das Filter-Panel und liefert den neuen Filter (oder `null`).
 Future<DocumentFilter?> showFilterSheet(
@@ -76,7 +77,7 @@ class _FilterSheetState extends State<_FilterSheet> {
           const SizedBox(height: 8),
           if (children.isEmpty)
             Text(
-              'Noch keine vorhanden',
+              tr.noneYet,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -99,11 +100,11 @@ class _FilterSheetState extends State<_FilterSheet> {
             child: Row(
               children: [
                 Expanded(
-                  child: Text('Filter', style: theme.textTheme.titleLarge),
+                  child: Text(tr.filter, style: theme.textTheme.titleLarge),
                 ),
                 TextButton(
                   onPressed: () => setState(() => _f = _f.clearFilters()),
-                  child: const Text('Zurücksetzen'),
+                  child: Text(tr.reset),
                 ),
               ],
             ),
@@ -116,12 +117,12 @@ class _FilterSheetState extends State<_FilterSheet> {
                 if (widget.showInboxSwitch)
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Nur Posteingang'),
+                    title: Text(tr.inboxOnly),
                     value: _f.inboxOnly,
                     onChanged: (v) =>
                         setState(() => _f = _f.copyWith(inboxOnly: v)),
                   ),
-                section('Sortierung', [
+                section(tr.sortOrder, [
                   for (final o in DocumentOrdering.values)
                     ChoiceChip(
                       label: Text(o.label),
@@ -130,12 +131,12 @@ class _FilterSheetState extends State<_FilterSheet> {
                           setState(() => _f = _f.copyWith(ordering: o)),
                     ),
                 ]),
-                section('Zeitraum (Belegdatum)', [
+                section(tr.periodDocumentDate, [
                   ActionChip(
                     avatar: const Icon(LucideIcons.calendarRange, size: 16),
                     label: Text(
                       _f.createdFrom == null
-                          ? 'Beliebig'
+                          ? tr.any
                           : '${formatDay(_f.createdFrom!)} – ${formatDay(_f.createdTo!)}',
                     ),
                     onPressed: _pickRange,
@@ -143,7 +144,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                   if (_f.createdFrom != null)
                     ActionChip(
                       avatar: const Icon(LucideIcons.x, size: 16),
-                      label: const Text('Entfernen'),
+                      label: Text(tr.remove),
                       onPressed: () => setState(
                         () => _f = _f.copyWith(
                           createdFrom: () => null,
@@ -152,7 +153,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                       ),
                     ),
                 ]),
-                section('Tags (alle müssen zutreffen)', [
+                section(tr.tagsAllMustMatch, [
                   for (final t in tags)
                     FilterChip(
                       label: Text('${t.name} (${t.documentCount})'),
@@ -168,7 +169,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                       ),
                     ),
                 ]),
-                section('Korrespondent', [
+                section(tr.correspondent, [
                   for (final c in correspondents)
                     FilterChip(
                       label: Text('${c.name} (${c.documentCount})'),
@@ -180,7 +181,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                       ),
                     ),
                 ]),
-                section('Dokumenttyp', [
+                section(tr.documentType, [
                   for (final d in types)
                     FilterChip(
                       label: Text('${d.name} (${d.documentCount})'),
@@ -203,7 +204,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: () => Navigator.pop(context, _f),
-                  child: const Text('Anwenden'),
+                  child: Text(tr.apply),
                 ),
               ),
             ),

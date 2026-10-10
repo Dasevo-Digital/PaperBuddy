@@ -4,6 +4,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'environment.dart';
+import 'l10n.dart';
 
 /// App-Sperre per Face ID, Touch ID, Fingerabdruck oder Geräte-Code.
 /// Gesperrt wird beim Start und nach [lockAfter] im Hintergrund.
@@ -66,7 +67,7 @@ class AppLock extends ChangeNotifier {
   /// aussperrt.
   Future<bool> setEnabled(bool value) async {
     if (value &&
-        !await _authenticate('App-Sperre für ${AppEnv.appName} einschalten')) {
+        !await _authenticate(tr.turnOnAppLockFor(AppEnv.appName))) {
       return false;
     }
     _enabled = value;
@@ -80,7 +81,7 @@ class AppLock extends ChangeNotifier {
     if (_busy || !locked) return;
     _busy = true;
     notifyListeners();
-    final ok = await _authenticate('${AppEnv.appName} entsperren');
+    final ok = await _authenticate(tr.unlockApp(AppEnv.appName));
     _busy = false;
     if (ok) _locked = false;
     notifyListeners();
@@ -187,7 +188,7 @@ class _LockScreenState extends State<_LockScreen> {
                 FilledButton.icon(
                   onPressed: widget.lock.busy ? null : widget.lock.unlock,
                   icon: const Icon(LucideIcons.lockOpen),
-                  label: const Text('Entsperren'),
+                  label: Text(tr.unlock),
                 ),
             ],
           ),

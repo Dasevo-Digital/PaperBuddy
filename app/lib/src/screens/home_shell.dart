@@ -5,6 +5,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 import 'documents_screen.dart';
 import 'settings_screen.dart';
 import 'statistics_screen.dart';
+import '../l10n.dart';
 
 /// Hauptnavigation: unten auf dem Telefon, seitlich ab Tablet-Breite.
 class HomeShell extends StatefulWidget {
@@ -21,20 +22,20 @@ class _HomeShellState extends State<HomeShell> {
   /// unten und seitlich wechselt (Fenstergröße, Drehen des Tablets).
   final _pagesKey = GlobalKey();
 
-  static const _destinations = [
-    (icon: LucideIcons.files, label: 'Dokumente'),
-    (icon: LucideIcons.inbox, label: 'Posteingang'),
-    (icon: LucideIcons.chartPie, label: 'Übersicht'),
-    (icon: LucideIcons.settings, label: 'Einstellungen'),
+  static List<({IconData icon, String label})> get _destinations => [
+    (icon: LucideIcons.files, label: tr.documents),
+    (icon: LucideIcons.inbox, label: tr.inbox),
+    (icon: LucideIcons.chartPie, label: tr.dashboard),
+    (icon: LucideIcons.settings, label: tr.settings),
   ];
 
   @override
   Widget build(BuildContext context) {
     final pages = [
-      const DocumentsScreen(key: PageStorageKey('all'), title: 'Dokumente'),
-      const DocumentsScreen(
+      DocumentsScreen(key: PageStorageKey('all'), title: tr.documents),
+      DocumentsScreen(
         key: PageStorageKey('inbox'),
-        title: 'Posteingang',
+        title: tr.inbox,
         baseFilter: DocumentFilter(inboxOnly: true),
       ),
       StatisticsScreen(

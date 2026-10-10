@@ -5,6 +5,7 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 import '../app_state.dart';
 import '../format.dart';
 import 'dialogs.dart';
+import '../l10n.dart';
 
 /// Fristen eines Dokuments in der Detailansicht: abhaken, löschen, neue
 /// anlegen (z. B. „Kündigungsfrist“ an einem Vertrag).
@@ -83,12 +84,12 @@ class _RemindersSectionState extends State<RemindersSection> {
         Row(
           children: [
             Expanded(
-              child: Text('Fristen', style: theme.textTheme.titleMedium),
+              child: Text(tr.deadlines, style: theme.textTheme.titleMedium),
             ),
             TextButton.icon(
               onPressed: reminders == null ? null : _add,
               icon: const Icon(LucideIcons.alarmClockPlus, size: 18),
-              label: const Text('Frist hinzufügen'),
+              label: Text(tr.addDeadline),
             ),
           ],
         ),
@@ -100,7 +101,7 @@ class _RemindersSectionState extends State<RemindersSection> {
               value: r.done,
               onChanged: (v) => _setDone(r, v ?? false),
               title: Text(
-                r.note.isEmpty ? 'Frist' : r.note,
+                r.note.isEmpty ? tr.deadline : r.note,
                 style: r.done
                     ? const TextStyle(decoration: TextDecoration.lineThrough)
                     : null,
@@ -112,7 +113,7 @@ class _RemindersSectionState extends State<RemindersSection> {
                     : null,
               ),
               secondary: IconButton(
-                tooltip: 'Frist löschen',
+                tooltip: tr.deleteDeadline,
                 icon: const Icon(LucideIcons.x, size: 18),
                 onPressed: () => _delete(r),
               ),
@@ -164,7 +165,7 @@ class _ReminderDialogState extends State<_ReminderDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Frist hinzufügen'),
+      title: Text(tr.addDeadline),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         spacing: 12,
@@ -173,8 +174,8 @@ class _ReminderDialogState extends State<_ReminderDialog> {
             borderRadius: BorderRadius.circular(4),
             onTap: _pickDate,
             child: InputDecorator(
-              decoration: const InputDecoration(
-                labelText: 'Fällig am',
+              decoration: InputDecoration(
+                labelText: tr.dueOn,
                 prefixIcon: Icon(LucideIcons.calendar),
               ),
               child: Text(formatDay(_due)),
@@ -183,9 +184,9 @@ class _ReminderDialogState extends State<_ReminderDialog> {
           TextField(
             controller: _note,
             autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Notiz',
-              hintText: 'z. B. Kündigungsfrist',
+            decoration: InputDecoration(
+              labelText: tr.note,
+              hintText: tr.eGNoticePeriod,
             ),
           ),
         ],
@@ -193,12 +194,12 @@ class _ReminderDialogState extends State<_ReminderDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Abbrechen'),
+          child: Text(tr.cancel),
         ),
         FilledButton(
           onPressed: () =>
               Navigator.pop(context, (due: _due, note: _note.text.trim())),
-          child: const Text('Hinzufügen'),
+          child: Text(tr.add),
         ),
       ],
     );

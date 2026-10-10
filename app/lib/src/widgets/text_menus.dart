@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n.dart';
 
 /// Kontextmenü für Passwortfelder (Rechtsklick, langes Drücken): bietet immer
 /// „Einsetzen“ an, etwa aus einem Passwortmanager. Kopieren und Ausschneiden
@@ -15,19 +16,19 @@ Widget passwordContextMenu(BuildContext context, EditableTextState field) {
     buttonItems: [
       ContextMenuButtonItem(
         type: ContextMenuButtonType.paste,
-        label: 'Einsetzen',
+        label: tr.paste,
         onPressed: () => field.pasteText(SelectionChangedCause.toolbar),
       ),
       if (value.text.isNotEmpty && selected < value.text.length)
         ContextMenuButtonItem(
           type: ContextMenuButtonType.selectAll,
-          label: 'Alles auswählen',
+          label: tr.selectAllText,
           onPressed: () => field.selectAll(SelectionChangedCause.toolbar),
         ),
       if (selected > 0)
         ContextMenuButtonItem(
           type: ContextMenuButtonType.delete,
-          label: 'Löschen',
+          label: tr.delete,
           onPressed: () {
             field.userUpdateTextEditingValue(
               value.replaced(value.selection, ''),

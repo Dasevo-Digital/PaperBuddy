@@ -5,25 +5,26 @@ import 'package:paperbuddy_api/paperbuddy_api.dart';
 import '../../app_state.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/text_menus.dart';
+import '../../l10n.dart';
 
-/// Bereiche für die Rechte-Matrix, mit deutschem Namen.
-const permissionModels = <(String, String)>[
-  ('document', 'Dokumente'),
-  ('note', 'Notizen'),
+/// Bereiche für die Rechte-Matrix, mit Namen in der Sprache der App.
+List<(String, String)> get permissionModels => [
+  ('document', tr.documents),
+  ('note', tr.notes),
   ('tag', 'Tags'),
-  ('correspondent', 'Korrespondenten'),
-  ('documenttype', 'Dokumenttypen'),
-  ('storagepath', 'Speicherpfade'),
+  ('correspondent', tr.correspondents),
+  ('documenttype', tr.documentTypes),
+  ('storagepath', tr.storagePaths),
   ('customfield', 'Custom Fields'),
-  ('savedview', 'Ansichten'),
-  ('workflow', 'Workflows'),
-  ('mailaccount', 'Mailkonten'),
-  ('mailrule', 'Mailregeln'),
-  ('paperlesstask', 'Aufgaben'),
-  ('uisettings', 'Einstellungen'),
-  ('sharelink', 'Freigabelinks'),
-  ('user', 'Benutzer'),
-  ('group', 'Gruppen'),
+  ('savedview', tr.views),
+  ('workflow', tr.workflows),
+  ('mailaccount', tr.mailAccounts),
+  ('mailrule', tr.mailRules),
+  ('paperlesstask', tr.tasks),
+  ('uisettings', tr.settings),
+  ('sharelink', tr.shareLinks),
+  ('user', tr.users),
+  ('group', tr.groups),
 ];
 
 const _actions = ['view', 'add', 'change', 'delete'];
@@ -88,12 +89,12 @@ class _UsersScreenState extends State<UsersScreen>
       ..sort((a, b) => a.name.compareTo(b.name));
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Benutzer und Gruppen'),
+        title: Text(tr.usersAndGroups),
         bottom: TabBar(
           controller: _tabs,
-          tabs: const [
-            Tab(text: 'Benutzer'),
-            Tab(text: 'Gruppen'),
+          tabs: [
+            Tab(text: tr.users),
+            Tab(text: tr.groups),
           ],
         ),
       ),
@@ -103,7 +104,7 @@ class _UsersScreenState extends State<UsersScreen>
           final model = _tabs.index == 0 ? 'user' : 'group';
           if (!me.can('add', model)) return const SizedBox.shrink();
           return FloatingActionButton(
-            tooltip: _tabs.index == 0 ? 'Benutzer anlegen' : 'Gruppe anlegen',
+            tooltip: _tabs.index == 0 ? tr.createUser : tr.createGroup,
             onPressed: () => _tabs.index == 0 ? _editUser() : _editGroup(),
             child: const Icon(LucideIcons.plus),
           );
@@ -123,8 +124,8 @@ class _UsersScreenState extends State<UsersScreen>
                   subtitle: Text(
                     [
                       u.username,
-                      if (u.isSuperuser) 'Administrator',
-                      if (u.isMfaEnabled) 'Zwei-Faktor',
+                      if (u.isSuperuser) tr.administrator,
+                      if (u.isMfaEnabled) tr.twoFactor,
                       if (!u.isActive) 'deaktiviert',
                       if (u.groups.isNotEmpty)
                         u.groups
@@ -137,10 +138,10 @@ class _UsersScreenState extends State<UsersScreen>
             ],
           ),
           groups.isEmpty
-              ? const EmptyHint(
+              ? EmptyHint(
                   icon: LucideIcons.users,
                   text:
-                      'Noch keine Gruppen. Mit Gruppen lassen sich Rechte und Freigaben für mehrere Personen bündeln.',
+                      tr.noGroupsYetGroupsBundle,
                 )
               : ListView(
                   children: [
@@ -149,8 +150,7 @@ class _UsersScreenState extends State<UsersScreen>
                         leading: const Icon(LucideIcons.users),
                         title: Text(g.name),
                         subtitle: Text(
-                          '${g.permissions.length} Rechte · '
-                          '${users.where((u) => u.groups.contains(g.id)).length} Mitglieder',
+                          tr.permissionsMembers(g.permissions.length, users.where((u) => u.groups.contains(g.id)).length),
                         ),
                         onTap: me.can('change', 'group')
                             ? () => _editGroup(g)
@@ -188,16 +188,16 @@ class PermissionMatrix extends StatelessWidget {
           children: [
             OutlinedButton(
               onPressed: () => onChanged({...defaultPermissions}),
-              child: const Text('Standard'),
+              child: Text(tr.defaultLabel),
             ),
             OutlinedButton(
               onPressed: () =>
                   onChanged({for (final (m, _) in permissionModels) 'view_$m'}),
-              child: const Text('Nur lesen'),
+              child: Text(tr.readOnly),
             ),
             OutlinedButton(
               onPressed: () => onChanged({}),
-              child: const Text('Keine'),
+              child: Text(tr.none),
             ),
           ],
         ),
@@ -209,12 +209,12 @@ class PermissionMatrix extends StatelessWidget {
             headingRowHeight: 36,
             dataRowMinHeight: 36,
             dataRowMaxHeight: 40,
-            columns: const [
-              DataColumn(label: Text('Bereich')),
-              DataColumn(label: Text('Ansehen')),
-              DataColumn(label: Text('Anlegen')),
-              DataColumn(label: Text('Ändern')),
-              DataColumn(label: Text('Löschen')),
+            columns: [
+              DataColumn(label: Text(tr.area)),
+              DataColumn(label: Text(tr.view)),
+              DataColumn(label: Text(tr.create)),
+              DataColumn(label: Text(tr.change)),
+              DataColumn(label: Text(tr.delete)),
             ],
             rows: [
               for (final (model, label) in permissionModels)
@@ -244,7 +244,7 @@ class PermissionMatrix extends StatelessWidget {
         ),
         if (inherited.isNotEmpty)
           Text(
-            'Ausgegraute Häkchen kommen aus Gruppen.',
+            tr.greyedOutCheckmarksComeFrom,
             style: theme.textTheme.bodySmall,
           ),
       ],
@@ -292,11 +292,11 @@ class _UserEditScreenState extends State<UserEditScreen> {
 
   Future<void> _save() async {
     if (_username.text.trim().isEmpty) {
-      setState(() => _error = 'Bitte einen Benutzernamen angeben');
+      setState(() => _error = tr.pleaseEnterAUsername);
       return;
     }
     if (widget.user == null && _password.text.length < 8) {
-      setState(() => _error = 'Das Passwort braucht mindestens 8 Zeichen');
+      setState(() => _error = tr.thePasswordNeedsAtLeast);
       return;
     }
     setState(() {
@@ -334,11 +334,10 @@ class _UserEditScreenState extends State<UserEditScreen> {
   Future<void> _resetMfa() async {
     final ok = await confirm(
       context,
-      title: 'Zwei-Faktor-Anmeldung zurücksetzen?',
+      title: tr.resetTwoFactorAuthentication,
       message:
-          'Der Benutzer meldet sich danach nur mit dem Passwort an und kann '
-          'die Zwei-Faktor-Anmeldung im Profil neu einrichten.',
-      action: 'Zurücksetzen',
+          tr.theUserThenSignsIn,
+      action: tr.reset,
       destructive: true,
     );
     if (!ok || !mounted) return;
@@ -350,17 +349,17 @@ class _UserEditScreenState extends State<UserEditScreen> {
     );
     if (done == true && mounted) {
       setState(() => _mfa = false);
-      showInfo(context, 'Zwei-Faktor-Anmeldung zurückgesetzt');
+      showInfo(context, tr.twoFactorAuthenticationReset);
     }
   }
 
   Future<void> _delete() async {
     final ok = await confirm(
       context,
-      title: 'Benutzer löschen?',
+      title: tr.deleteUser,
       message:
-          'Seine Dokumente bleiben erhalten und haben danach keinen Eigentümer mehr.',
-      action: 'Löschen',
+          tr.theirDocumentsAreKeptAnd,
+      action: tr.delete,
       destructive: true,
     );
     if (!ok || !mounted) return;
@@ -381,12 +380,12 @@ class _UserEditScreenState extends State<UserEditScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.user == null ? 'Benutzer anlegen' : widget.user!.username,
+          widget.user == null ? tr.createUser : widget.user!.username,
         ),
         actions: [
           if (widget.user != null && !isMe && me.can('delete', 'user'))
             IconButton(
-              tooltip: 'Löschen',
+              tooltip: tr.delete,
               icon: const Icon(LucideIcons.trash2),
               onPressed: _delete,
             ),
@@ -394,7 +393,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
             padding: const EdgeInsets.only(right: 8),
             child: FilledButton(
               onPressed: _saving ? null : _save,
-              child: const Text('Speichern'),
+              child: Text(tr.save),
             ),
           ),
         ],
@@ -418,8 +417,8 @@ class _UserEditScreenState extends State<UserEditScreen> {
                     ),
                   TextField(
                     controller: _username,
-                    decoration: const InputDecoration(
-                      labelText: 'Benutzername',
+                    decoration: InputDecoration(
+                      labelText: tr.username,
                     ),
                   ),
                   Row(
@@ -428,16 +427,16 @@ class _UserEditScreenState extends State<UserEditScreen> {
                       Expanded(
                         child: TextField(
                           controller: _first,
-                          decoration: const InputDecoration(
-                            labelText: 'Vorname',
+                          decoration: InputDecoration(
+                            labelText: tr.firstName,
                           ),
                         ),
                       ),
                       Expanded(
                         child: TextField(
                           controller: _last,
-                          decoration: const InputDecoration(
-                            labelText: 'Nachname',
+                          decoration: InputDecoration(
+                            labelText: tr.lastName,
                           ),
                         ),
                       ),
@@ -445,7 +444,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
                   ),
                   TextField(
                     controller: _email,
-                    decoration: const InputDecoration(labelText: 'E-Mail'),
+                    decoration: InputDecoration(labelText: tr.email),
                   ),
                   TextField(
                     controller: _password,
@@ -453,35 +452,35 @@ class _UserEditScreenState extends State<UserEditScreen> {
                     contextMenuBuilder: passwordContextMenu,
                     decoration: InputDecoration(
                       labelText: widget.user == null
-                          ? 'Passwort'
-                          : 'Neues Passwort',
+                          ? tr.password
+                          : tr.newPassword,
                       helperText: widget.user == null
                           ? null
-                          : 'Leer lassen, um es zu behalten',
+                          : tr.leaveEmptyToKeepIt,
                     ),
                   ),
                   if (widget.user != null && _mfa)
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(LucideIcons.shieldCheck),
-                      title: const Text('Zwei-Faktor-Anmeldung aktiv'),
+                      title: Text(tr.twoFactorAuthenticationActive),
                       trailing: !isMe && me.can('change', 'user')
                           ? TextButton(
                               onPressed: _resetMfa,
-                              child: const Text('Zurücksetzen'),
+                              child: Text(tr.reset),
                             )
                           : null,
                     ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Aktiv'),
+                    title: Text(tr.active),
                     value: _active,
                     onChanged: isMe ? null : (v) => setState(() => _active = v),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Administrator'),
-                    subtitle: const Text('Darf alles und sieht alle Dokumente'),
+                    title: Text(tr.administrator),
+                    subtitle: Text(tr.mayDoEverythingAndSees),
                     value: _superuser,
                     onChanged: isMe || !me.isSuperuser
                         ? null
@@ -489,7 +488,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
                   ),
                   if (state.groups.isNotEmpty) ...[
                     Text(
-                      'Gruppen',
+                      tr.groups,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     Wrap(
@@ -510,7 +509,7 @@ class _UserEditScreenState extends State<UserEditScreen> {
                   ],
                   if (!_superuser) ...[
                     Text(
-                      'Rechte',
+                      tr.permissions,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     PermissionMatrix(
@@ -553,7 +552,7 @@ class _GroupEditScreenState extends State<GroupEditScreen> {
 
   Future<void> _save() async {
     if (_name.text.trim().isEmpty) {
-      setState(() => _error = 'Bitte einen Namen angeben');
+      setState(() => _error = tr.pleaseEnterAName);
       return;
     }
     setState(() => _saving = true);
@@ -579,8 +578,8 @@ class _GroupEditScreenState extends State<GroupEditScreen> {
   Future<void> _delete() async {
     final ok = await confirm(
       context,
-      title: 'Gruppe löschen?',
-      action: 'Löschen',
+      title: tr.deleteGroup,
+      action: tr.delete,
       destructive: true,
     );
     if (!ok || !mounted) return;
@@ -599,12 +598,12 @@ class _GroupEditScreenState extends State<GroupEditScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.group == null ? 'Gruppe anlegen' : widget.group!.name,
+          widget.group == null ? tr.createGroup : widget.group!.name,
         ),
         actions: [
           if (widget.group != null && me.can('delete', 'group'))
             IconButton(
-              tooltip: 'Löschen',
+              tooltip: tr.delete,
               icon: const Icon(LucideIcons.trash2),
               onPressed: _delete,
             ),
@@ -612,7 +611,7 @@ class _GroupEditScreenState extends State<GroupEditScreen> {
             padding: const EdgeInsets.only(right: 8),
             child: FilledButton(
               onPressed: _saving ? null : _save,
-              child: const Text('Speichern'),
+              child: Text(tr.save),
             ),
           ),
         ],
@@ -630,12 +629,12 @@ class _GroupEditScreenState extends State<GroupEditScreen> {
                   TextField(
                     controller: _name,
                     decoration: InputDecoration(
-                      labelText: 'Name',
+                      labelText: tr.name,
                       errorText: _error,
                     ),
                   ),
                   Text(
-                    'Rechte der Mitglieder',
+                    tr.membersPermissions,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   PermissionMatrix(
