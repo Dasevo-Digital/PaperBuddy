@@ -68,15 +68,24 @@ for test in "${TESTS[@]}"; do
     sleep 0.5
   done
 
+  out=$data.out
   if flutter test "$test" -d "$DEVICE" \
     --dart-define=PAPERBUDDY_E2E_SERVER="http://127.0.0.1:$port" \
     --dart-define=PAPERBUDDY_E2E_USER=admin \
-    --dart-define=PAPERBUDDY_E2E_PASSWORD="$PASSWORD"; then
+    --dart-define=PAPERBUDDY_E2E_PASSWORD="$PASSWORD" 2>&1 | tee "$out"; then
     echo "== OK: $test"
   else
     echo "== FEHLER: $test" >&2
     tail -40 "$log" >&2
     failed+=("$test")
+    # In GitHub Actions als Annotation, damit der Grund ohne Log-Zugriff
+    # sichtbar ist.
+    if [ -n "${GITHUB_ACTIONS:-}" ]; then
+      msg=$(grep -v Helvetica "$out" | grep -E -A15 'EXCEPTION CAUGHT|Zeitüberschreitung|Expected:|Nicht gefunden|Error:' | head -60 |
+        python3 -c 'import sys; print(sys.stdin.read().replace("%", "%25").replace("\r", "").replace("\n", "%0A"))') ||
+        msg="Details im Log"
+      echo "::error title=Integrationstest $(basename "$test")::$msg"
+    fi
   fi
   kill "$SERVER_PID" 2>/dev/null || true
   wait "$SERVER_PID" 2>/dev/null || true
