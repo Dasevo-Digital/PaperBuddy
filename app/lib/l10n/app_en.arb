@@ -533,5 +533,17 @@
   "documentsCount": "{count, plural, =1{1 document} other{{count} documents}}",
   "mailConsume": "Import",
   "signOutQuestion": "Sign out?",
-  "eInvoice": "E-invoice"
+  "eInvoice": "E-invoice",
+  "integrationsTitle": "Access for other apps",
+  "integrationsSubtitle": "Tokens for Famio and others, read only",
+  "integrationsIntro": "An integration token lets another app such as Famio read the documents with a certain tag, including their deadlines. It cannot change anything and sees at most what you see yourself.",
+  "integrationsEmpty": "No tokens yet.",
+  "integrationCreate": "Create token",
+  "integrationTag": "Tag",
+  "integrationCreated": "Token created",
+  "integrationKeyHint": "Enter the key in the other app; in Famio under Administration → PaperBuddy. It is shown only now.",
+  "integrationLastUsed": "Last used {date}",
+  "integrationNeverUsed": "Not used yet",
+  "integrationDeleteQuestion": "Delete token?",
+  "integrationDeleteHint": "The app loses access immediately."
 }

@@ -17,6 +17,7 @@ import '../security.dart';
 import '../storage.dart';
 import '../trash.dart';
 import 'custom_fields.dart';
+import 'integration_tokens.dart';
 import 'operations.dart';
 import 'saved_views.dart';
 import 'share_links.dart';
@@ -139,6 +140,7 @@ class PaperlessApi {
     ShareLinksResource(db, access, store, accessLog: accessLog, clientAddress: clientAddress).mount(route);
 
     UsersResource(db, auth, access).mount(route);
+    IntegrationTokensResource(db, auth, access).mount(route);
     OperationsResource(db: db, auth: auth, metrics: metrics, backups: backups, routes: () => _routes).mount(route);
     customFields.mount(route);
     SavedViewsResource(db, access).mount(route);
@@ -322,6 +324,9 @@ class PaperlessApi {
         },
       );
     }
+    // Integrations-Token: nur lesen, nur ihre Bereiche.
+    final denied = IntegrationTokensResource.check(request, user);
+    if (denied != null) return denied;
     return inner(request.change(context: {'user': user}));
   };
 

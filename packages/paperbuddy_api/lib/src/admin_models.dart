@@ -533,3 +533,37 @@ class ShareLink {
     fileVersion: '${j['file_version'] ?? 'archive'}',
   );
 }
+
+/// Schlüssel für andere Programme wie Famio: liest nur Dokumente mit einem
+/// Tag samt deren Fristen (PaperBuddy-Erweiterung).
+class IntegrationToken {
+  const IntegrationToken({
+    required this.id,
+    required this.name,
+    required this.tag,
+    this.tagName,
+    this.created,
+    this.lastUsed,
+    this.token,
+  });
+
+  final int id;
+  final String name;
+  final int tag;
+  final String? tagName;
+  final DateTime? created;
+  final DateTime? lastUsed;
+
+  /// Der Schlüssel; nur direkt nach dem Anlegen gesetzt.
+  final String? token;
+
+  factory IntegrationToken.fromJson(Map<String, dynamic> j) => IntegrationToken(
+    id: j['id'] as int,
+    name: j['name'] as String? ?? '',
+    tag: _int(j['tag']) ?? 0,
+    tagName: j['tag_name'] as String?,
+    created: DateTime.tryParse('${j['created']}'),
+    lastUsed: DateTime.tryParse('${j['last_used']}'),
+    token: j['token'] as String?,
+  );
+}

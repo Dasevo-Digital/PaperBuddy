@@ -49,6 +49,7 @@ class OperationsResource {
     '/api/health/',
     '/metrics/',
     '/api/documents/{id}/access_log/',
+    '/api/integration_tokens/',
   ];
 
   /// Ohne Anmeldung erreichbar.
@@ -65,7 +66,7 @@ class OperationsResource {
   Future<User?> _admin(Request request) async {
     try {
       final user = await auth.userForAuthorizationHeader(request.headers['authorization']);
-      return user != null && user.isSuperuser ? user : null;
+      return user != null && user.isSuperuser && user.scope == null ? user : null;
     } on Exception {
       return null;
     }

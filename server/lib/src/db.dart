@@ -350,6 +350,18 @@ const _migrations = <String>[
     field_id INTEGER NOT NULL REFERENCES custom_fields(id) ON DELETE CASCADE
   );
   ''',
+  // 13: Integrations-Token (nur lesen, auf einen Tag beschränkt), z. B. für Famio
+  '''
+  CREATE TABLE integration_tokens (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    key_hash TEXT NOT NULL UNIQUE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    created TEXT NOT NULL,
+    last_used TEXT
+  );
+  ''',
 ];
 
 Database openDatabase(String path) {

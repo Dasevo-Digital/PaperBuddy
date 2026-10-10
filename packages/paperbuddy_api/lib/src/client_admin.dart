@@ -161,6 +161,28 @@ extension PaperlessAdmin on PaperlessClient {
   Future<void> deleteReminder(int id) =>
       _send('DELETE', '/api/reminders/$id/');
 
+  // Integrations-Token --------------------------------------------------------
+
+  /// Eigene Token (Administratoren: alle); leer bei Paperless-ngx.
+  Future<List<IntegrationToken>> integrationTokens() async {
+    try {
+      return [
+        for (final t in (await _send('GET', '/api/integration_tokens/')) as List)
+          IntegrationToken.fromJson(t as Map<String, dynamic>),
+      ];
+    } on ApiException catch (e) {
+      if (e.isNotFound) return [];
+      rethrow;
+    }
+  }
+
+  /// Neues Token, das nur Dokumente mit [tag] lesen darf; der Schlüssel steht
+  /// in [IntegrationToken.token] und wird nur jetzt geliefert.
+  Future<IntegrationToken> createIntegrationToken(String name, int tag) async =>
+      IntegrationToken.fromJson(await _json('POST', '/api/integration_tokens/', {'name': name, 'tag': tag}));
+
+  Future<void> deleteIntegrationToken(int id) => _send('DELETE', '/api/integration_tokens/$id/');
+
   // Zwei-Faktor-Anmeldung -----------------------------------------------------
 
   /// Neuer Schlüssel; aktiv erst nach [activateTotp] mit einem passenden Code.

@@ -7,6 +7,7 @@ import '../environment.dart';
 import 'admin/custom_fields_screen.dart';
 import 'admin/labels_screen.dart';
 import 'admin/mail_screen.dart';
+import 'admin/integration_tokens_screen.dart';
 import 'admin/profile_screen.dart';
 import 'admin/trash_screen.dart';
 import 'admin/users_screen.dart';
@@ -138,6 +139,12 @@ class SettingsScreen extends StatelessWidget {
             title: Text(tr.profile),
             subtitle: Text(tr.nameEmailPassword),
             onTap: () => _open(context, const ProfileScreen()),
+          ),
+          ListTile(
+            leading: const Icon(LucideIcons.keyRound),
+            title: Text(tr.integrationsTitle),
+            subtitle: Text(tr.integrationsSubtitle),
+            onTap: () => _open(context, const IntegrationTokensScreen()),
           ),
           const Divider(),
           Padding(

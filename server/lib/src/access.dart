@@ -79,8 +79,11 @@ class Access {
     };
   }
 
-  bool has(User u, String action, String model) =>
-      u.isSuperuser || permissions(u).contains('${action}_$model');
+  bool has(User u, String action, String model) {
+    // Integrations-Token lesen nur.
+    if (u.scope != null && action != 'view') return false;
+    return u.isSuperuser || permissions(u).contains('${action}_$model');
+  }
 
   void require(User u, String action, String model) {
     if (!has(u, action, model)) throw forbidden();
@@ -99,26 +102,36 @@ class Access {
 
   /// SQL-Bedingung für sichtbare Objekte (nur Ganzzahlen eingesetzt).
   String visibleSql(User u, String type, String alias) {
-    if (u.isSuperuser) return '1 = 1';
-    return '($alias.owner IS NULL OR $alias.owner = ${u.id} OR '
-        '${_sharedWith(u, type, alias, ['view', 'change'])})';
+    final scope = u.scope;
+    final tagged = scope != null && type == 'document'
+        ? ' AND $alias.id IN (SELECT document_id FROM document_tags WHERE tag_id = ${scope.tagId})'
+        : '';
+    if (u.isSuperuser) return '(1 = 1$tagged)';
+    return '(($alias.owner IS NULL OR $alias.owner = ${u.id} OR '
+        '${_sharedWith(u, type, alias, ['view', 'change'])})$tagged)';
   }
 
   /// SQL-Bedingung für änderbare Objekte.
   String changeableSql(User u, String type, String alias) {
+    if (u.scope != null) return '0 = 1';
     if (u.isSuperuser) return '1 = 1';
     return '($alias.owner IS NULL OR $alias.owner = ${u.id} OR '
         '${_sharedWith(u, type, alias, ['change'])})';
   }
 
-  bool canView(User u, String type, int id, int? owner) =>
-      u.isSuperuser ||
-      owner == null ||
-      owner == u.id ||
-      _hasObjectPerm(u, type, id, const ['view', 'change']);
+  bool canView(User u, String type, int id, int? owner) {
+    final scope = u.scope;
+    if (scope != null &&
+        type == 'document' &&
+        db.select('SELECT 1 FROM document_tags WHERE document_id = ? AND tag_id = ?', [id, scope.tagId]).isEmpty) {
+      return false;
+    }
+    return u.isSuperuser || owner == null || owner == u.id || _hasObjectPerm(u, type, id, const ['view', 'change']);
+  }
 
   bool canChange(User u, String type, int id, int? owner) =>
-      u.isSuperuser || owner == null || owner == u.id || _hasObjectPerm(u, type, id, const ['change']);
+      u.scope == null &&
+      (u.isSuperuser || owner == null || owner == u.id || _hasObjectPerm(u, type, id, const ['change']));
 
   bool _hasObjectPerm(User u, String type, int id, List<String> perms) {
     final groups = groupIds(u);

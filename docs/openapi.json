@@ -977,6 +977,55 @@
         }
       }
     },
+    "/api/integration_tokens/": {
+      "x-paperbuddy-extension": true,
+      "get": {
+        "tags": [
+          "integration_tokens"
+        ],
+        "operationId": "get_api_integration_tokens",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "integration_tokens"
+        ],
+        "operationId": "post_api_integration_tokens",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/integration_tokens/{id}/": {
+      "x-paperbuddy-extension": true,
+      "delete": {
+        "tags": [
+          "integration_tokens"
+        ],
+        "operationId": "delete_api_integration_tokens_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/mail_accounts/": {
       "get": {
         "tags": [

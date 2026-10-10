@@ -5,6 +5,11 @@ ausführliche Fassung mit Hintergründen steht im jeweiligen Release.
 
 ## Unveröffentlicht
 
+- **Integrations-Token** für andere Apps wie Famio: nur lesen, nur Dokumente
+  mit einem Tag samt deren Fristen, verwaltet unter Einstellungen → Zugriff
+  für andere Apps.
+- **Behoben:** „Vom Gerät entfernen“ in der Offline-Liste löste in
+  Debug-Builds eine Assertion aus.
 - **Barcode-Trennblätter:** Stapelscans werden an Seiten mit dem Barcode
   `PATCHT` aufgeteilt, Barcodes wie `ASN00042` setzen die Archivnummer – mit
   denselben Einstellungen wie Paperless-ngx (`CONSUMER_ENABLE_BARCODES`,

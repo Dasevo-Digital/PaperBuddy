@@ -34,7 +34,11 @@ class _OfflineScreenState extends State<OfflineScreen> {
 
   Future<void> _remove(OfflineDocument d) async {
     await AppScope.read(context).files?.removeOffline(d.id);
-    setState(() => _docs = _load());
+    if (!mounted) return;
+    final docs = _load();
+    setState(() {
+      _docs = docs;
+    });
   }
 
   @override

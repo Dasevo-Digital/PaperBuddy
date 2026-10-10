@@ -11,10 +11,20 @@ import 'security.dart';
 import 'totp.dart';
 
 class User {
-  User(this.id, this.username, {required this.isSuperuser});
+  User(this.id, this.username, {required this.isSuperuser, this.scope});
   final int id;
   final String username;
   final bool isSuperuser;
+
+  /// Gesetzt bei Integrations-Token: nur lesen, nur Dokumente mit dem Tag.
+  final TokenScope? scope;
+}
+
+/// Einschränkung eines Integrations-Tokens.
+class TokenScope {
+  const TokenScope({required this.tokenId, required this.tagId});
+  final int tokenId;
+  final int tagId;
 }
 
 /// Passwort-Hashes im Django-Format `pbkdf2_sha256$<iter>$<salt>$<hash>`,
@@ -240,13 +250,53 @@ class AuthService {
     return key;
   }
 
-  User? userForToken(String token) => _userFromRow(
-    db.select(
-      'SELECT u.* FROM tokens t JOIN users u ON u.id = t.user_id '
-      'WHERE t.key = ? AND u.is_active = 1',
-      [token],
-    ).firstOrNull,
-  );
+  User? userForToken(String token) {
+    if (token.startsWith(integrationPrefix)) return _userForIntegrationToken(token);
+    return _userFromRow(
+      db.select(
+        'SELECT u.* FROM tokens t JOIN users u ON u.id = t.user_id '
+        'WHERE t.key = ? AND u.is_active = 1',
+        [token],
+      ).firstOrNull,
+    );
+  }
+
+  // Integrations-Token ----------------------------------------------------------
+
+  static const integrationPrefix = 'pbi_';
+
+  static String _hashKey(String key) => sha256.convert(utf8.encode(key)).toString();
+
+  /// Legt ein Token für [owner] an, das nur Dokumente mit [tagId] lesen darf.
+  /// Liefert den Schlüssel; gespeichert wird nur sein Hash.
+  (int, String) createIntegrationToken(User owner, String name, int tagId) {
+    final key = '$integrationPrefix${List.generate(24, (_) => _random.nextInt(256).toRadixString(16).padLeft(2, '0')).join()}';
+    db.execute(
+      'INSERT INTO integration_tokens (name, key_hash, user_id, tag_id, created) VALUES (?, ?, ?, ?, ?)',
+      [name, _hashKey(key), owner.id, tagId, nowIso()],
+    );
+    return (db.lastInsertRowId, key);
+  }
+
+  User? _userForIntegrationToken(String key) {
+    final row = db.select(
+      'SELECT u.*, t.id AS token_id, t.tag_id, t.last_used FROM integration_tokens t '
+      'JOIN users u ON u.id = t.user_id WHERE t.key_hash = ? AND u.is_active = 1',
+      [_hashKey(key)],
+    ).firstOrNull;
+    if (row == null) return null;
+    // Zuletzt benutzt, höchstens einmal je Minute schreiben.
+    final last = DateTime.tryParse('${row['last_used']}');
+    if (last == null || DateTime.now().difference(last).inMinutes >= 1) {
+      db.execute('UPDATE integration_tokens SET last_used = ? WHERE id = ?', [nowIso(), row['token_id']]);
+    }
+    return User(
+      row['id'] as int,
+      row['username'] as String,
+      isSuperuser: row['is_superuser'] == 1,
+      scope: TokenScope(tokenId: row['token_id'] as int, tagId: row['tag_id'] as int),
+    );
+  }
 
   /// Unterstützt `Authorization: Token …` und `Basic …` wie Paperless-ngx.
   /// Basic-Auth läuft über [login], ist also ebenfalls gebremst.

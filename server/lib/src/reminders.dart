@@ -53,8 +53,10 @@ class Reminders {
   User _user(Request r) => r.context['user'] as User;
 
   /// Eigene Fristen an Dokumenten, die der Benutzer (noch) sehen darf.
+  /// Integrations-Token sehen alle Fristen an ihren Dokumenten (etwa die
+  /// der ganzen Familie), nicht nur die des Token-Erstellers.
   String _visible(User u) =>
-      'r.owner = ${u.id} AND d.deleted_at IS NULL AND ${access.visibleSql(u, 'document', 'd')}';
+      '${u.scope != null ? '' : 'r.owner = ${u.id} AND '}d.deleted_at IS NULL AND ${access.visibleSql(u, 'document', 'd')}';
 
   static const _select =
       'SELECT r.*, d.title FROM reminders r JOIN documents d ON d.id = r.document_id';

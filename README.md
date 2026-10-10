@@ -258,6 +258,16 @@ Die Passphrase unbedingt getrennt vom Server aufbewahren (etwa im
 Passwort-Manager). Ohne sie ist eine Sicherung nicht zu öffnen, auch nicht
 vom Entwickler.
 
+## Andere Apps anbinden (z. B. Famio)
+
+Unter Einstellungen → Zugriff für andere Apps legt man ein **Integrations-Token**
+an: Es liest nur Dokumente mit einem bestimmten Tag (etwa „Familie“) samt allen
+Fristen daran, kann nichts ändern, sieht höchstens, was sein Ersteller sieht, und
+kommt nicht an Benutzer, Mailkonten, Workflows, Statistiken oder das
+Zugriffsprotokoll. Gespeichert wird nur ein Hash; der Schlüssel (`pbi_…`)
+erscheint einmal beim Anlegen. In Famio unter Verwaltung → PaperBuddy eintragen.
+Über die API: `/api/integration_tokens/` (PaperBuddy-Erweiterung).
+
 ## Überwachung
 
 - **`GET /api/health/`** (ohne Anmeldung): `{"status": "ok", "version": …}`,

@@ -797,5 +797,22 @@
   },
   "mailConsume": "Übernehmen",
   "signOutQuestion": "Abmelden?",
-  "eInvoice": "E-Rechnung"
+  "eInvoice": "E-Rechnung",
+  "integrationsTitle": "Zugriff für andere Apps",
+  "integrationsSubtitle": "Token für Famio und andere, nur lesend",
+  "integrationsIntro": "Ein Integrations-Token erlaubt einer anderen App wie Famio, die Dokumente mit einem bestimmten Tag samt ihren Fristen zu lesen. Es kann nichts ändern und sieht höchstens, was du selbst siehst.",
+  "integrationsEmpty": "Noch keine Token.",
+  "integrationCreate": "Token anlegen",
+  "integrationTag": "Tag",
+  "integrationCreated": "Token angelegt",
+  "integrationKeyHint": "Den Schlüssel in der anderen App eintragen, in Famio unter Verwaltung → PaperBuddy. Er wird nur jetzt angezeigt.",
+  "integrationLastUsed": "Zuletzt benutzt {date}",
+  "integrationNeverUsed": "Noch nicht benutzt",
+  "integrationDeleteQuestion": "Token löschen?",
+  "integrationDeleteHint": "Die App verliert den Zugriff sofort.",
+  "@integrationLastUsed": {
+    "placeholders": {
+      "date": {}
+    }
+  }
 }
