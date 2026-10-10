@@ -295,7 +295,7 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                           value: _correspondent,
                           onChanged: (v) => setState(() => _correspondent = v),
                           onCreate: client.user.can('add', 'correspondent')
-                              ? client.createCorrespondent
+                              ? state.createCorrespondent
                               : null,
                         ),
                         LabelField<DocumentType>(
@@ -305,7 +305,7 @@ class _DocumentEditScreenState extends State<DocumentEditScreen> {
                           value: _documentType,
                           onChanged: (v) => setState(() => _documentType = v),
                           onCreate: client.user.can('add', 'documenttype')
-                              ? client.createDocumentType
+                              ? state.createDocumentType
                               : null,
                         ),
                         LabelField<StoragePath>(

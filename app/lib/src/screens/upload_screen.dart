@@ -203,7 +203,7 @@ class _UploadScreenState extends State<UploadScreen> {
                       value: _correspondent,
                       onChanged: (v) => setState(() => _correspondent = v),
                       onCreate: client.user.can('add', 'correspondent')
-                          ? client.createCorrespondent
+                          ? state.createCorrespondent
                           : null,
                     ),
                     LabelField<DocumentType>(
@@ -213,7 +213,7 @@ class _UploadScreenState extends State<UploadScreen> {
                       value: _documentType,
                       onChanged: (v) => setState(() => _documentType = v),
                       onCreate: client.user.can('add', 'documenttype')
-                          ? client.createDocumentType
+                          ? state.createDocumentType
                           : null,
                     ),
                     LabelField<StoragePath>(

@@ -137,7 +137,7 @@ class _Root extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 250),
+      duration: AppState.signOutTransition,
       child: switch (state.status) {
         SessionStatus.starting => const Scaffold(
           key: ValueKey('starting'),

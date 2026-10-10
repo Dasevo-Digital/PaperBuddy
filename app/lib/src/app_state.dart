@@ -225,10 +225,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// So lange blendet die Oberfläche beim Abmelden über (siehe `_Root`).
+  static const signOutTransition = Duration(milliseconds: 250);
+
   Future<void> logout() async {
     await _store.clear();
-    _client?.close();
-    _client = null;
+    final old = _client;
     thumbnails.clear();
     // Abmelden entfernt auch alle Dokumente vom Gerät.
     await files?.clearAll();
@@ -246,6 +248,25 @@ class AppState extends ChangeNotifier {
     groups = {};
     status = SessionStatus.signedOut;
     notifyListeners();
+    // Die bisherige Oberfläche blendet noch aus und baut dabei neu; sie
+    // liest den Client. Erst danach freigeben.
+    await Future<void>.delayed(signOutTransition * 2);
+    if (identical(_client, old)) _client = null;
+    old?.close();
+  }
+
+  /// Neu anlegen und gleich in die Listen übernehmen, damit Auswahlfelder
+  /// den Namen statt einer Nummer zeigen.
+  Future<Correspondent> createCorrespondent(String name) async {
+    final created = await client.createCorrespondent(name);
+    await refreshLabels();
+    return created;
+  }
+
+  Future<DocumentType> createDocumentType(String name) async {
+    final created = await client.createDocumentType(name);
+    await refreshLabels();
+    return created;
   }
 
   Future<void> refreshLabels() async {

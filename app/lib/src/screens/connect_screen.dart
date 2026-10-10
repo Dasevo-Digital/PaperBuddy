@@ -71,6 +71,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
       _busy = true;
       _error = null;
     });
+    var askCode = false;
     try {
       await AppScope.read(context).login(
         _server.text,
@@ -86,11 +87,17 @@ class _ConnectScreenState extends State<ConnectScreen> {
         _error = first ? null : e.message;
       });
       _code.clear();
-      _codeFocus.requestFocus();
+      askCode = true;
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+    // Erst nach dem Freigeben: Ein gesperrtes Feld nimmt keinen Fokus an.
+    if (askCode && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _codeFocus.requestFocus();
+      });
     }
   }
 
