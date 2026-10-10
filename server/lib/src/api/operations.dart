@@ -43,7 +43,13 @@ class OperationsResource {
   final List<(String, String)> Function() routes;
 
   /// Eigene Erweiterungen, die Paperless-ngx nicht kennt.
-  static const extensions = ['/api/reminders/', '/api/scanners/', '/api/health/', '/metrics/'];
+  static const extensions = [
+    '/api/reminders/',
+    '/api/scanners/',
+    '/api/health/',
+    '/metrics/',
+    '/api/documents/{id}/access_log/',
+  ];
 
   /// Ohne Anmeldung erreichbar.
   static const public = {'/api/token/', '/api/oauth/callback/', '/api/health/', '/share/{slug}/', '/metrics/'};

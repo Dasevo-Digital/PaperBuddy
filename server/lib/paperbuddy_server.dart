@@ -19,3 +19,4 @@ export 'src/version.dart';
 export 'src/reminders.dart';
 export 'src/security.dart';
 export 'src/backup/backup.dart';
+export 'src/access_log.dart';

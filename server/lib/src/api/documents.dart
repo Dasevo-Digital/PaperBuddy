@@ -4,6 +4,7 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import '../access.dart';
+import '../access_log.dart';
 import '../auth.dart';
 import '../db.dart';
 import '../history.dart';
@@ -27,6 +28,7 @@ class DocumentsResource {
     required this.trash,
     this.pdf,
     this.history,
+    this.accessLog,
     this.onUpdated,
   });
 
@@ -38,6 +40,7 @@ class DocumentsResource {
   final Trash trash;
   final PdfOperations? pdf;
   final History? history;
+  final AccessLog? accessLog;
 
   /// Wird nach jeder Änderung an einem Dokument aufgerufen (Workflows).
   final Future<void> Function(int documentId)? onUpdated;
@@ -350,8 +353,11 @@ class DocumentsResource {
   }
 
   Response get(Request request) {
-    access.require(_user(request), 'view', _model);
-    return json(serialize(_require(request), request));
+    final user = _user(request);
+    access.require(user, 'view', _model);
+    final row = _require(request);
+    accessLog?.record(row['id'] as int, 'view', userId: user.id);
+    return json(serialize(row, request));
   }
 
   // ---------------------------------------------------------------------------
@@ -623,8 +629,11 @@ class DocumentsResource {
   }
 
   Future<Response> download(Request request, {bool inline = false}) async {
-    access.require(_user(request), 'view', _model);
+    final user = _user(request);
+    access.require(user, 'view', _model);
     final row = _require(request);
+    // Vorschau im Browser zählt als angesehen, sonst heruntergeladen.
+    accessLog?.record(row['id'] as int, inline ? 'view' : 'download', userId: user.id);
     final f = _files(request, row);
     final wantOriginal = asBool(request.url.queryParameters['original']);
     if (!wantOriginal && f.archive != null) {
@@ -731,6 +740,19 @@ class DocumentsResource {
       throw Access.forbidden();
     }
     return json(history?.entries(row['id'] as int) ?? const []);
+  }
+
+  /// Zugriffe auf ein Dokument (PaperBuddy-Erweiterung); dieselben Rechte
+  /// wie beim Verlauf.
+  Response accessLogOf(Request request) {
+    final user = _user(request);
+    access.require(user, 'view', _model);
+    final row = _require(request);
+    final owner = row['owner'] as int?;
+    if (!(user.isSuperuser || owner == null || owner == user.id || access.has(user, 'view', 'history'))) {
+      throw Access.forbidden();
+    }
+    return json(accessLog?.entries(row['id'] as int) ?? const []);
   }
 
   Future<Response> metadata(Request request) async {
@@ -871,6 +893,7 @@ class DocumentsResource {
     route('GET', '$doc/suggestions/', suggestions);
     route('GET', '$doc/notes/', notes);
     route('GET', '$doc/history/', historyOf);
+    route('GET', '$doc/access_log/', accessLogOf);
     route('POST', '$doc/update_version/', updateVersion);
     route('DELETE', '$doc/versions/<version|[0-9]+>/', deleteVersion);
     route('POST', '$doc/notes/', addNote);

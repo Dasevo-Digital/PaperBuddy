@@ -548,6 +548,30 @@
         }
       }
     },
+    "/api/documents/{id}/access_log/": {
+      "x-paperbuddy-extension": true,
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "operationId": "get_api_documents_id_access_log",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/documents/{id}/download/": {
       "get": {
         "tags": [

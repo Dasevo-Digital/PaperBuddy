@@ -228,6 +228,40 @@ class HistoryEntry {
   );
 }
 
+/// Zugriff auf ein Dokument (PaperBuddy-Erweiterung
+/// `/api/documents/<id>/access_log/`).
+class AccessEntry {
+  const AccessEntry({
+    required this.id,
+    required this.timestamp,
+    required this.action,
+    this.actor,
+    this.shareLink,
+    this.address,
+  });
+  final int id;
+  final DateTime? timestamp;
+
+  /// `view`, `download` oder `share` (über einen Freigabelink)
+  final String action;
+
+  /// Benutzername; `null` bei Freigabelinks.
+  final String? actor;
+  final int? shareLink;
+
+  /// Nur bei Freigabelinks gespeichert.
+  final String? address;
+
+  factory AccessEntry.fromJson(Map<String, dynamic> j) => AccessEntry(
+    id: j['id'] as int,
+    timestamp: _date(j['timestamp']),
+    action: j['action'] as String? ?? 'view',
+    actor: (j['actor'] as Map?)?['username'] as String?,
+    shareLink: _int(j['share_link']),
+    address: j['address'] as String?,
+  );
+}
+
 class CustomFieldValue {
   const CustomFieldValue(this.field, this.value);
   final int field;

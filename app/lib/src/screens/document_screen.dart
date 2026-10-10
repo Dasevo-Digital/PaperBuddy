@@ -444,6 +444,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
           },
         ),
         HistorySection(key: ValueKey(_doc.modified), documentId: _doc.id),
+        AccessLogSection(documentId: _doc.id),
         const SizedBox(height: 20),
         Text('Inhalt', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),

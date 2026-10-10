@@ -274,3 +274,85 @@ class _HistorySectionState extends State<HistorySection> {
     );
   }
 }
+
+/// Wer das Dokument angesehen, heruntergeladen oder über einen Freigabelink
+/// abgerufen hat (PaperBuddy-Erweiterung).
+class AccessLogSection extends StatefulWidget {
+  const AccessLogSection({super.key, required this.documentId});
+
+  final int documentId;
+
+  @override
+  State<AccessLogSection> createState() => _AccessLogSectionState();
+}
+
+class _AccessLogSectionState extends State<AccessLogSection> {
+  Future<List<AccessEntry>>? _entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      title: Text('Zugriffe', style: theme.textTheme.titleMedium),
+      onExpansionChanged: (open) {
+        if (open && _entries == null) {
+          setState(() {
+            _entries = AppScope.read(
+              context,
+            ).client.accessLog(widget.documentId);
+          });
+        }
+      },
+      children: [
+        FutureBuilder<List<AccessEntry>>(
+          future: _entries,
+          builder: (context, snap) {
+            if (snap.hasError) {
+              final e = snap.error;
+              return Text(switch (e) {
+                ApiException(isNotFound: true) =>
+                  'Der Server protokolliert keine Zugriffe.',
+                ApiException(statusCode: 403) =>
+                  'Nur für den Eigentümer sichtbar.',
+                _ => '$e',
+              });
+            }
+            final entries = snap.data;
+            if (entries == null) {
+              return const Padding(
+                padding: EdgeInsets.all(12),
+                child: LinearProgressIndicator(),
+              );
+            }
+            if (entries.isEmpty) return const Text('Noch keine Zugriffe');
+            return Column(
+              children: [
+                for (final e in entries)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(switch (e.action) {
+                      'download' => LucideIcons.download,
+                      'share' => LucideIcons.link,
+                      _ => LucideIcons.eye,
+                    }),
+                    title: Text(switch (e.action) {
+                      'download' => 'Heruntergeladen',
+                      'share' => 'Über Freigabelink abgerufen',
+                      _ => 'Angesehen',
+                    }),
+                    subtitle: Text(
+                      [
+                        if (e.timestamp != null) formatDayTime(e.timestamp!),
+                        ?(e.actor ?? e.address),
+                      ].join(' · '),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}

@@ -6,6 +6,8 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import '../access.dart';
+import '../access_log.dart';
+import '../security.dart';
 import '../auth.dart';
 import '../db.dart';
 import '../storage.dart';
@@ -13,10 +15,12 @@ import 'http_utils.dart';
 
 /// Freigabelinks: ein Dokument ohne Anmeldung herunterladen (`/share/<slug>`).
 class ShareLinksResource {
-  ShareLinksResource(this.db, this.access, this.store);
+  ShareLinksResource(this.db, this.access, this.store, {this.accessLog, this.clientAddress = const ClientAddress()});
   final Database db;
   final Access access;
   final BlobStore store;
+  final AccessLog? accessLog;
+  final ClientAddress clientAddress;
   static final _random = Random.secure();
 
   static String _slug() {
@@ -118,6 +122,12 @@ class ShareLinksResource {
     if (row == null || (expiration != null && expiration.isBefore(DateTime.now()))) {
       return Response.notFound('Dieser Link ist ungültig oder abgelaufen.');
     }
+    accessLog?.record(
+      row['document_id'] as int,
+      'share',
+      shareLinkId: row['id'] as int,
+      address: clientAddress.of(request),
+    );
     final original = row['original_filename'] as String;
     if (row['file_version'] == 'archive' && row['archive_path'] != null) {
       final f = await store.get(row['archive_path'] as String);

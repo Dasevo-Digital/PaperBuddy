@@ -329,6 +329,20 @@ const _migrations = <String>[
   );
   CREATE INDEX reminders_owner_due ON reminders(owner, done, due);
   ''',
+  // 11: Zugriffe auf Dokumente (angesehen, heruntergeladen, Freigabelink)
+  '''
+  CREATE TABLE document_access (
+    id INTEGER PRIMARY KEY,
+    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    timestamp TEXT NOT NULL,
+    action TEXT NOT NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    share_link_id INTEGER,
+    address TEXT
+  );
+  CREATE INDEX document_access_doc ON document_access(document_id, timestamp);
+  CREATE INDEX document_access_time ON document_access(timestamp);
+  ''',
 ];
 
 Database openDatabase(String path) {

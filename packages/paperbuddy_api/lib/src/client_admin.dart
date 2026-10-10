@@ -344,6 +344,15 @@ extension PaperlessAdmin on PaperlessClient {
       HistoryEntry.fromJson(h as Map<String, dynamic>),
   ];
 
+  /// Wer das Dokument angesehen, heruntergeladen oder über einen
+  /// Freigabelink abgerufen hat (nur PaperBuddy; Paperless antwortet 404).
+  Future<List<AccessEntry>> accessLog(int documentId) async => [
+    for (final a
+        in (await _send('GET', '/api/documents/$documentId/access_log/'))
+            as List)
+      AccessEntry.fromJson(a as Map<String, dynamic>),
+  ];
+
   /// Neue Fassung hochladen; liefert die Task-ID.
   Future<String> uploadVersion(
     int documentId,

@@ -8,6 +8,7 @@ import 'package:shelf/shelf_io.dart' as io;
 import 'package:sqlite3/sqlite3.dart';
 
 import 'access.dart';
+import 'access_log.dart';
 import 'backup/backup.dart';
 import 'api/custom_fields.dart';
 import 'api/paperless_api.dart';
@@ -50,6 +51,7 @@ class PaperbuddyServer {
     required this.scanners,
     required this.reminders,
     required this.backups,
+    required this.accessLog,
   });
 
   final Config config;
@@ -66,6 +68,7 @@ class PaperbuddyServer {
   final Reminders reminders;
   final ScannerService scanners;
   final BackupService backups;
+  final AccessLog accessLog;
   HttpServer? _http;
   Timer? _trainTimer;
 
@@ -124,6 +127,11 @@ class PaperbuddyServer {
       settings: config.backup,
       statusFile: p.join(config.dataDir, 'backup-status.json'),
     );
+    final accessLog = AccessLog(
+      db,
+      enabled: config.accessLog,
+      retention: Duration(days: config.accessLogDays),
+    );
     final api = PaperlessApi(
       db: db,
       auth: auth,
@@ -160,6 +168,7 @@ class PaperbuddyServer {
       clientAddress: ClientAddress(trustedProxies: config.trustedProxies),
       hsts: config.publicUrl?.startsWith('https://') ?? false,
       backups: backups,
+      accessLog: accessLog,
     );
     final watcher = config.consumeDir == null
         ? null
@@ -179,6 +188,7 @@ class PaperbuddyServer {
       scanners: scanners,
       reminders: reminders,
       backups: backups,
+      accessLog: accessLog,
     );
   }
 
@@ -199,6 +209,7 @@ class PaperbuddyServer {
     workflows.startScheduler();
     reminders.start();
     backups.start();
+    if (config.accessLog) accessLog.start();
     if (config.backupDir != null && config.backup == null) {
       _log.warning('PAPERBUDDY_BACKUP_DIR ist gesetzt, aber keine Passphrase: keine Sicherung.');
     } else if (config.backupDir == null) {
@@ -222,6 +233,7 @@ class PaperbuddyServer {
     workflows.stop();
     reminders.stop();
     backups.stop();
+    accessLog.stop();
     mail.stop();
     scanners.close();
     _trainTimer?.cancel();

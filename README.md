@@ -126,7 +126,11 @@ Verwaltungsbefehle laufen über `paperbuddy-manage` (z. B. `paperbuddy-manage ex
 - **Fristen:** Erinnerungen an Dokumenten (z. B. Kündigungsfrist), in der App unter
   Übersicht und Benachrichtigungen, per E-Mail am Fälligkeitstag, wenn `EMAIL_HOST` gesetzt
   ist (PaperBuddy-Erweiterung `/api/reminders/`, Paperless-Apps ignorieren sie)
-- **Teilen:** Mehrbenutzer mit Gruppen, Modell- und Objektrechten, Freigabelinks ohne Anmeldung
+- **Teilen:** Mehrbenutzer mit Gruppen, Modell- und Objektrechten, Freigabelinks ohne Anmeldung;
+  Zugriffsprotokoll je Dokument (wer hat angesehen, heruntergeladen oder einen Freigabelink genutzt),
+  sichtbar für Eigentümer und Administratoren unter Detailansicht → Zugriffe (PaperBuddy-Erweiterung
+  `/api/documents/<id>/access_log/`; Wiederholungen innerhalb von 10 Minuten zählen einmal, die
+  Adresse wird nur bei Freigabelinks gespeichert)
 - **Sicherheit:** Zwei-Faktor-Anmeldung (TOTP mit Wiederherstellungscodes), Login-Bremse gegen Passwort-Raten, tägliche verschlüsselte und geprüfte Sicherung (age-Format), Papierkorb mit Frist, Export im Paperless-Format, Import aus Paperless-ngx
 - **Speicher:** lokal, S3-kompatibel (AWS, MinIO, RustFS …) oder WebDAV (z. B. Nextcloud)
 
@@ -162,6 +166,7 @@ Umgebungsvariablen mit Präfix `PAPERBUDDY_`. Die `PAPERLESS_`-Namen werden eben
 | `BACKUP_DIR` | – | Ordner für die tägliche, verschlüsselte Sicherung (siehe [Sicherung](#sicherung)) |
 | `BACKUP_PASSPHRASE` / `BACKUP_PASSPHRASE_FILE` | – | Passphrase dafür, direkt oder aus einer Datei |
 | `BACKUP_TIME` / `BACKUP_KEEP` | `03:00` / `7` | Uhrzeit der Sicherung (Ortszeit des Servers, `TZ`); so viele bleiben liegen |
+| `ACCESS_LOG` / `ACCESS_LOG_DAYS` | `true` / `90` | Zugriffe auf Dokumente protokollieren (angesehen, heruntergeladen, Freigabelink) und so viele Tage behalten |
 | `DEBUG` | – | `1` = jede Anfrage loggen |
 
 ## Verwaltung auf der Kommandozeile

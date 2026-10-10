@@ -33,6 +33,8 @@ class Config {
     this.backup,
     this.backupDir,
     this.backupPassphrase,
+    this.accessLog = true,
+    this.accessLogDays = 90,
   });
 
   final String host;
@@ -94,6 +96,10 @@ class Config {
   /// (`manage backup`).
   final String? backupDir;
   final String? backupPassphrase;
+
+  /// Zugriffe auf Dokumente protokollieren und so viele Tage behalten.
+  final bool accessLog;
+  final int accessLogDays;
 
   String get databasePath => p.join(dataDir, 'paperbuddy.sqlite3');
 
@@ -168,6 +174,8 @@ class Config {
       trustedProxies: _list(get('TRUSTED_PROXIES')),
       backupDir: backupDir == null ? null : p.absolute(backupDir),
       backupPassphrase: passphrase,
+      accessLog: (get('ACCESS_LOG') ?? 'true') != 'false',
+      accessLogDays: int.parse(get('ACCESS_LOG_DAYS') ?? '90'),
       backup: backupDir == null || passphrase == null || passphrase.isEmpty
           ? null
           : BackupSettings(

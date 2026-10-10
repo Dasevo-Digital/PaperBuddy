@@ -6,6 +6,7 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import '../access.dart';
+import '../access_log.dart';
 import '../auth.dart';
 import '../backup/backup.dart';
 import '../history.dart';
@@ -50,6 +51,7 @@ class PaperlessApi {
     this.clientAddress = const ClientAddress(),
     this.hsts = false,
     this.backups,
+    this.accessLog,
     Metrics? metrics,
   }) : metrics = metrics ?? Metrics();
 
@@ -71,6 +73,9 @@ class PaperlessApi {
 
   /// Für den Zustand der Sicherung in `/api/health/` und `/metrics`.
   final BackupService? backups;
+
+  /// Zugriffe auf Dokumente; `null` = nicht protokollieren.
+  final AccessLog? accessLog;
 
   final Metrics metrics;
 
@@ -131,7 +136,7 @@ class PaperlessApi {
     route('GET', '/api/tasks/<id|[0-9]+>/', _task);
     route('POST', '/api/acknowledge_tasks/', _acknowledgeTasks);
     route('GET', '/api/config/', _config);
-    ShareLinksResource(db, access, store).mount(route);
+    ShareLinksResource(db, access, store, accessLog: accessLog, clientAddress: clientAddress).mount(route);
 
     UsersResource(db, auth, access).mount(route);
     OperationsResource(db: db, auth: auth, metrics: metrics, backups: backups, routes: () => _routes).mount(route);
@@ -146,6 +151,7 @@ class PaperlessApi {
       trash: trash,
       pdf: pdf,
       history: history,
+      accessLog: accessLog,
       onUpdated: onDocumentUpdated,
     ).mount(route);
 

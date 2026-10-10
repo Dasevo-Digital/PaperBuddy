@@ -13,6 +13,16 @@ ausführliche Fassung mit Hintergründen steht im jeweiligen Release.
 - **Überwachung:** `/api/health/` für Uptime-Monitore, `/metrics` im
   Prometheus-Format und `/api/schema/` mit der OpenAPI-Beschreibung aller
   Endpunkte (Kopie in `docs/openapi.json`).
+- **Zugriffsprotokoll:** Wer ein Dokument angesehen, heruntergeladen oder
+  über einen Freigabelink abgerufen hat, steht in der Detailansicht unter
+  „Zugriffe“ (für Eigentümer und Administratoren). Abschaltbar mit
+  `PAPERBUDDY_ACCESS_LOG=false`, Aufbewahrung `PAPERBUDDY_ACCESS_LOG_DAYS`
+  (Standard 90 Tage).
+- **Integrationstests** der echten App gegen Wegwerf-Server, auch in der CI.
+- **Behoben:** Beim Abmelden blitzte kurz ein Fehlerbild auf; nach einem
+  falschen Zwei-Faktor-Code stand der Cursor nicht wieder im Codefeld; neu
+  angelegte Korrespondenten und Dokumenttypen erschienen im Formular als
+  Nummer.
 - **Behoben:** Der Docker-Healthcheck schlug immer fehl, weil `/bin/sh` im
   Image `dash` ist und `/dev/tcp` nicht kennt; Container galten dadurch als
   „unhealthy“. Er fragt jetzt `/api/health/` über `bash` ab.

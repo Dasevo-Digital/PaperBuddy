@@ -159,4 +159,15 @@ void main() {
     );
     expect(await admin.scanners(), isA<List<ScannerInfo>>());
   });
+
+  test('Zugriffe: angesehen und heruntergeladen, neueste zuerst', () async {
+    final id = await upload(admin, 'zugriff.txt', 'Zugriffsprotokoll');
+    await admin.document(id);
+    await admin.downloadFile(id);
+    final log = await admin.accessLog(id);
+    expect([for (final e in log) e.action], ['download', 'view']);
+    expect(log.first.actor, 'admin');
+    expect(log.first.address, isNull);
+    expect(log.first.timestamp, isNotNull);
+  });
 }
