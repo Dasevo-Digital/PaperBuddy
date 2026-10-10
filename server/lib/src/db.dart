@@ -343,6 +343,13 @@ const _migrations = <String>[
   CREATE INDEX document_access_doc ON document_access(document_id, timestamp);
   CREATE INDEX document_access_time ON document_access(timestamp);
   ''',
+  // 12: Custom Fields für Rechnungsdaten (welches Feld wofür steht)
+  '''
+  CREATE TABLE invoice_fields (
+    kind TEXT PRIMARY KEY,
+    field_id INTEGER NOT NULL REFERENCES custom_fields(id) ON DELETE CASCADE
+  );
+  ''',
 ];
 
 Database openDatabase(String path) {

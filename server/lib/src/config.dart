@@ -35,6 +35,7 @@ class Config {
     this.backupPassphrase,
     this.accessLog = true,
     this.accessLogDays = 90,
+    this.invoiceFields = true,
   });
 
   final String host;
@@ -100,6 +101,9 @@ class Config {
   /// Zugriffe auf Dokumente protokollieren und so viele Tage behalten.
   final bool accessLog;
   final int accessLogDays;
+
+  /// Rechnungsdaten (Betrag, Nummer, Fälligkeit, IBAN) in Custom Fields.
+  final bool invoiceFields;
 
   String get databasePath => p.join(dataDir, 'paperbuddy.sqlite3');
 
@@ -176,6 +180,7 @@ class Config {
       backupPassphrase: passphrase,
       accessLog: (get('ACCESS_LOG') ?? 'true') != 'false',
       accessLogDays: int.parse(get('ACCESS_LOG_DAYS') ?? '90'),
+      invoiceFields: (get('INVOICE_FIELDS') ?? 'true') != 'false',
       backup: backupDir == null || passphrase == null || passphrase.isEmpty
           ? null
           : BackupSettings(

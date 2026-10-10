@@ -20,3 +20,5 @@ export 'src/reminders.dart';
 export 'src/security.dart';
 export 'src/backup/backup.dart';
 export 'src/access_log.dart';
+export 'src/processing/invoice.dart';
+export 'src/processing/invoice_fields.dart';

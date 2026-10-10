@@ -82,6 +82,23 @@ Future<void> main(List<String> args) async {
         } else {
           exitCode = 1;
         }
+      case 'extract-invoices':
+        // Vorhandene Dokumente: E-Rechnung im Original, sonst der Text.
+        final store = await createStore(config);
+        final tools = ExternalTools(ocrLanguage: config.ocrLanguage);
+        final fields = InvoiceFields(db);
+        var found = 0;
+        for (final d in db.select('SELECT id, content, mime_type, original_path FROM documents WHERE deleted_at IS NULL')) {
+          InvoiceData? data;
+          if (d['mime_type'] == 'application/pdf') {
+            final file = await store.get(d['original_path'] as String);
+            final xml = file == null ? null : await tools.pdfInvoiceXml(file.path);
+            if (xml != null) data = parseInvoiceXml(xml);
+          }
+          data ??= invoiceFromText(d['content'] as String);
+          if (data != null && fields.apply(d['id'] as int, data) > 0) found++;
+        }
+        stdout.writeln('Rechnungsdaten bei $found Dokument(en) ergänzt.');
       case 'rename-files':
         final n = await FilenameGenerator(db, await createStore(config), format: config.filenameFormat).relocateAll();
         stdout.writeln('$n Dokument(e) neu abgelegt.');
@@ -94,6 +111,7 @@ Future<void> main(List<String> args) async {
   backup [ordner]                    verschlüsselte Gesamtsicherung anlegen und prüfen
   verify-backup <datei>              Sicherung entschlüsseln und prüfen
   restore-backup <datei> <ordner>    Sicherung in einen leeren Ordner entpacken
+  extract-invoices                   Rechnungsdaten vorhandener Dokumente in Custom Fields eintragen
   rename-files                       Dateien nach FILENAME_FORMAT/Speicherpfaden neu ablegen
   disable-totp <benutzer>            Zwei-Faktor-Anmeldung ausschalten (Telefon verloren)''');
     }

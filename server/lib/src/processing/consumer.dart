@@ -13,6 +13,8 @@ import '../history.dart';
 import '../storage.dart';
 import 'classifier.dart';
 import 'file_types.dart';
+import 'invoice.dart';
+import 'invoice_fields.dart';
 import 'matching.dart';
 import 'tools.dart';
 
@@ -26,6 +28,7 @@ const supportedMimeTypes = {
   'image/webp': 'webp',
   'text/plain': 'txt',
   'text/csv': 'csv',
+  'application/xml': 'xml',
   ...officeMimeTypes,
 };
 
@@ -113,11 +116,14 @@ class ConsumeError implements Exception {
 
 /// Ergebnis der Text- und Bildverarbeitung einer Datei.
 class _Extracted {
-  _Extracted(this.content, this.archive, this.thumbnail, this.pages);
+  _Extracted(this.content, this.archive, this.thumbnail, this.pages, [this.invoice]);
   final String content;
   final String? archive;
   final String? thumbnail;
   final int? pages;
+
+  /// Rechnungsdaten aus E-Rechnung oder Text, sofern erkannt.
+  final InvoiceData? invoice;
 }
 
 /// Nimmt Dateien entgegen und verarbeitet sie nacheinander im Hintergrund.
@@ -129,6 +135,7 @@ class Consumer {
     required this.workDir,
     DocumentClassifier? classifier,
     this.history,
+    this.invoices = true,
   }) : classifier = classifier ?? DocumentClassifier(db);
 
   final Database db;
@@ -137,6 +144,9 @@ class Consumer {
   final String workDir;
   final DocumentClassifier classifier;
   final History? history;
+
+  /// Rechnungsdaten erkennen und in Custom Fields eintragen.
+  final bool invoices;
   ConsumeHooks? hooks;
 
   /// Nach dem Anlegen und nach Workflows (z. B. Dateien einsortieren).
@@ -260,7 +270,19 @@ class Consumer {
     String? thumbnail;
     int? pages;
 
-    if (mime == 'text/plain' || mime == 'text/csv') {
+    InvoiceData? invoice;
+    if (mime == 'application/xml') {
+      // E-Rechnung ohne PDF: lesbarer Text und ein PDF zum Ansehen.
+      invoice = parseInvoiceXml(utf8.decode(await source.readAsBytes(), allowMalformed: true));
+      if (invoice == null) throw ConsumeError('Not consuming ${p.basename(source.path)}: unreadable e-invoice');
+      content = invoiceSummary(invoice);
+      final pdf = p.join(scratch.path, 'invoice.pdf');
+      await File(pdf).writeAsBytes(await invoicePdf(invoice));
+      archive = pdf;
+      pages = await tools.pdfPageCount(pdf);
+      final thumb = p.join(scratch.path, 'thumb.png');
+      if (await tools.pdfThumbnail(pdf, thumb)) thumbnail = thumb;
+    } else if (mime == 'text/plain' || mime == 'text/csv') {
       content = utf8.decode(await source.readAsBytes(), allowMalformed: true);
     } else if (officeMimeTypes.containsKey(mime)) {
       // Text direkt aus der Datei; Archiv-PDF und Vorschau über LibreOffice.
@@ -296,7 +318,16 @@ class Consumer {
         thumbnail = ocrInput;
       }
     }
-    return _Extracted(content.replaceAll('\f', '\n').trim(), archive, thumbnail, pages);
+    content = content.replaceAll('\f', '\n').trim();
+    if (invoices && invoice == null) {
+      // Eingebettete E-Rechnung im Original (die Archivfassung verliert sie).
+      if (isPdf) {
+        final xml = await tools.pdfInvoiceXml(source.path);
+        if (xml != null) invoice = parseInvoiceXml(xml);
+      }
+      invoice ??= invoiceFromText(content);
+    }
+    return _Extracted(content, archive, thumbnail, pages, invoice);
   }
 
   Future<int> _consume(File source, String originalName, ConsumeOverrides o, Directory scratch) async {
@@ -319,8 +350,21 @@ class Consumer {
     classifier.trainIfNeeded();
     final matched = matchContent(db, '${p.basenameWithoutExtension(originalName)}\n${x.content}',
         classifier: classifier);
-    final created = o.created ?? findDate(x.content) ?? DateTime.now();
-    final title = (o.title?.trim().isNotEmpty ?? false) ? o.title!.trim() : p.basenameWithoutExtension(originalName);
+    final invoice = x.invoice;
+    final created = o.created ?? invoice?.issueDate ?? findDate(x.content) ?? DateTime.now();
+    var title = (o.title?.trim().isNotEmpty ?? false) ? o.title!.trim() : p.basenameWithoutExtension(originalName);
+    // Reine XML-Rechnung: Der Dateiname sagt meist nichts, Verkäufer und
+    // Nummer schon.
+    if (mime == 'application/xml' && !(o.title?.trim().isNotEmpty ?? false) && invoice != null) {
+      final named = [invoice.seller, invoice.number].whereType<String>().join(' ');
+      if (named.isNotEmpty) title = named;
+    }
+    // Bei E-Rechnungen ist der Verkäufer sicher: vorhandenen Korrespondenten
+    // gleichen Namens zuordnen.
+    final seller = invoice?.source == 'xml' ? invoice?.seller : null;
+    final sellerId = seller == null
+        ? null
+        : db.select('SELECT id FROM correspondents WHERE lower(name) = lower(?)', [seller]).firstOrNull?['id'] as int?;
     final now = nowIso();
 
     db.execute('BEGIN;');
@@ -334,7 +378,7 @@ class Consumer {
         [
           title,
           x.content,
-          o.correspondent ?? matched.correspondent,
+          o.correspondent ?? sellerId ?? matched.correspondent,
           o.documentType ?? matched.documentType,
           o.storagePath ?? matched.storagePath,
           dateOnly(created),
@@ -374,6 +418,7 @@ class Consumer {
           [id, e.value == null ? null : jsonEncode(e.value), e.key],
         );
       }
+      if (invoices && invoice != null) InvoiceFields(db).apply(id, invoice);
       for (final (perm, column, ids) in [
         ('view', 'user_id', o.viewUsers),
         ('view', 'group_id', o.viewGroups),
@@ -514,6 +559,7 @@ class Consumer {
           'page_count = COALESCE(?, page_count), modified = ? WHERE id = ?',
           [x.content, archiveKey, thumbKey, x.pages, nowIso(), id],
         );
+        if (invoices && x.invoice != null) InvoiceFields(db).apply(id, x.invoice!);
         _log.info('Dokument #$id neu verarbeitet');
       } catch (e, st) {
         _log.severe('Neuverarbeitung von #$id fehlgeschlagen', e, st);

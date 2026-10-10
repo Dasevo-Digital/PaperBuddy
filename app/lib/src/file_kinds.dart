@@ -16,6 +16,8 @@ abstract final class FileKinds {
     'webp',
     'txt',
     'csv',
+    // E-Rechnung (XRechnung)
+    'xml',
     'docx',
     'xlsx',
     'pptx',
@@ -66,6 +68,7 @@ abstract final class FileKinds {
       'DOCX' || 'DOC' || 'ODT' => tr.textDocument,
       'XLSX' || 'XLS' || 'ODS' => tr.spreadsheet,
       'PPTX' || 'PPT' || 'ODP' => tr.presentation,
+      'XML' => tr.eInvoice,
       _ => null,
     };
     return kind == null ? short : '$kind ($short)';

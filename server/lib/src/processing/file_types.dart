@@ -5,6 +5,8 @@ import 'package:archive/archive.dart';
 import 'package:path/path.dart' as p;
 import 'package:xml/xml.dart';
 
+import 'invoice.dart';
+
 /// Office-Formate (OOXML und OpenDocument).
 const officeMimeTypes = {
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
@@ -55,6 +57,9 @@ String detectFileType(String fileName, List<int> bytes) {
     };
   }
   if (_looksLikeText(bytes)) {
+    // E-Rechnung (XRechnung, CII oder UBL) statt einfachem Text.
+    final head = utf8.decode(bytes.length > 4096 ? bytes.sublist(0, 4096) : bytes, allowMalformed: true);
+    if (head.trimLeft().startsWith('<') && looksLikeInvoiceXml(head)) return 'application/xml';
     return switch (ext) {
       '.csv' => 'text/csv',
       '.eml' => 'message/rfc822',

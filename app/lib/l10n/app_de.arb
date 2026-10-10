@@ -796,5 +796,6 @@
     }
   },
   "mailConsume": "Übernehmen",
-  "signOutQuestion": "Abmelden?"
+  "signOutQuestion": "Abmelden?",
+  "eInvoice": "E-Rechnung"
 }

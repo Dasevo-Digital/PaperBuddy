@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:logging/logging.dart';
+
+import 'invoice.dart';
 
 final _log = Logger('tools');
 
@@ -102,6 +105,25 @@ class ExternalTools {
     final r = await Process.run('qpdf', args);
     // Exit-Code 3 = Warnungen, Ergebnis ist trotzdem gültig.
     if (r.exitCode != 0 && r.exitCode != 3) throw StateError('qpdf: ${r.stderr}');
+  }
+
+  /// Eingebettete E-Rechnung (ZUGFeRD/Factur-X: `factur-x.xml`,
+  /// `zugferd-invoice.xml`, `xrechnung.xml` …) aus einem PDF; `null`, wenn
+  /// keine da ist oder qpdf fehlt.
+  Future<String?> pdfInvoiceXml(String pdf) async {
+    final list = await _run('qpdf', ['--list-attachments', pdf]);
+    if (list == null || list.exitCode != 0) return null;
+    final names = [
+      for (final line in '${list.stdout}'.split('\n'))
+        if (RegExp(r'^(.+?) -> \d+,\d+\s*$').firstMatch(line.trim()) case final m?) m[1]!,
+    ];
+    for (final name in names.where((n) => n.toLowerCase().endsWith('.xml'))) {
+      final r = await Process.run('qpdf', ['--show-attachment=$name', pdf], stdoutEncoding: null);
+      if (r.exitCode != 0) continue;
+      final xml = utf8.decode(r.stdout as List<int>, allowMalformed: true);
+      if (looksLikeInvoiceXml(xml)) return xml;
+    }
+    return null;
   }
 
   Future<String?> pdfText(String pdf) async {

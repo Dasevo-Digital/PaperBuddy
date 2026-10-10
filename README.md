@@ -114,12 +114,17 @@ Verwaltungsbefehle laufen über `paperbuddy-manage` (z. B. `paperbuddy-manage ex
 
 - **Erfassen:** Upload (App, Web, API, Teilen-Menü, Drag & Drop auf das Fenster), Eingangsordner über SMB/FTP, E-Mail-Abruf per IMAP (auch Gmail/Outlook per OAuth),
   Netzwerkscanner über eSCL/AirScan, Dokumentenscanner in der App (iOS VisionKit, Android ML Kit)
-- **Dateitypen:** PDF, JPEG, PNG, TIFF, WebP, Text/CSV, Word, Excel, PowerPoint (DOCX/XLSX/PPTX)
-  und OpenDocument; erkannt am Inhalt, nicht an der Endung. Bei Office-Dateien wird der Text
+- **Dateitypen:** PDF, JPEG, PNG, TIFF, WebP, Text/CSV, Word, Excel, PowerPoint (DOCX/XLSX/PPTX),
+  OpenDocument und E-Rechnungen als XML (XRechnung in UBL oder CII, dargestellt als PDF); erkannt am Inhalt, nicht an der Endung. Bei Office-Dateien wird der Text
   immer gelesen, Vorschau und Archiv-PDF gibt es mit LibreOffice (`PAPERBUDDY_OFFICE=1` beim
   Docker-Build bzw. bei `install.sh`, auch nötig für alte DOC/XLS/PPT)
 - **Verarbeiten:** OCR (ocrmypdf/Tesseract), Archiv-PDF, Vorschaubild, Datumserkennung,
   Zuordnung per Regel oder lernend, Workflows (Zuweisen, Entfernen, E-Mail, Webhook, zeitgesteuert)
+- **Rechnungsdaten:** Rechnungsbetrag, Rechnungsnummer, Fälligkeit und IBAN landen in Custom
+  Fields. Aus E-Rechnungen (ZUGFeRD/Factur-X im PDF, XRechnung) exakt, sonst aus dem erkannten
+  Text (Stichwörter wie „Gesamtbetrag“, „zahlbar innerhalb von 14 Tagen“, IBAN mit Prüfsumme).
+  Die Felder entstehen bei der ersten Rechnung und dürfen umbenannt werden; von Hand gesetzte
+  Werte bleiben. Vorhandene Dokumente: `manage extract-invoices`
 - **Ordnen:** Tags, Korrespondenten, Dokumenttypen, Speicherpfade (auch als Ordnerstruktur),
   Custom Fields, Notizen, Archivnummern, gespeicherte Ansichten, Volltextsuche
 - **Bearbeiten:** PDF-Seiten drehen und löschen, Dokumente zusammenführen und teilen,
@@ -167,6 +172,7 @@ Umgebungsvariablen mit Präfix `PAPERBUDDY_`. Die `PAPERLESS_`-Namen werden eben
 | `BACKUP_DIR` | – | Ordner für die tägliche, verschlüsselte Sicherung (siehe [Sicherung](#sicherung)) |
 | `BACKUP_PASSPHRASE` / `BACKUP_PASSPHRASE_FILE` | – | Passphrase dafür, direkt oder aus einer Datei |
 | `BACKUP_TIME` / `BACKUP_KEEP` | `03:00` / `7` | Uhrzeit der Sicherung (Ortszeit des Servers, `TZ`); so viele bleiben liegen |
+| `INVOICE_FIELDS` | `true` | Rechnungsdaten in Custom Fields eintragen (`false` = aus) |
 | `ACCESS_LOG` / `ACCESS_LOG_DAYS` | `true` / `90` | Zugriffe auf Dokumente protokollieren (angesehen, heruntergeladen, Freigabelink) und so viele Tage behalten |
 | `DEBUG` | – | `1` = jede Anfrage loggen |
 
@@ -178,6 +184,7 @@ dart run bin/manage.dart export /pfad/zum/backup
 dart run bin/manage.dart import /pfad/zum/paperless-export
 dart run bin/manage.dart import-paperless https://paperless.example.org <api-token>
 dart run bin/manage.dart rename-files     # nach Änderung von FILENAME_FORMAT
+dart run bin/manage.dart extract-invoices # Rechnungsdaten vorhandener Dokumente ergänzen
 dart run bin/manage.dart disable-totp <benutzer>   # Zwei-Faktor-Anmeldung ausschalten
 dart run bin/manage.dart backup [ordner]           # verschlüsselte Gesamtsicherung, siehe unten
 dart run bin/manage.dart verify-backup <datei>

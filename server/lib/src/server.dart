@@ -83,7 +83,14 @@ class PaperbuddyServer {
     final tools = ExternalTools(ocrLanguage: config.ocrLanguage);
     store ??= await createStore(config);
     final history = History(db);
-    final consumer = Consumer(db: db, store: store, tools: tools, workDir: p.join(config.dataDir, 'work'), history: history);
+    final consumer = Consumer(
+      db: db,
+      store: store,
+      tools: tools,
+      workDir: p.join(config.dataDir, 'work'),
+      history: history,
+      invoices: config.invoiceFields,
+    );
     final trash = Trash(db, store, access, delay: config.emptyTrashDelay);
     final customFields = CustomFieldsResource(db, access);
     final workflows = WorkflowEngine(

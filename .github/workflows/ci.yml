@@ -29,6 +29,9 @@ jobs:
       - uses: dart-lang/setup-dart@v1
         with:
           sdk: stable
+      # qpdf für den ZUGFeRD-Test (eingebettete E-Rechnung im PDF).
+      - name: qpdf
+        run: sudo apt-get update && sudo apt-get install -y qpdf
       - name: Server
         working-directory: server
         run: |

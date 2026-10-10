@@ -532,5 +532,6 @@
   "actionsCount": "{count, plural, =1{1 action} other{{count} actions}}",
   "documentsCount": "{count, plural, =1{1 document} other{{count} documents}}",
   "mailConsume": "Import",
-  "signOutQuestion": "Sign out?"
+  "signOutQuestion": "Sign out?",
+  "eInvoice": "E-invoice"
 }

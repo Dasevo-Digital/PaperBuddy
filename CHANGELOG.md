@@ -5,6 +5,12 @@ ausführliche Fassung mit Hintergründen steht im jeweiligen Release.
 
 ## Unveröffentlicht
 
+- **Rechnungsdaten:** Betrag, Rechnungsnummer, Fälligkeit und IBAN werden
+  erkannt und in Custom Fields eingetragen – exakt aus E-Rechnungen
+  (ZUGFeRD/Factur-X, XRechnung), sonst aus dem Text. XRechnung-Dateien (XML)
+  lassen sich hochladen und erscheinen als lesbares PDF. Abschaltbar mit
+  `PAPERBUDDY_INVOICE_FIELDS=false`, für vorhandene Dokumente
+  `manage extract-invoices`.
 - **Englische Oberfläche:** Die App spricht Deutsch und Englisch, je nach
   Gerät oder unter Einstellungen → Sprache. Datum und Zahlen folgen der
   Sprache, ebenso die Meldungen des API-Clients.
