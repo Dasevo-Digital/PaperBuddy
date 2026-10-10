@@ -127,7 +127,7 @@ Verwaltungsbefehle laufen über `paperbuddy-manage` (z. B. `paperbuddy-manage ex
   Übersicht und Benachrichtigungen, per E-Mail am Fälligkeitstag, wenn `EMAIL_HOST` gesetzt
   ist (PaperBuddy-Erweiterung `/api/reminders/`, Paperless-Apps ignorieren sie)
 - **Teilen:** Mehrbenutzer mit Gruppen, Modell- und Objektrechten, Freigabelinks ohne Anmeldung
-- **Sicherheit:** Zwei-Faktor-Anmeldung (TOTP mit Wiederherstellungscodes), Login-Bremse gegen Passwort-Raten, Papierkorb mit Frist, Export/Backup im Paperless-Format, Import aus Paperless-ngx
+- **Sicherheit:** Zwei-Faktor-Anmeldung (TOTP mit Wiederherstellungscodes), Login-Bremse gegen Passwort-Raten, tägliche verschlüsselte und geprüfte Sicherung (age-Format), Papierkorb mit Frist, Export im Paperless-Format, Import aus Paperless-ngx
 - **Speicher:** lokal, S3-kompatibel (AWS, MinIO, RustFS …) oder WebDAV (z. B. Nextcloud)
 
 ## Konfiguration
@@ -159,6 +159,9 @@ Umgebungsvariablen mit Präfix `PAPERBUDDY_`. Die `PAPERLESS_`-Namen werden eben
 | `OAUTH_CALLBACK_BASE_URL` | `URL` | öffentliche Adresse für den OAuth-Rückruf |
 | `GMAIL_OAUTH_CLIENT_ID`, `GMAIL_OAUTH_CLIENT_SECRET` | – | Gmail-Postfächer per OAuth verbinden |
 | `OUTLOOK_OAUTH_CLIENT_ID`, `OUTLOOK_OAUTH_CLIENT_SECRET` | – | Outlook-Postfächer per OAuth verbinden |
+| `BACKUP_DIR` | – | Ordner für die tägliche, verschlüsselte Sicherung (siehe [Sicherung](#sicherung)) |
+| `BACKUP_PASSPHRASE` / `BACKUP_PASSPHRASE_FILE` | – | Passphrase dafür, direkt oder aus einer Datei |
+| `BACKUP_TIME` / `BACKUP_KEEP` | `03:00` / `7` | Uhrzeit der Sicherung (Ortszeit des Servers, `TZ`); so viele bleiben liegen |
 | `DEBUG` | – | `1` = jede Anfrage loggen |
 
 ## Verwaltung auf der Kommandozeile
@@ -170,6 +173,9 @@ dart run bin/manage.dart import /pfad/zum/paperless-export
 dart run bin/manage.dart import-paperless https://paperless.example.org <api-token>
 dart run bin/manage.dart rename-files     # nach Änderung von FILENAME_FORMAT
 dart run bin/manage.dart disable-totp <benutzer>   # Zwei-Faktor-Anmeldung ausschalten
+dart run bin/manage.dart backup [ordner]           # verschlüsselte Gesamtsicherung, siehe unten
+dart run bin/manage.dart verify-backup <datei>
+dart run bin/manage.dart restore-backup <datei> <leerer-ordner>
 ```
 
 Zwei-Faktor-Anmeldung: Einrichten in der App unter Einstellungen → Profil.
@@ -188,6 +194,52 @@ Reverse-Proxy dessen Adresse in `TRUSTED_PROXIES` eintragen, sonst zählen alle
 Anfragen als eine Adresse.
 
 Im Container: `docker compose exec paperbuddy manage <befehl>`.
+
+## Sicherung
+
+Mit `PAPERBUDDY_BACKUP_DIR` und einer Passphrase sichert der Server jede Nacht
+(`BACKUP_TIME`, Standard 03:00) alles in eine Datei
+`paperbuddy-<datum>-<zeit>.tar.age`: einen konsistenten Schnappschuss der
+Datenbank (auch im laufenden Betrieb), alle Originale, Archiv-PDFs,
+Vorschaubilder und Versionen sowie ein Manifest mit Prüfsummen. Anders als
+`manage export` enthält sie auch Workflows, Mailkonten, Fristen, Freigaben,
+Rechte und die Zwei-Faktor-Einstellungen.
+
+Direkt danach prüft der Server die Sicherung: Er entschlüsselt sie
+vollständig, rechnet jede Datei gegen ihre Prüfsumme, spielt die Datenbank in
+ein Temp-Verzeichnis zurück und vergleicht dort die Einträge jeder Tabelle.
+Erst wenn das klappt, löscht er Sicherungen über `BACKUP_KEEP` (Standard 7)
+hinaus. Meldet die Prüfung ein Problem, etwa eine fehlende Datei, bleiben alle
+älteren Sicherungen liegen, denn nur sie enthalten die Datei dann vielleicht
+noch. Das Ergebnis steht im Log und in `DATA_DIR/backup-status.json`.
+
+Verschlüsselt wird im Format von [age](https://age-encryption.org)
+(scrypt, ChaCha20-Poly1305). Eine Sicherung lässt sich darum auch ohne
+PaperBuddy öffnen:
+
+```bash
+age -d paperbuddy-20261010-030000.tar.age | tar x
+```
+
+**Wiederherstellen:** `manage restore-backup <datei> <leerer-ordner>`
+entpackt und prüft die Sicherung. Danach den Server anhalten,
+`PAPERBUDDY_DATA_DIR` auf diesen Ordner setzen (die Dateien liegen dort unter
+`media/`, wie bei `MEDIA_ROOT` voreingestellt) und neu starten. Bei S3 oder
+WebDAV liegen die Dateien weiter im entfernten Speicher; die Kopien unter
+`media/` helfen, wenn auch dieser verloren ist.
+
+**Einrichten:**
+
+- *Debian/LXC:* `PAPERBUDDY_BACKUP=1 sh install.sh` schaltet die Sicherung
+  nach `/var/backups/paperbuddy` ein und legt eine zufällige Passphrase in
+  `/etc/paperbuddy/backup-passphrase` ab. Dort kann auch eine NAS-Freigabe
+  eingehängt werden; andere Ordner darf der Dienst nicht beschreiben.
+- *Docker:* in `.env` `PAPERBUDDY_BACKUP_DIR=/backup` und
+  `PAPERBUDDY_BACKUP_PASSPHRASE` setzen; die Sicherungen landen in `./backup`.
+
+Die Passphrase unbedingt getrennt vom Server aufbewahren (etwa im
+Passwort-Manager). Ohne sie ist eine Sicherung nicht zu öffnen, auch nicht
+vom Entwickler.
 
 ## Mit einer iOS-App verbinden
 

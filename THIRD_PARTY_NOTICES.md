@@ -20,6 +20,8 @@ Mobile ist nicht übernommen.
 ## Im Server und im Docker-Image
 
 - SQLite — Public Domain; über das Paket `sqlite3` eingebunden
+- PointyCastle — MIT; scrypt und ChaCha20-Poly1305 für die Sicherungen
+  im Dateiformat von age (https://age-encryption.org)
 - OCRmyPDF — MPL-2.0
 - Tesseract OCR mit Sprachdaten — Apache-2.0
 - Poppler (`poppler-utils`) — GPL-2.0/GPL-3.0; als eigenständiges Programm

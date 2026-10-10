@@ -18,3 +18,4 @@ export 'src/filenames.dart';
 export 'src/version.dart';
 export 'src/reminders.dart';
 export 'src/security.dart';
+export 'src/backup/backup.dart';

@@ -25,7 +25,7 @@ RUN apt-get update \
       fonts-dejavu-core fonts-liberation2; fi \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --uid 1000 --create-home paperbuddy \
- && mkdir -p /data /consume && chown paperbuddy:paperbuddy /data /consume
+ && mkdir -p /data /consume /backup && chown paperbuddy:paperbuddy /data /consume /backup
 
 COPY --from=build /out/server/bundle /opt/paperbuddy
 ENV PATH="/opt/paperbuddy/bin:$PATH" \

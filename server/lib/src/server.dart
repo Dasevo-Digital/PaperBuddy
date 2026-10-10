@@ -8,6 +8,7 @@ import 'package:shelf/shelf_io.dart' as io;
 import 'package:sqlite3/sqlite3.dart';
 
 import 'access.dart';
+import 'backup/backup.dart';
 import 'api/custom_fields.dart';
 import 'api/paperless_api.dart';
 import 'auth.dart';
@@ -48,6 +49,7 @@ class PaperbuddyServer {
     required this.mail,
     required this.scanners,
     required this.reminders,
+    required this.backups,
   });
 
   final Config config;
@@ -63,6 +65,7 @@ class PaperbuddyServer {
   final MailService mail;
   final Reminders reminders;
   final ScannerService scanners;
+  final BackupService backups;
   HttpServer? _http;
   Timer? _trainTimer;
 
@@ -167,6 +170,13 @@ class PaperbuddyServer {
       mail: mail,
       scanners: scanners,
       reminders: reminders,
+      backups: BackupService(
+        db: db,
+        store: store,
+        workDir: p.join(config.dataDir, 'work'),
+        settings: config.backup,
+        statusFile: p.join(config.dataDir, 'backup-status.json'),
+      ),
     );
   }
 
@@ -186,6 +196,12 @@ class PaperbuddyServer {
     trash.startAutoEmpty();
     workflows.startScheduler();
     reminders.start();
+    backups.start();
+    if (config.backupDir != null && config.backup == null) {
+      _log.warning('PAPERBUDDY_BACKUP_DIR ist gesetzt, aber keine Passphrase: keine Sicherung.');
+    } else if (config.backupDir == null) {
+      _log.info('Keine zeitgesteuerte Sicherung (PAPERBUDDY_BACKUP_DIR und PAPERBUDDY_BACKUP_PASSPHRASE setzen).');
+    }
     if (config.mailInterval > Duration.zero) mail.start();
     // Wie Paperless-ngx: das lernende Matching stündlich nachtrainieren.
     consumer.classifier.trainIfNeeded();
@@ -203,6 +219,7 @@ class PaperbuddyServer {
     trash.stop();
     workflows.stop();
     reminders.stop();
+    backups.stop();
     mail.stop();
     scanners.close();
     _trainTimer?.cancel();

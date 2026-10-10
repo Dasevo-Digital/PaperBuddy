@@ -3,6 +3,14 @@
 Hier steht je Version, was sich für Nutzer und Betreiber ändert. Die
 ausführliche Fassung mit Hintergründen steht im jeweiligen Release.
 
+## Unveröffentlicht
+
+- **Sicherung:** täglich, verschlüsselt im age-Format und nach jedem Lauf
+  geprüft (Prüfsummen, Datenbank zurückgespielt und gezählt), mit
+  Aufbewahrung. Dazu `manage backup`, `verify-backup` und `restore-backup`;
+  ohne PaperBuddy: `age -d <datei> | tar x`. Unter Debian schaltet
+  `PAPERBUDDY_BACKUP=1 sh install.sh` sie ein.
+
 ## 0.2.0 (09.10.2026)
 
 ### Neu in der App

@@ -46,6 +46,7 @@ fi
 install -d -o paperbuddy -g paperbuddy -m 0750 /var/lib/paperbuddy
 install -d -o paperbuddy -g paperbuddy -m 0770 /var/lib/paperbuddy/consume
 install -d -m 0750 -g paperbuddy /etc/paperbuddy
+install -d -o paperbuddy -g paperbuddy -m 0700 /var/backups/paperbuddy
 
 env=/etc/paperbuddy/paperbuddy.env
 if [ ! -f "$env" ]; then
@@ -65,6 +66,11 @@ PAPERBUDDY_ADMIN_PASSWORD=$password
 # PAPERBUDDY_URL=https://docs.example.org
 # PAPERBUDDY_SCANNERS=Büro=http://192.0.2.20/eSCL
 # PAPERBUDDY_FILENAME_FORMAT={{ created_year }}/{{ correspondent }}/{{ title }}
+# Verschlüsselte Sicherung, täglich (PAPERBUDDY_BACKUP=1 sh install.sh richtet sie ein):
+# PAPERBUDDY_BACKUP_DIR=/var/backups/paperbuddy
+# PAPERBUDDY_BACKUP_PASSPHRASE_FILE=/etc/paperbuddy/backup-passphrase
+# PAPERBUDDY_BACKUP_TIME=03:00
+# PAPERBUDDY_BACKUP_KEEP=7
 EOF
   printf 'Benutzer: admin\nPasswort: %s\n' "$password" > /root/paperbuddy-admin.txt
   chmod 0600 /root/paperbuddy-admin.txt
@@ -72,6 +78,22 @@ EOF
   chmod 0640 "$env"
   umask 022
   echo "Administrator angelegt, Zugangsdaten in /root/paperbuddy-admin.txt"
+fi
+
+# PAPERBUDDY_BACKUP=1 sh install.sh: tägliche, verschlüsselte Sicherung nach
+# /var/backups/paperbuddy mit einer zufälligen Passphrase einschalten.
+if [ "${PAPERBUDDY_BACKUP:-0}" = 1 ] && ! grep -q '^PAPERBUDDY_BACKUP_DIR=' "$env"; then
+  secret=/etc/paperbuddy/backup-passphrase
+  if [ ! -f "$secret" ]; then
+    umask 077
+    head -c 32 /dev/urandom | base64 | tr -d '/+=' | cut -c1-32 > "$secret"
+    umask 022
+  fi
+  chown paperbuddy:paperbuddy "$secret"
+  chmod 0400 "$secret"
+  printf 'PAPERBUDDY_BACKUP_DIR=/var/backups/paperbuddy\nPAPERBUDDY_BACKUP_PASSPHRASE_FILE=%s\n' "$secret" >> "$env"
+  echo "Sicherung eingeschaltet: täglich 03:00 nach /var/backups/paperbuddy."
+  echo "Passphrase in $secret – unbedingt an einem anderen Ort aufbewahren."
 fi
 
 if systemctl is-active --quiet paperbuddy; then

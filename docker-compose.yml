@@ -23,9 +23,15 @@ services:
       PAPERBUDDY_SCANNERS: ${PAPERBUDDY_SCANNERS:-}
       PAPERBUDDY_URL: ${PAPERBUDDY_URL:-}
       PAPERBUDDY_TRUSTED_PROXIES: ${PAPERBUDDY_TRUSTED_PROXIES:-}
+      # Verschlüsselte Sicherung nach ./backup (siehe README)
+      PAPERBUDDY_BACKUP_DIR: ${PAPERBUDDY_BACKUP_DIR:-}
+      PAPERBUDDY_BACKUP_PASSPHRASE: ${PAPERBUDDY_BACKUP_PASSPHRASE:-}
+      PAPERBUDDY_BACKUP_TIME: ${PAPERBUDDY_BACKUP_TIME:-03:00}
+      PAPERBUDDY_BACKUP_KEEP: ${PAPERBUDDY_BACKUP_KEEP:-7}
     volumes:
       - ./data:/data
       - ./consume:/consume
+      - ./backup:/backup
 
   # Optional: Freigabe des Eingangsordners für Scanner (SMB2/3).
   samba:

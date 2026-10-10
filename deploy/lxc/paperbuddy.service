@@ -17,7 +17,9 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/lib/paperbuddy
+# Sicherungen (PAPERBUDDY_BACKUP_DIR) nach /var/backups/paperbuddy; dort lässt
+# sich auch eine NAS-Freigabe einhängen.
+ReadWritePaths=/var/lib/paperbuddy -/var/backups/paperbuddy
 
 [Install]
 WantedBy=multi-user.target

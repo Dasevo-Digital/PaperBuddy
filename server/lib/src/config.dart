@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import 'backup/backup.dart';
+
 /// Laufzeitkonfiguration, ausschließlich über Umgebungsvariablen.
 ///
 /// Die Namen orientieren sich an Paperless-ngx (`PAPERLESS_*`), damit
@@ -28,6 +30,9 @@ class Config {
     this.filenameFormat,
     this.oauth = const OAuthSettings(),
     this.trustedProxies = const [],
+    this.backup,
+    this.backupDir,
+    this.backupPassphrase,
   });
 
   final String host;
@@ -82,6 +87,14 @@ class Config {
   /// Adressen von Reverse-Proxys, deren `X-Forwarded-For` gilt.
   final List<String> trustedProxies;
 
+  /// Zeitgesteuerte Sicherung; `null` = aus.
+  final BackupSettings? backup;
+
+  /// Zielordner und Passphrase für Sicherungen, auch ohne Zeitplan
+  /// (`manage backup`).
+  final String? backupDir;
+  final String? backupPassphrase;
+
   String get databasePath => p.join(dataDir, 'paperbuddy.sqlite3');
 
   factory Config.fromEnvironment([Map<String, String>? env]) {
@@ -92,6 +105,12 @@ class Config {
     }
 
     final dataDir = p.absolute(get('DATA_DIR') ?? 'data');
+    final passphraseFile = get('BACKUP_PASSPHRASE_FILE');
+    final passphrase = get('BACKUP_PASSPHRASE') ??
+        (passphraseFile == null ? null : File(passphraseFile).readAsStringSync().trim());
+    final backupDir = get('BACKUP_DIR');
+    final backupTime = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(get('BACKUP_TIME') ?? '03:00');
+    if (backupTime == null) throw FormatException('BACKUP_TIME im Format HH:MM angeben');
     final consume = get('CONSUMPTION_DIR') ?? get('CONSUME_DIR');
     return Config(
       host: get('BIND_ADDR') ?? '0.0.0.0',
@@ -147,6 +166,17 @@ class Config {
       ),
       corsOrigins: _list(get('CORS_ALLOWED_HOSTS')),
       trustedProxies: _list(get('TRUSTED_PROXIES')),
+      backupDir: backupDir == null ? null : p.absolute(backupDir),
+      backupPassphrase: passphrase,
+      backup: backupDir == null || passphrase == null || passphrase.isEmpty
+          ? null
+          : BackupSettings(
+              dir: p.absolute(backupDir),
+              passphrase: passphrase,
+              hour: int.parse(backupTime.group(1)!),
+              minute: int.parse(backupTime.group(2)!),
+              keep: int.parse(get('BACKUP_KEEP') ?? '7'),
+            ),
     );
   }
 }

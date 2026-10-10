@@ -232,4 +232,36 @@ void main() {
       expect((await env.json('GET', '/api/documents/?query=beleg'))['count'], 1);
     });
   }, skip: _enabled ? false : 'PAPERBUDDY_IT=1 setzen');
+
+  // Sicherungen müssen sich mit dem echten age öffnen lassen (Container mit
+  // age und expect, weil age die Passphrase nur am Terminal annimmt).
+  group('age', () {
+    test('Sicherung mit age entschlüsseln und mit tar entpacken', () async {
+      final env = await TestEnv.create();
+      addTearDown(env.close);
+      await env.uploadText('vertrag.txt', 'Mietvertrag Wohnung');
+      final dir = env.dir.path;
+      final created = await BackupService(db: env.server.db, store: env.server.store, workDir: '$dir/work')
+          .create('$dir/out', 'interop-passphrase-123', workFactor: 12);
+      File(created.file).copySync('$dir/in.age');
+      File('$dir/dec.exp').writeAsStringSync('''
+set timeout 60
+spawn sh -c "age -d -o /w/plain.tar /w/in.age"
+expect -re "(?i)passphrase"
+send "interop-passphrase-123\\r"
+expect eof
+''');
+      final r = await Process.run('docker', [
+        'run', '--rm', '-v', '$dir:/w', 'alpine:3.22', 'sh', '-c',
+        'apk add -q age expect tar >/dev/null && expect /w/dec.exp >/dev/null && mkdir /tmp/x && cd /tmp/x '
+            '&& tar xf /w/plain.tar && sha256sum paperbuddy.sqlite3 media/originals/* && cat paperbuddy-backup.json',
+      ]);
+      expect(r.exitCode, 0, reason: '${r.stderr}');
+      final out = r.stdout as String;
+      final manifest = jsonDecode(out.substring(out.indexOf('{'))) as Map<String, dynamic>;
+      for (final MapEntry(key: name, value: info) in (manifest['files'] as Map<String, dynamic>).entries) {
+        expect(out, contains('${info['sha256']}  $name'));
+      }
+    });
+  }, skip: _enabled ? false : 'PAPERBUDDY_IT=1 setzen');
 }
