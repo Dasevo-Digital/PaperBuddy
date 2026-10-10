@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import 'backup/backup.dart';
+import 'processing/barcodes.dart';
 
 /// Laufzeitkonfiguration, ausschließlich über Umgebungsvariablen.
 ///
@@ -36,6 +37,7 @@ class Config {
     this.accessLog = true,
     this.accessLogDays = 90,
     this.invoiceFields = true,
+    this.barcodes = const BarcodeSettings(),
   });
 
   final String host;
@@ -104,6 +106,9 @@ class Config {
 
   /// Rechnungsdaten (Betrag, Nummer, Fälligkeit, IBAN) in Custom Fields.
   final bool invoiceFields;
+
+  /// Trennblätter und ASN-Barcodes beim Verarbeiten.
+  final BarcodeSettings barcodes;
 
   String get databasePath => p.join(dataDir, 'paperbuddy.sqlite3');
 
@@ -181,6 +186,14 @@ class Config {
       accessLog: (get('ACCESS_LOG') ?? 'true') != 'false',
       accessLogDays: int.parse(get('ACCESS_LOG_DAYS') ?? '90'),
       invoiceFields: (get('INVOICE_FIELDS') ?? 'true') != 'false',
+      barcodes: BarcodeSettings(
+        split: _bool(get('CONSUMER_ENABLE_BARCODES')),
+        separator: get('CONSUMER_BARCODE_STRING') ?? 'PATCHT',
+        asn: _bool(get('CONSUMER_ENABLE_ASN_BARCODE')),
+        asnPrefix: get('CONSUMER_ASN_BARCODE_PREFIX') ?? 'ASN',
+        dpi: int.parse(get('CONSUMER_BARCODE_DPI') ?? '300'),
+        maxPages: int.parse(get('CONSUMER_BARCODE_MAX_PAGES') ?? '0'),
+      ),
       backup: backupDir == null || passphrase == null || passphrase.isEmpty
           ? null
           : BackupSettings(
@@ -193,6 +206,9 @@ class Config {
     );
   }
 }
+
+/// Wie Paperless-ngx: `true`, `1`, `yes` oder `y`.
+bool _bool(String? value) => const {'true', '1', 'yes', 'y'}.contains(value?.toLowerCase());
 
 List<String> _list(String? value) =>
     (value ?? '').split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();

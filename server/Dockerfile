@@ -18,7 +18,7 @@ FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d
 ARG OFFICE=0
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      ca-certificates ocrmypdf poppler-utils qpdf \
+      ca-certificates ocrmypdf poppler-utils qpdf zbar-tools \
       tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng \
  && if [ "$OFFICE" = 1 ]; then apt-get install -y --no-install-recommends \
       libreoffice-writer-nogui libreoffice-calc-nogui libreoffice-impress-nogui \

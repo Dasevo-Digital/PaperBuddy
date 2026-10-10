@@ -87,7 +87,7 @@ class TestEnv {
     await server.consumer.waitFor(taskId);
     final task = server.db.select('SELECT status, related_document, result FROM tasks WHERE task_id = ?', [taskId]).first;
     lastTaskResult = task['result'] as String?;
-    return task['status'] == 'SUCCESS' ? task['related_document'] as int : null;
+    return task['status'] == 'SUCCESS' ? task['related_document'] as int? : null;
   }
 
   String? lastTaskResult;

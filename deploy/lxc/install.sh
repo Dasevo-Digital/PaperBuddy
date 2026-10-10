@@ -30,7 +30,7 @@ echo "Pakete installieren …"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
 apt-get install -y -q --no-install-recommends \
-  ca-certificates curl ocrmypdf poppler-utils qpdf \
+  ca-certificates curl ocrmypdf poppler-utils qpdf zbar-tools \
   tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng
 # PAPERBUDDY_OFFICE=1 sh install.sh: LibreOffice für Vorschau und Archiv-PDF
 # von Word, Excel und PowerPoint (rund 400 MB). Einmal installiert, bleibt es.

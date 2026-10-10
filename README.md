@@ -113,7 +113,8 @@ Verwaltungsbefehle laufen über `paperbuddy-manage` (z. B. `paperbuddy-manage ex
 ## Funktionen
 
 - **Erfassen:** Upload (App, Web, API, Teilen-Menü, Drag & Drop auf das Fenster), Eingangsordner über SMB/FTP, E-Mail-Abruf per IMAP (auch Gmail/Outlook per OAuth),
-  Netzwerkscanner über eSCL/AirScan, Dokumentenscanner in der App (iOS VisionKit, Android ML Kit)
+  Netzwerkscanner über eSCL/AirScan, Dokumentenscanner in der App (iOS VisionKit, Android ML Kit);
+  Stapelscans mit Barcode-Trennblättern und ASN-Aufklebern (eingeschaltet über `CONSUMER_ENABLE_BARCODES`)
 - **Dateitypen:** PDF, JPEG, PNG, TIFF, WebP, Text/CSV, Word, Excel, PowerPoint (DOCX/XLSX/PPTX),
   OpenDocument und E-Rechnungen als XML (XRechnung in UBL oder CII, dargestellt als PDF); erkannt am Inhalt, nicht an der Endung. Bei Office-Dateien wird der Text
   immer gelesen, Vorschau und Archiv-PDF gibt es mit LibreOffice (`PAPERBUDDY_OFFICE=1` beim
@@ -172,6 +173,9 @@ Umgebungsvariablen mit Präfix `PAPERBUDDY_`. Die `PAPERLESS_`-Namen werden eben
 | `BACKUP_DIR` | – | Ordner für die tägliche, verschlüsselte Sicherung (siehe [Sicherung](#sicherung)) |
 | `BACKUP_PASSPHRASE` / `BACKUP_PASSPHRASE_FILE` | – | Passphrase dafür, direkt oder aus einer Datei |
 | `BACKUP_TIME` / `BACKUP_KEEP` | `03:00` / `7` | Uhrzeit der Sicherung (Ortszeit des Servers, `TZ`); so viele bleiben liegen |
+| `CONSUMER_ENABLE_BARCODES` / `CONSUMER_BARCODE_STRING` | `false` / `PATCHT` | Stapelscans an Trennblättern mit diesem Barcode aufteilen (wie Paperless-ngx; braucht `zbar-tools`) |
+| `CONSUMER_ENABLE_ASN_BARCODE` / `CONSUMER_ASN_BARCODE_PREFIX` | `false` / `ASN` | Archivnummer aus Barcodes wie `ASN00042` übernehmen; beim Aufteilen beginnt eine solche Seite ein neues Dokument |
+| `CONSUMER_BARCODE_DPI` / `CONSUMER_BARCODE_MAX_PAGES` | `300` / `0` | Auflösung beim Lesen; nur die ersten Seiten durchsuchen (0 = alle) |
 | `INVOICE_FIELDS` | `true` | Rechnungsdaten in Custom Fields eintragen (`false` = aus) |
 | `ACCESS_LOG` / `ACCESS_LOG_DAYS` | `true` / `90` | Zugriffe auf Dokumente protokollieren (angesehen, heruntergeladen, Freigabelink) und so viele Tage behalten |
 | `DEBUG` | – | `1` = jede Anfrage loggen |

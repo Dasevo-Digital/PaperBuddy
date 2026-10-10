@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:logging/logging.dart';
+import 'package:path/path.dart' as p;
 
 import 'invoice.dart';
 
@@ -124,6 +125,35 @@ class ExternalTools {
       if (looksLikeInvoiceXml(xml)) return xml;
     }
     return null;
+  }
+
+  /// Barcodes je Seite (Seiten mit pdftoppm rendern, mit zbarimg lesen);
+  /// `null`, wenn eines der Programme fehlt. Mit [maxPages] nur die ersten.
+  Future<List<List<String>>?> pdfBarcodes(String pdf, String workDir, {int dpi = 300, int maxPages = 0}) async {
+    if (!await has('pdftoppm') || !await has('zbarimg')) return null;
+    final dir = await Directory(workDir).createTemp('barcodes-');
+    try {
+      final render = await Process.run('pdftoppm', [
+        '-r', '$dpi', '-gray', '-png',
+        if (maxPages > 0) ...['-l', '$maxPages'],
+        pdf, p.join(dir.path, 'page'),
+      ]);
+      if (render.exitCode != 0) {
+        _log.warning('pdftoppm fehlgeschlagen: ${render.stderr}');
+        return null;
+      }
+      int number(File f) => int.parse(RegExp(r'-(\d+)\.png$').firstMatch(f.path)![1]!);
+      final pages = dir.listSync().whereType<File>().where((f) => f.path.endsWith('.png')).toList()
+        ..sort((a, b) => number(a).compareTo(number(b)));
+      return [
+        for (final page in pages)
+          await Process.run('zbarimg', ['--quiet', '--raw', page.path]).then((r) => r.exitCode == 0
+              ? [for (final line in '${r.stdout}'.split('\n')) if (line.trim().isNotEmpty) line.trim()]
+              : <String>[]),
+      ];
+    } finally {
+      await dir.delete(recursive: true);
+    }
   }
 
   Future<String?> pdfText(String pdf) async {

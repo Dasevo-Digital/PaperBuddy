@@ -90,6 +90,7 @@ class PaperbuddyServer {
       workDir: p.join(config.dataDir, 'work'),
       history: history,
       invoices: config.invoiceFields,
+      barcodes: config.barcodes,
     );
     final trash = Trash(db, store, access, delay: config.emptyTrashDelay);
     final customFields = CustomFieldsResource(db, access);
@@ -206,6 +207,9 @@ class PaperbuddyServer {
         .map((e) => e.key);
     if (missing.isNotEmpty) {
       _log.warning('Nicht gefunden: ${missing.join(', ')}. OCR und Vorschaubilder sind eingeschränkt.');
+    }
+    if (config.barcodes.enabled && !await ExternalTools(ocrLanguage: config.ocrLanguage).has('zbarimg')) {
+      _log.warning('Barcodes sind eingeschaltet, aber zbarimg fehlt (Paket zbar-tools).');
     }
     if (!auth.hasUsers) {
       _log.warning('Noch kein Benutzer vorhanden. PAPERBUDDY_ADMIN_USER und PAPERBUDDY_ADMIN_PASSWORD '

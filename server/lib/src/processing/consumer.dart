@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 import '../db.dart';
 import '../history.dart';
 import '../storage.dart';
+import 'barcodes.dart';
 import 'classifier.dart';
 import 'file_types.dart';
 import 'invoice.dart';
@@ -87,6 +88,29 @@ class ConsumeOverrides {
   final viewGroups = <int>{};
   final changeUsers = <int>{};
   final changeGroups = <int>{};
+
+  /// Teil eines aufgeteilten Stapelscans: nicht noch einmal nach Barcodes
+  /// suchen.
+  bool fromBarcodeSplit = false;
+
+  /// Gleiche Vorgaben für einen Teil eines Stapelscans, ggf. mit eigener ASN.
+  ConsumeOverrides forPart({int? asn}) => ConsumeOverrides(
+        title: title,
+        created: created,
+        correspondent: correspondent,
+        documentType: documentType,
+        storagePath: storagePath,
+        tags: tags,
+        archiveSerialNumber: asn ?? archiveSerialNumber,
+        owner: owner,
+        customFieldValues: customFieldValues,
+      )
+        ..titleTemplate = titleTemplate
+        ..viewUsers.addAll(viewUsers)
+        ..viewGroups.addAll(viewGroups)
+        ..changeUsers.addAll(changeUsers)
+        ..changeGroups.addAll(changeGroups)
+        ..fromBarcodeSplit = true;
 }
 
 /// Erweiterungspunkte für Workflows.
@@ -136,6 +160,7 @@ class Consumer {
     DocumentClassifier? classifier,
     this.history,
     this.invoices = true,
+    this.barcodes = const BarcodeSettings(),
   }) : classifier = classifier ?? DocumentClassifier(db);
 
   final Database db;
@@ -147,6 +172,9 @@ class Consumer {
 
   /// Rechnungsdaten erkennen und in Custom Fields eintragen.
   final bool invoices;
+
+  /// Trennblätter und ASN-Barcodes (aus, solange nichts eingeschaltet ist).
+  final BarcodeSettings barcodes;
   ConsumeHooks? hooks;
 
   /// Nach dem Anlegen und nach Workflows (z. B. Dateien einsortieren).
@@ -234,6 +262,12 @@ class Consumer {
     _setTask(taskId, 'STARTED');
     final scratch = Directory(p.join(workDir, 'scratch', taskId));
     try {
+      final split = await _splitByBarcodes(staged, originalName, o, scratch, source, mailRule);
+      if (split != null) {
+        _setTask(taskId, 'SUCCESS', result: split);
+        _log.info('$originalName: $split');
+        return;
+      }
       hooks?.consumptionStarted(
           fileName: originalName, path: sourcePath, source: source, overrides: o, mailRule: mailRule);
       final id = await _consume(staged, originalName, o, scratch);
@@ -255,6 +289,56 @@ class Consumer {
       if (await scratch.exists()) await scratch.delete(recursive: true);
       if (await staged.exists()) await staged.delete();
     }
+  }
+
+  /// Stapelscan an Trennblättern bzw. ASN-Barcodes aufteilen: Jeder Teil
+  /// wird als eigenes Dokument eingereiht. Liefert die Meldung für den
+  /// Task, wenn aufgeteilt wurde; setzt sonst ggf. nur die ASN in [o].
+  Future<String?> _splitByBarcodes(
+    File staged,
+    String originalName,
+    ConsumeOverrides o,
+    Directory scratch,
+    ConsumeSource source,
+    int? mailRule,
+  ) async {
+    if (!barcodes.enabled || o.fromBarcodeSplit) return null;
+    final head = await staged.openRead(0, 2048).expand((b) => b).toList();
+    if (detectMime(originalName, head) != 'application/pdf') return null;
+    await scratch.create(recursive: true);
+    final codes = await tools.pdfBarcodes(staged.path, scratch.path, dpi: barcodes.dpi, maxPages: barcodes.maxPages);
+    final pages = await tools.pdfPageCount(staged.path);
+    if (codes == null || pages == null) {
+      _log.warning('Barcodes eingeschaltet, aber pdftoppm, pdfinfo oder zbarimg fehlt.');
+      return null;
+    }
+    bool asnFree(int? asn) =>
+        asn != null && db.select('SELECT 1 FROM documents WHERE archive_serial_number = ?', [asn]).isEmpty;
+    final parts = planBarcodeSplit(codes, pages, barcodes);
+    final whole = parts.length == 1 && parts.single.first == 1 && parts.single.last == pages;
+    if (parts.isEmpty || whole) {
+      final asn = parts.firstOrNull?.asn;
+      if (o.archiveSerialNumber == null && asnFree(asn)) o.archiveSerialNumber = asn;
+      return null;
+    }
+    if (!await tools.has('qpdf')) {
+      _log.warning('$originalName: Trennblätter gefunden, aber qpdf fehlt – wird nicht aufgeteilt.');
+      return null;
+    }
+    final stem = p.basenameWithoutExtension(originalName);
+    for (final (i, part) in parts.indexed) {
+      final out = p.join(scratch.path, 'part-${i + 1}.pdf');
+      await tools.qpdf([staged.path, '--pages', '.', '${part.first}-${part.last}', '--', out]);
+      await submit(
+        File(out),
+        originalName: '${stem}_${i + 1}.pdf',
+        overrides: o.forPart(asn: asnFree(part.asn) ? part.asn : null),
+        moveSource: true,
+        source: source,
+        mailRule: mailRule,
+      );
+    }
+    return 'Split into ${parts.length} documents: ${parts.join(', ')}';
   }
 
   /// Typ nach Inhalt, nicht nach Endung (siehe [detectFileType]).

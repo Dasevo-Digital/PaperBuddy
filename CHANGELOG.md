@@ -5,6 +5,11 @@ ausführliche Fassung mit Hintergründen steht im jeweiligen Release.
 
 ## Unveröffentlicht
 
+- **Barcode-Trennblätter:** Stapelscans werden an Seiten mit dem Barcode
+  `PATCHT` aufgeteilt, Barcodes wie `ASN00042` setzen die Archivnummer – mit
+  denselben Einstellungen wie Paperless-ngx (`CONSUMER_ENABLE_BARCODES`,
+  `CONSUMER_ENABLE_ASN_BARCODE`). Docker-Image und Debian-Installer bringen
+  dafür `zbar-tools` mit.
 - **Rechnungsdaten:** Betrag, Rechnungsnummer, Fälligkeit und IBAN werden
   erkannt und in Custom Fields eingetragen – exakt aus E-Rechnungen
   (ZUGFeRD/Factur-X, XRechnung), sonst aus dem Text. XRechnung-Dateien (XML)
