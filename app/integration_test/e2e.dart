@@ -52,7 +52,8 @@ Future<void> scrollUntilShown(WidgetTester tester, Finder anchor, Finder target,
     position.jumpTo((position.pixels + 300).clamp(0, position.maxScrollExtent));
     await tester.pump(const Duration(milliseconds: 200));
   }
-  await tester.pump(const Duration(milliseconds: 300));
+  // Gebaut heißt nicht sichtbar: Listen bauen etwas über den Rand hinaus.
+  await reveal(tester, target);
 }
 
 /// Holt [finder] in den sichtbaren Bereich, damit ein Tippen trifft.
