@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "PaperBuddy",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "REST-API von PaperBuddy, kompatibel zu Paperless-ngx 2.18.0 (API-Versionen 1 bis 10). Pfade mit x-paperbuddy-extension gibt es nur bei PaperBuddy."
   },
   "security": [

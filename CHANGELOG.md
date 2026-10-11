@@ -3,27 +3,41 @@
 Hier steht je Version, was sich für Nutzer und Betreiber ändert. Die
 ausführliche Fassung mit Hintergründen steht im jeweiligen Release.
 
-## Unveröffentlicht
+## 0.3.0 (11.10.2026)
 
-- **Integrations-Token** für andere Apps wie Famio: nur lesen, nur Dokumente
-  mit einem Tag samt deren Fristen, verwaltet unter Einstellungen → Zugriff
-  für andere Apps.
-- **Behoben:** „Vom Gerät entfernen“ in der Offline-Liste löste in
-  Debug-Builds eine Assertion aus.
-- **Barcode-Trennblätter:** Stapelscans werden an Seiten mit dem Barcode
-  `PATCHT` aufgeteilt, Barcodes wie `ASN00042` setzen die Archivnummer – mit
-  denselben Einstellungen wie Paperless-ngx (`CONSUMER_ENABLE_BARCODES`,
-  `CONSUMER_ENABLE_ASN_BARCODE`). Docker-Image und Debian-Installer bringen
-  dafür `zbar-tools` mit.
+### Neu in der App
+
+- **Englische Oberfläche:** Die App spricht Deutsch und Englisch, je nach
+  Gerät oder unter Einstellungen → Sprache. Datum und Zahlen folgen der
+  Sprache, ebenso die Meldungen des API-Clients.
+- **Zugriffe:** Wer ein Dokument angesehen, heruntergeladen oder über einen
+  Freigabelink abgerufen hat, steht in der Detailansicht unter „Zugriffe“
+  (für Eigentümer und Administratoren).
+- **Zugriff für andere Apps:** Integrations-Token für Programme wie Famio
+  anlegen und löschen (Einstellungen → Zugriff für andere Apps).
+
+### Neu im Server
+
 - **Rechnungsdaten:** Betrag, Rechnungsnummer, Fälligkeit und IBAN werden
   erkannt und in Custom Fields eingetragen – exakt aus E-Rechnungen
   (ZUGFeRD/Factur-X, XRechnung), sonst aus dem Text. XRechnung-Dateien (XML)
   lassen sich hochladen und erscheinen als lesbares PDF. Abschaltbar mit
   `PAPERBUDDY_INVOICE_FIELDS=false`, für vorhandene Dokumente
   `manage extract-invoices`.
-- **Englische Oberfläche:** Die App spricht Deutsch und Englisch, je nach
-  Gerät oder unter Einstellungen → Sprache. Datum und Zahlen folgen der
-  Sprache, ebenso die Meldungen des API-Clients.
+- **Barcode-Trennblätter:** Stapelscans werden an Seiten mit dem Barcode
+  `PATCHT` aufgeteilt, Barcodes wie `ASN00042` setzen die Archivnummer – mit
+  denselben Einstellungen wie Paperless-ngx (`CONSUMER_ENABLE_BARCODES`,
+  `CONSUMER_ENABLE_ASN_BARCODE`). Docker-Image und Debian-Installer bringen
+  dafür `zbar-tools` mit.
+- **Integrations-Token** (`/api/integration_tokens/`): nur lesen, nur
+  Dokumente mit einem Tag samt deren Fristen, höchstens so viel, wie der
+  Ersteller sieht.
+- **Zugriffsprotokoll** (`/api/documents/<id>/access_log/`): abschaltbar mit
+  `PAPERBUDDY_ACCESS_LOG=false`, Aufbewahrung `PAPERBUDDY_ACCESS_LOG_DAYS`
+  (Standard 90 Tage).
+
+### Betrieb
+
 - **Sicherung:** täglich, verschlüsselt im age-Format und nach jedem Lauf
   geprüft (Prüfsummen, Datenbank zurückgespielt und gezählt), mit
   Aufbewahrung. Dazu `manage backup`, `verify-backup` und `restore-backup`;
@@ -32,19 +46,20 @@ ausführliche Fassung mit Hintergründen steht im jeweiligen Release.
 - **Überwachung:** `/api/health/` für Uptime-Monitore, `/metrics` im
   Prometheus-Format und `/api/schema/` mit der OpenAPI-Beschreibung aller
   Endpunkte (Kopie in `docs/openapi.json`).
-- **Zugriffsprotokoll:** Wer ein Dokument angesehen, heruntergeladen oder
-  über einen Freigabelink abgerufen hat, steht in der Detailansicht unter
-  „Zugriffe“ (für Eigentümer und Administratoren). Abschaltbar mit
-  `PAPERBUDDY_ACCESS_LOG=false`, Aufbewahrung `PAPERBUDDY_ACCESS_LOG_DAYS`
-  (Standard 90 Tage).
 - **Integrationstests** der echten App gegen Wegwerf-Server, auch in der CI.
-- **Behoben:** Beim Abmelden blitzte kurz ein Fehlerbild auf; nach einem
-  falschen Zwei-Faktor-Code stand der Cursor nicht wieder im Codefeld; neu
-  angelegte Korrespondenten und Dokumenttypen erschienen im Formular als
+
+### Behoben
+
+- Der Docker-Healthcheck schlug immer fehl, weil `/bin/sh` im Image `dash`
+  ist und `/dev/tcp` nicht kennt; Container galten dadurch als „unhealthy“.
+  Er fragt jetzt `/api/health/` über `bash` ab.
+- Beim Abmelden blitzte kurz ein Fehlerbild auf.
+- Nach einem falschen Zwei-Faktor-Code stand der Cursor nicht wieder im
+  Codefeld.
+- Neu angelegte Korrespondenten und Dokumenttypen erschienen im Formular als
   Nummer.
-- **Behoben:** Der Docker-Healthcheck schlug immer fehl, weil `/bin/sh` im
-  Image `dash` ist und `/dev/tcp` nicht kennt; Container galten dadurch als
-  „unhealthy“. Er fragt jetzt `/api/health/` über `bash` ab.
+- „Vom Gerät entfernen“ in der Offline-Liste löste in Debug-Builds eine
+  Assertion aus.
 
 ## 0.2.0 (09.10.2026)
 
