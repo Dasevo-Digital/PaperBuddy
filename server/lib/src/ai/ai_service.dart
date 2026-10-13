@@ -46,7 +46,9 @@ class SemanticHit {
 /// Dokumente und beantwortet Suchanfragen.
 ///
 /// Das Modell wird erst geladen, wenn es gebraucht wird, und nach zwei
-/// Minuten ohne Arbeit wieder freigegeben (rund 300 MB Arbeitsspeicher).
+/// Minuten ohne Arbeit wieder freigegeben, samt Laufzeit. Gemessen im
+/// Docker-Image: rund 250 MB mehr beim Rechnen, danach bleiben etwa 120 MB,
+/// weil Dart und glibc freigegebenen Speicher im Prozess behalten.
 class AiService {
   AiService({required this.db, required this.settings, http.Client? client, this.idle = const Duration(minutes: 2)})
       : index = VectorIndex(db),
@@ -188,6 +190,9 @@ class AiService {
     _embedder = null;
     _loaded = null;
     if (e != null) await (await e).close();
+    // Auch die Laufzeit samt Isolate; der nächste Aufruf startet sie neu.
+    _runtime?.close();
+    _runtime = null;
   }
 
   /// Liest alle Dokumente ohne Vektoren ein (läuft sonst von selbst).

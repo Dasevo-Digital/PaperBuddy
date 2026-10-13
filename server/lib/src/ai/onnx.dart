@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ffi';
+import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
@@ -418,8 +419,22 @@ class _Ort {
 
   Object? _close(int id) {
     final s = _sessions.remove(id);
-    if (s != null) _releaseSession(s.pointer);
+    if (s != null) {
+      _releaseSession(s.pointer);
+      _trim();
+    }
     return null;
+  }
+
+  /// glibc behält freigegebenen Speicher sonst oft im Prozess; ohne das
+  /// blieben nach dem Schließen des Modells rund 100 MB belegt.
+  static void _trim() {
+    if (!Platform.isLinux) return;
+    try {
+      DynamicLibrary.process().lookupFunction<Int32 Function(Size), int Function(int)>('malloc_trim')(0);
+    } on ArgumentError {
+      // Kein glibc (z. B. musl): dann eben nicht.
+    }
   }
 
   void dispose() {

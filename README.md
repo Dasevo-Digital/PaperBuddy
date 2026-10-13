@@ -285,10 +285,11 @@ Mit `PAPERBUDDY_AI=true` versteht PaperBuddy Dokumente nach ihrer Bedeutung:
 Das Modell ist multilingual-e5-small (MIT-Lizenz, über 90 Sprachen). Der
 Server lädt es beim ersten Start einmalig von HuggingFace (135 MB), prüft die
 Prüfsummen und liest danach alle Dokumente im Hintergrund ein (auf einem
-aktuellen Rechner rund 50–100 ms je Seite). Dokumente verlassen den Server dabei nie. Solange das Modell
-rechnet, belegt es rund 400 MB Arbeitsspeicher. Nach zwei Minuten ohne Arbeit
-gibt der Server es wieder frei. Den Fortschritt zeigt die App unter
-Einstellungen → Lokale KI.
+aktuellen Rechner rund 50–100 ms je Seite). Dokumente verlassen den Server
+dabei nie. Solange das Modell rechnet, braucht der Server rund 250 MB mehr
+Arbeitsspeicher. Nach zwei Minuten ohne Arbeit gibt er das Modell frei;
+danach bleiben etwa 120 MB mehr belegt als ohne KI. Den Fortschritt zeigt die
+App unter Einstellungen → Lokale KI.
 
 **Einschalten:**
 

@@ -17,10 +17,10 @@ import 'package:characters/characters.dart';
 /// 3. Je Wort die wahrscheinlichste Zerlegung über das Wörterbuch (Viterbi).
 /// 4. `<s>` davor, `</s>` dahinter.
 class UnigramTokenizer {
-  UnigramTokenizer._(this._ids, this._scores, this._charsmap, this.unkId, this._maxPieceLength)
+  UnigramTokenizer._(this._pieces, this._scores, this._charsmap, this.unkId, this._maxPieceLength)
       : _unkScore = _scores.reduce((a, b) => a < b ? a : b) - 10;
 
-  final Map<String, int> _ids;
+  final _PieceTable _pieces;
   final Float64List _scores;
   final _Charsmap? _charsmap;
   final int _maxPieceLength;
@@ -57,9 +57,8 @@ class UnigramTokenizer {
     if (s.pos < 0) throw const FormatException('tokenizer.json ohne Wörterbuch');
     s.skipTo(0x5b); // [
     s.pos++;
-    final ids = <String, int>{};
+    final pieces = _PieceTableBuilder();
     final scores = <double>[];
-    var maxLength = 1;
     while (true) {
       s.skipSpace();
       if (s.peek == 0x5d) break; // ]
@@ -69,17 +68,15 @@ class UnigramTokenizer {
       }
       s.expect(0x5b);
       s.skipSpace();
-      final piece = s.readString();
+      final piece = s.readStringBytes();
       s.skipSpace();
       s.expect(0x2c);
       s.skipSpace();
       final score = s.readNumber();
       s.skipSpace();
       s.expect(0x5d);
-      ids.putIfAbsent(piece, () => scores.length);
+      pieces.add(piece);
       scores.add(score);
-      final length = piece.runes.length;
-      if (length > maxLength) maxLength = length;
     }
     String? charsmap;
     final cm = s.find('"precompiled_charsmap"');
@@ -91,11 +88,11 @@ class UnigramTokenizer {
       if (s.peek == 0x22) charsmap = s.readString();
     }
     return UnigramTokenizer._(
-      ids,
+      pieces.build(),
       Float64List.fromList(scores),
       charsmap == null || charsmap.isEmpty ? null : _Charsmap(base64.decode(charsmap)),
       unkId,
-      maxLength,
+      pieces.maxChars,
     );
   }
 
@@ -152,8 +149,14 @@ class UnigramTokenizer {
   /// unbekanntes Zeichen nur, wenn es kein Stück aus genau diesem Zeichen
   /// gibt; aufeinanderfolgende unbekannte Zeichen werden eins.
   void _viterbi(String word, List<int> into) {
-    final chars = word.runes.toList(growable: false);
-    final n = chars.length;
+    final bytes = utf8.encode(word);
+    // Wo jedes Zeichen in den UTF-8-Bytes beginnt, plus das Ende.
+    final starts = <int>[
+      for (var b = 0; b < bytes.length; b++)
+        if (bytes[b] & 0xc0 != 0x80) b,
+      bytes.length,
+    ];
+    final n = starts.length - 1;
     final best = Float64List(n + 1);
     final from = Int32List(n + 1)..fillRange(1, n + 1, -1);
     final piece = Int32List(n + 1);
@@ -163,8 +166,8 @@ class UnigramTokenizer {
       var single = false;
       final limit = i + _maxPieceLength > n ? n - i : _maxPieceLength;
       for (var l = 1; l <= limit; l++) {
-        final id = _ids[String.fromCharCodes(chars, i, i + l)];
-        if (id == null) continue;
+        final id = _pieces.lookup(bytes, starts[i], starts[i + l]);
+        if (id < 0) continue;
         final score = base + _scores[id];
         if (from[i + l] < 0 || score > best[i + l]) {
           best[i + l] = score;
@@ -277,6 +280,23 @@ class _Scanner {
     pos++;
   }
 
+  /// Eine Zeichenkette als UTF-8-Bytes, ohne ein `String`-Objekt.
+  Uint8List readStringBytes() {
+    expect(0x22);
+    final start = pos;
+    var escaped = false;
+    while (bytes[pos] != 0x22) {
+      if (bytes[pos] == 0x5c) {
+        escaped = true;
+        pos++;
+      }
+      pos++;
+    }
+    final raw = Uint8List.sublistView(bytes, start, pos);
+    pos++;
+    return escaped ? utf8.encode(jsonDecode('"${utf8.decode(raw)}"') as String) : raw;
+  }
+
   String readString() {
     expect(0x22);
     final start = pos;
@@ -301,5 +321,80 @@ class _Scanner {
       pos++;
     }
     return double.parse(String.fromCharCodes(bytes, start, pos));
+  }
+}
+
+/// Das Wörterbuch als Hashtabelle über UTF-8-Bytes in wenigen typisierten
+/// Listen statt 250.000 einzelner Zeichenketten: rund 6 statt 50 MB, und
+/// die Speicherbereinigung hat nichts zu durchsuchen.
+class _PieceTable {
+  _PieceTable(this._bytes, this._offsets, this._slots);
+  final Uint8List _bytes;
+  final Uint32List _offsets;
+  final Int32List _slots;
+
+  static int hash(Uint8List b, int start, int end) {
+    var h = 0x811c9dc5;
+    for (var i = start; i < end; i++) {
+      h = ((h ^ b[i]) * 0x01000193) & 0xffffffff;
+    }
+    return h;
+  }
+
+  bool _equals(int id, Uint8List b, int start, int end) {
+    final s = _offsets[id], e = _offsets[id + 1];
+    if (e - s != end - start) return false;
+    for (var i = 0; i < e - s; i++) {
+      if (_bytes[s + i] != b[start + i]) return false;
+    }
+    return true;
+  }
+
+  /// Kennung des Stücks `b[start..end)`, sonst -1.
+  int lookup(Uint8List b, int start, int end) {
+    final mask = _slots.length - 1;
+    var i = hash(b, start, end) & mask;
+    while (true) {
+      final id = _slots[i];
+      if (id < 0 || _equals(id, b, start, end)) return id;
+      i = (i + 1) & mask;
+    }
+  }
+}
+
+class _PieceTableBuilder {
+  final _bytes = BytesBuilder();
+  final _offsets = <int>[0];
+  var maxChars = 1;
+
+  void add(Uint8List piece) {
+    _bytes.add(piece);
+    _offsets.add(_bytes.length);
+    var chars = 0;
+    for (final b in piece) {
+      if (b & 0xc0 != 0x80) chars++;
+    }
+    if (chars > maxChars) maxChars = chars;
+  }
+
+  _PieceTable build() {
+    final count = _offsets.length - 1;
+    var size = 1;
+    while (size < count * 2) {
+      size <<= 1;
+    }
+    final table = _PieceTable(_bytes.takeBytes(), Uint32List.fromList(_offsets), Int32List(size)..fillRange(0, size, -1));
+    final mask = size - 1;
+    for (var id = 0; id < count; id++) {
+      final s = table._offsets[id], e = table._offsets[id + 1];
+      // Gibt es ein Stück doppelt, gilt das erste.
+      if (table.lookup(table._bytes, s, e) >= 0) continue;
+      var i = _PieceTable.hash(table._bytes, s, e) & mask;
+      while (table._slots[i] >= 0) {
+        i = (i + 1) & mask;
+      }
+      table._slots[i] = id;
+    }
+    return table;
   }
 }
