@@ -73,7 +73,10 @@ jobs:
         run: |
           flutter pub get
           flutter analyze
-          flutter test --reporter github
+          flutter test --reporter github --file-reporter json:build/test-results.json || {
+            dart run tool/ci_failures.dart build/test-results.json
+            exit 1
+          }
       - name: Web-Build
         working-directory: app
         run: flutter build web --release

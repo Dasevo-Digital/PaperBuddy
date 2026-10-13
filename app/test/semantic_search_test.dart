@@ -8,6 +8,19 @@ import 'package:paperbuddy/src/app.dart';
 import 'support.dart';
 import 'widgets_test.dart' show settle;
 
+/// Wartet in echter Zeit, bis [finder] etwas findet. Anders als
+/// `pumpAndSettle` spult das die Testzeit nicht vor: Solange ein Ladekreis
+/// läuft, liefe sonst die 30-Sekunden-Grenze des Clients ab, bevor der
+/// Server (auf einem langsamen CI-Rechner) geantwortet hat.
+Future<void> waitFor(WidgetTester tester, Finder finder, {Duration timeout = const Duration(seconds: 20)}) async {
+  final end = DateTime.now().add(timeout);
+  while (finder.evaluate().isEmpty) {
+    if (DateTime.now().isAfter(end)) fail('Nicht erschienen: $finder');
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+}
+
 void main() {
   late TestServer server;
 
@@ -46,13 +59,14 @@ void main() {
     expect(find.byTooltip('Nach Wörtern suchen'), findsOneWidget);
     // Kein Wort „Blutuntersuchung“ im Text, aber Wörter des Befunds.
     await tester.enterText(find.byType(SearchBar).first, 'Blutwerte Labor');
-    // Suche abschicken, dann echte Zeit für den Server; sonst spult der
-    // Ladekreis die Testzeit bis zur Zeitüberschreitung vor.
-    await tester.pump(const Duration(milliseconds: 400));
-    await settle(tester);
+    await tester.pump(const Duration(milliseconds: 400)); // Suche abschicken
+    await waitFor(tester, find.text('1 Dokument'));
     expect(find.text('Laborbefund'), findsOneWidget);
     expect(find.text('Stromrechnung'), findsNothing);
     expect(find.text('1 Dokument'), findsOneWidget);
+    // Der Server stellt nach der Anfrage den Zeitgeber, der das Modell nach
+    // der Ruhezeit freigibt; in Testzeit ablaufen lassen.
+    await tester.pump(const Duration(minutes: 3));
   });
 
   testWidgets('Ohne lokale KI kein Umschalter, ähnliche Dokumente trotzdem', (tester) async {
@@ -62,8 +76,7 @@ void main() {
     await settle(tester);
     await tester.scrollUntilVisible(find.text('Ähnliche Dokumente'), 300, scrollable: find.byType(Scrollable).last);
     await tester.tap(find.text('Ähnliche Dokumente'));
-    await settle(tester);
-    expect(find.text('Stromabschlag'), findsOneWidget);
+    await waitFor(tester, find.text('Stromabschlag'));
     expect(find.text('Laborbefund'), findsNothing);
   });
 }
