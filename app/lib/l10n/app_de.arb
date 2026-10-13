@@ -814,5 +814,39 @@
     "placeholders": {
       "date": {}
     }
+  },
+  "similarDocuments": "Ähnliche Dokumente",
+  "noSimilarDocuments": "Keine ähnlichen Dokumente gefunden.",
+  "searchByMeaning": "Nach Bedeutung suchen",
+  "searchByWords": "Nach Wörtern suchen",
+  "semanticSearchHint": "Suche nach Bedeutung, z. B. „Stromkosten 2025“",
+  "localAi": "Lokale KI",
+  "aiReady": "Bereit: Suche nach Bedeutung und Zuordnung über ähnliche Dokumente",
+  "aiReadyIndexed": "Bereit · {indexed} von {total} Dokumenten eingelesen",
+  "@aiReadyIndexed": {
+    "placeholders": {
+      "indexed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "aiDownloading": "Modell wird geladen ({percent} %)",
+  "@aiDownloading": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "aiDisabled": "Aus – auf dem Server mit PAPERBUDDY_AI=true einschalten",
+  "aiUnavailable": "ONNX Runtime fehlt auf dem Server",
+  "aiError": "Fehler: {error}",
+  "@aiError": {
+    "placeholders": {
+      "error": {}
+    }
   }
 }

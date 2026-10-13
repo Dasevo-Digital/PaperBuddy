@@ -64,7 +64,8 @@ Server im selben Prozess (ohne Netzwerk, über einen Shelf-Handler).
 | `access.dart` | Modellrechte (`view_document` …) und Objektrechte (Eigentümer, Freigaben); SQL-Bedingungen für sichtbare/änderbare Objekte |
 | `trash.dart` | Papierkorb, automatisches Leeren |
 | `workflows.dart` | Workflow-Engine (Auslöser, Aktionen, Platzhalter, Zeitsteuerung) und API |
-| `processing/classifier.dart` | Lernendes Matching (Naive Bayes), stündlich nachtrainiert |
+| `processing/classifier.dart` | Lernendes Matching: Naive Bayes, mit lokaler KI die ähnlichsten Dokumente (Vektoren und TF-IDF) |
+| `ai/` | Lokale KI: ONNX Runtime über `dart:ffi` in eigenem Isolate, SentencePiece-Tokenizer, multilingual-e5-small (Download mit Prüfsummen), Vektoren je Abschnitt in `document_embeddings` |
 | `mail/` | IMAP-Client, MIME-Parser, Mailkonten und -regeln |
 | `scanners/escl.dart` | eSCL/AirScan: Suche per mDNS, Fähigkeiten, Scanaufträge |
 | `storage_remote.dart` | S3 (SigV4) und WebDAV mit lokalem Zwischenspeicher |
@@ -87,7 +88,8 @@ Umgesetzt: Token-/Basic-Auth, Dokumente mit allen gängigen Filtern, Volltextsuc
 Custom Fields, Rechte, Löschen, Neuverarbeitung), Notizen, Vorschläge, Tags/Korrespondenten/
 Dokumenttypen/Speicherpfade, Custom Fields, gespeicherte Ansichten, Benutzer, Gruppen, Profil,
 Papierkorb, Workflows, Mailkonten und -regeln, Freigabelinks, `bulk_edit_objects`,
-`ui_settings`, `statistics`, `status`, `config`, `remote_version`, `search/autocomplete`.
+`ui_settings`, `statistics`, `status`, `config`, `remote_version`, `search/autocomplete`,
+`more_like_id`.
 
 Außerdem: PDF-Bearbeitung per Bulk-Edit (`rotate`, `delete_pages`, `merge`, `split`, über qpdf),
 Änderungsverlauf (`/history/`), Versionen (`update_version`, `?version=`), Ablage nach
@@ -107,4 +109,5 @@ Verlauf, eigene Freigabelink-Seiten mit Vorschau.
 5. **Mehrbenutzer und Rechte**, Papierkorb, Freigabelinks *(erledigt)*
 6. **Speicher-Backends** (S3, WebDAV/Nextcloud), Backup/Export, Import aus Paperless-ngx *(erledigt)*
 7. **Eingänge**: Mail (IMAP), FTP, eSCL/AirScan *(erledigt)*
-8. **Optional**: Postgres, Thumbnails als WebP, KI-Klassifizierung (lokal)
+8. **Lokale KI**: semantische Suche, ähnliche Dokumente, Zuordnung über Vektoren *(erledigt)*
+9. **Optional**: Postgres, Thumbnails als WebP

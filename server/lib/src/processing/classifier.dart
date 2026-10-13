@@ -1,7 +1,11 @@
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:logging/logging.dart';
 import 'package:sqlite3/sqlite3.dart';
+
+import '../ai/embedder.dart';
+import '../ai/index.dart';
 
 final _log = Logger('classifier');
 
@@ -11,6 +15,10 @@ final _log = Logger('classifier');
 /// genügt ein multinomialer Naive-Bayes-Klassifikator auf Wortzählungen: er
 /// lernt aus den vorhandenen Zuordnungen, ist in Millisekunden trainiert und
 /// braucht keine externen Abhängigkeiten.
+///
+/// Mit der lokalen KI entscheiden stattdessen die ähnlichsten bereits
+/// zugeordneten Dokumente (siehe [predict]). Eine Korrektur wirkt dabei
+/// sofort, ohne neues Training.
 class DocumentClassifier {
   DocumentClassifier(this.db);
   final Database db;
@@ -20,6 +28,11 @@ class DocumentClassifier {
   _Multiclass? _storagePath;
   Map<int, _Binary> _tags = {};
   String? _trainedOn;
+
+  /// Gewichtete Wörter und Zuordnungen je Dokument, für [predict] und
+  /// [similar].
+  Map<int, _Sample> _samples = {};
+  Map<String, int> _df = {};
 
   bool get isTrained => _trainedOn != null;
 
@@ -81,8 +94,135 @@ class DocumentClassifier {
       // Ohne Gegenbeispiele würde jeder Text als Treffer gelten.
       if (model.positives >= 1 && model.negatives >= 1) _tags[tag] = model;
     }
+    final autoCorrespondents = autoIds('correspondents');
+    final autoTypes = autoIds('document_types');
+    final autoPaths = autoIds('storage_paths');
+    int auto(Set<int> ids, Object? label) => label is int && ids.contains(label) ? label : 0;
+    _df = {};
+    _docCount = docs.length;
+    for (final words in tokens.values) {
+      for (final w in words.keys) {
+        _df[w] = (_df[w] ?? 0) + 1;
+      }
+    }
+    _samples = {
+      for (final d in docs)
+        d['id'] as int: _Sample(
+          _tfidf(tokens[d['id']]!),
+          auto(autoCorrespondents, d['correspondent_id']),
+          auto(autoTypes, d['document_type_id']),
+          auto(autoPaths, d['storage_path_id']),
+          {
+            for (final t in (d['tag_ids'] as String?)?.split(',').map(int.parse) ?? const <int>[])
+              if (autoTags.contains(t)) t,
+          },
+        ),
+    };
+    _autoTags = autoTags;
     _trainedOn = fp;
     _log.fine('Trainiert auf ${docs.length} Dokumenten in ${sw.elapsedMilliseconds} ms');
+  }
+
+  Set<int> _autoTags = {};
+  int _docCount = 0;
+
+  /// TF-IDF, auf Länge 1 gebracht.
+  Map<String, double> _tfidf(Map<String, int> counts) {
+    final total = max(_docCount, 1);
+    final v = <String, double>{
+      for (final e in counts.entries) e.key: (1 + log(e.value)) * log((total + 1) / ((_df[e.key] ?? 0) + 1)),
+    };
+    final norm = sqrt(v.values.fold(0.0, (s, x) => s + x * x));
+    if (norm > 0) v.updateAll((_, x) => x / norm);
+    return v;
+  }
+
+  static double _cosine(Map<String, double> a, Map<String, double> b) {
+    if (a.length > b.length) (a, b) = (b, a);
+    var s = 0.0;
+    a.forEach((w, x) {
+      final y = b[w];
+      if (y != null) s += x * y;
+    });
+    return s;
+  }
+
+  /// Ähnlichkeit zweier Dokumente: Wortgewichte (TF-IDF) und, wenn es sie
+  /// gibt, die Vektoren der lokalen KI. multilingual-e5 liefert Werte
+  /// zwischen etwa 0,75 und 1; sie werden auf 0–1 gestreckt.
+  static double _similarity(Map<String, double> words, Float32List? vector, _Sample s, Float32List? other) {
+    final t = _cosine(words, s.words);
+    if (vector == null || other == null) return t;
+    return _vectorWeight * (dot(vector, other) - 0.75) / 0.25 + (1 - _vectorWeight) * t;
+  }
+
+  /// Anteil der Vektoren an der Ähnlichkeit. Gemessen an ausgedachten
+  /// Dokumenten (Korrespondenten und Typen, Kreuzvalidierung): 0,3 traf mit
+  /// einem einzigen Beispiel je Korrespondent zu 99 % (Naive Bayes 86 %),
+  /// reine Vektoren zu 97 %, reine Wortgewichte zu 93 %.
+  static const _vectorWeight = 0.3;
+  static const _neighbours = 7;
+
+  /// Zuordnung über die [_neighbours] ähnlichsten Dokumente, gewichtet nach
+  /// Ähnlichkeit. Ohne [vector] oder mit zu wenigen eingelesenen Dokumenten
+  /// entscheidet Naive Bayes.
+  Prediction predict(String text, {Float32List? vector, Map<int, DocVectors> vectors = const {}, int? exclude}) {
+    final known = vector == null
+        ? const <int>[]
+        : [for (final id in _samples.keys) if (id != exclude && (vectors[id]?.spans.isNotEmpty ?? false)) id];
+    if (known.length < 3) {
+      return Prediction(
+        correspondent: predictCorrespondent(text),
+        documentType: predictDocumentType(text),
+        storagePath: predictStoragePath(text),
+        tags: predictTags(text),
+      );
+    }
+    final words = _tfidf(tokenize(text));
+    final scored = [for (final id in known) (id, _similarity(words, vector, _samples[id]!, vectors[id]!.mean))]
+      ..sort((a, b) => b.$2.compareTo(a.$2));
+    final top = scored.take(_neighbours).toList();
+    final best = top.first.$2;
+    // Ähnlichere Nachbarn zählen deutlich mehr (Softmax, Temperatur 0,1).
+    final weights = [for (final (id, s) in top) (_samples[id]!, exp((s - best) / 0.1))];
+    final total = weights.fold(0.0, (s, w) => s + w.$2);
+    int? vote(int Function(_Sample) label, bool hasAuto) {
+      if (!hasAuto) return null;
+      final votes = <int, double>{};
+      for (final (s, w) in weights) {
+        votes[label(s)] = (votes[label(s)] ?? 0) + w;
+      }
+      final winner = votes.entries.reduce((a, b) => b.value > a.value ? b : a).key;
+      return winner == 0 ? null : winner;
+    }
+
+    return Prediction(
+      correspondent: vote((s) => s.correspondent, _correspondent != null),
+      documentType: vote((s) => s.documentType, _documentType != null),
+      storagePath: vote((s) => s.storagePath, _storagePath != null),
+      tags: {
+        for (final tag in _autoTags)
+          if (weights.where((w) => w.$1.tags.contains(tag)).fold(0.0, (s, w) => s + w.$2) >= total / 2) tag,
+      },
+    );
+  }
+
+  /// Die ähnlichsten Dokumente zu [id] unter [candidates], ähnlichstes
+  /// zuerst (für `more_like_id`).
+  List<(int, double)> similar(int id, Iterable<int> candidates, {Map<int, DocVectors> vectors = const {}, int limit = 25}) {
+    final sample = _samples[id];
+    if (sample == null) return const [];
+    final vector = vectors[id]?.spans.isNotEmpty ?? false ? vectors[id]!.mean : null;
+    final scored = <(int, double)>[];
+    for (final c in candidates) {
+      final other = _samples[c];
+      if (c == id || other == null) continue;
+      final otherVector = vectors[c]?.spans.isNotEmpty ?? false ? vectors[c]!.mean : null;
+      final s = _similarity(sample.words, otherVector == null ? null : vector, other, otherVector);
+      if (s > 0.1) scored.add((c, s));
+    }
+    scored.sort((a, b) => b.$2.compareTo(a.$2));
+    return scored.take(limit).toList();
   }
 
   int? predictCorrespondent(String text) => _correspondent?.predict(tokenize(text));
@@ -113,6 +253,26 @@ class DocumentClassifier {
     }
     return counts;
   }
+}
+
+/// Ergebnis der Zuordnung; `null` bzw. leer = keine.
+class Prediction {
+  const Prediction({this.correspondent, this.documentType, this.storagePath, this.tags = const {}});
+  final int? correspondent;
+  final int? documentType;
+  final int? storagePath;
+  final Set<int> tags;
+}
+
+/// Ein Trainingsdokument: Wortgewichte und Zuordnungen (0 = keine oder
+/// keine lernende).
+class _Sample {
+  _Sample(this.words, this.correspondent, this.documentType, this.storagePath, this.tags);
+  final Map<String, double> words;
+  final int correspondent;
+  final int documentType;
+  final int storagePath;
+  final Set<int> tags;
 }
 
 /// Naive Bayes mit mehreren Klassen; Klasse 0 bedeutet „keine Zuordnung“.

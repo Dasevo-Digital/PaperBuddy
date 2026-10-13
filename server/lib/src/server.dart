@@ -9,6 +9,7 @@ import 'package:sqlite3/sqlite3.dart';
 
 import 'access.dart';
 import 'access_log.dart';
+import 'ai/ai_service.dart';
 import 'backup/backup.dart';
 import 'api/custom_fields.dart';
 import 'api/paperless_api.dart';
@@ -52,6 +53,7 @@ class PaperbuddyServer {
     required this.reminders,
     required this.backups,
     required this.accessLog,
+    required this.ai,
   });
 
   final Config config;
@@ -69,10 +71,16 @@ class PaperbuddyServer {
   final ScannerService scanners;
   final BackupService backups;
   final AccessLog accessLog;
+  final AiService ai;
   HttpServer? _http;
   Timer? _trainTimer;
 
-  static Future<PaperbuddyServer> create(Config config, {Database? database, BlobStore? store}) async {
+  static Future<PaperbuddyServer> create(
+    Config config, {
+    Database? database,
+    BlobStore? store,
+    AiService? ai,
+  }) async {
     final db = database ?? openDatabase(config.databasePath);
     final auth = AuthService(db);
     if (!auth.hasUsers && config.adminUser != null && config.adminPassword != null) {
@@ -105,7 +113,12 @@ class PaperbuddyServer {
     );
     consumer.hooks = workflows;
     final filenames = FilenameGenerator(db, store, format: config.filenameFormat);
-    consumer.onStored = filenames.relocate;
+    final aiService = ai ?? AiService(db: db, settings: config.ai);
+    consumer.ai = aiService;
+    consumer.onStored = (id) async {
+      await filenames.relocate(id);
+      aiService.poke();
+    };
     final oauth = MailOAuth(db, config.oauth);
     final mail = MailService(
       oauth: oauth,
@@ -167,6 +180,7 @@ class PaperbuddyServer {
       onDocumentUpdated: (id) async {
         await workflows.documentUpdated(id);
         await filenames.relocate(id);
+        aiService.poke();
       },
       oauthUrls: (user) => {
         'gmail': oauth.authorizationUrl('gmail', user.id),
@@ -177,6 +191,7 @@ class PaperbuddyServer {
       hsts: config.publicUrl?.startsWith('https://') ?? false,
       backups: backups,
       accessLog: accessLog,
+      ai: aiService,
     );
     final watcher = config.consumeDir == null
         ? null
@@ -197,6 +212,7 @@ class PaperbuddyServer {
       reminders: reminders,
       backups: backups,
       accessLog: accessLog,
+      ai: aiService,
     );
   }
 
@@ -227,6 +243,8 @@ class PaperbuddyServer {
       _log.info('Keine zeitgesteuerte Sicherung (PAPERBUDDY_BACKUP_DIR und PAPERBUDDY_BACKUP_PASSPHRASE setzen).');
     }
     if (config.mailInterval > Duration.zero) mail.start();
+    ai.start();
+    if (!config.ai.enabled) _log.info('Lokale KI aus (PAPERBUDDY_AI=true für semantische Suche).');
     // Wie Paperless-ngx: das lernende Matching stündlich nachtrainieren.
     consumer.classifier.trainIfNeeded();
     _trainTimer = Timer.periodic(const Duration(hours: 1), (_) => consumer.classifier.trainIfNeeded());
@@ -248,6 +266,7 @@ class PaperbuddyServer {
     mail.stop();
     scanners.close();
     _trainTimer?.cancel();
+    await ai.close();
     await _http?.close();
     db.close();
   }

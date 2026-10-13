@@ -127,7 +127,10 @@ Verwaltungsbefehle laufen über `paperbuddy-manage` (z. B. `paperbuddy-manage ex
   Die Felder entstehen bei der ersten Rechnung und dürfen umbenannt werden; von Hand gesetzte
   Werte bleiben. Vorhandene Dokumente: `manage extract-invoices`
 - **Ordnen:** Tags, Korrespondenten, Dokumenttypen, Speicherpfade (auch als Ordnerstruktur),
-  Custom Fields, Notizen, Archivnummern, gespeicherte Ansichten, Volltextsuche
+  Custom Fields, Notizen, Archivnummern, gespeicherte Ansichten, Volltextsuche, ähnliche Dokumente
+- **Lokale KI (optional):** Suche nach Bedeutung („Was hat die Wohnung gekostet?“ findet den
+  Mietvertrag), Zuordnung über die ähnlichsten Dokumente, Deutsch und Englisch gemischt. Alles
+  rechnet auf dem eigenen Server, siehe [Lokale KI](#lokale-ki)
 - **Bearbeiten:** PDF-Seiten drehen und löschen, Dokumente zusammenführen und teilen,
   neue Versionen hochladen, Änderungsverlauf
 - **Fristen:** Erinnerungen an Dokumenten (z. B. Kündigungsfrist), in der App unter
@@ -178,6 +181,10 @@ Umgebungsvariablen mit Präfix `PAPERBUDDY_`. Die `PAPERLESS_`-Namen werden eben
 | `CONSUMER_BARCODE_DPI` / `CONSUMER_BARCODE_MAX_PAGES` | `300` / `0` | Auflösung beim Lesen; nur die ersten Seiten durchsuchen (0 = alle) |
 | `INVOICE_FIELDS` | `true` | Rechnungsdaten in Custom Fields eintragen (`false` = aus) |
 | `ACCESS_LOG` / `ACCESS_LOG_DAYS` | `true` / `90` | Zugriffe auf Dokumente protokollieren (angesehen, heruntergeladen, Freigabelink) und so viele Tage behalten |
+| `AI` | `false` | lokale KI: Suche nach Bedeutung und Zuordnung über ähnliche Dokumente (siehe [Lokale KI](#lokale-ki)) |
+| `AI_MODELS` | `$DATA_DIR/models` | wohin das Modell geladen wird |
+| `ONNXRUNTIME` | `lib/` neben dem Programm | Pfad zu `libonnxruntime.so` bzw. `.dylib` |
+| `AI_THREADS` | halbe Kernzahl | Rechenfäden für das Modell |
 | `DEBUG` | – | `1` = jede Anfrage loggen |
 
 ## Verwaltung auf der Kommandozeile
@@ -193,6 +200,7 @@ dart run bin/manage.dart disable-totp <benutzer>   # Zwei-Faktor-Anmeldung aussc
 dart run bin/manage.dart backup [ordner]           # verschlüsselte Gesamtsicherung, siehe unten
 dart run bin/manage.dart verify-backup <datei>
 dart run bin/manage.dart restore-backup <datei> <leerer-ordner>
+dart run bin/manage.dart ai-download [ordner]      # Modell der lokalen KI laden (für Server ohne Internet)
 ```
 
 Zwei-Faktor-Anmeldung: Einrichten in der App unter Einstellungen → Profil.
@@ -257,6 +265,45 @@ WebDAV liegen die Dateien weiter im entfernten Speicher; die Kopien unter
 Die Passphrase unbedingt getrennt vom Server aufbewahren (etwa im
 Passwort-Manager). Ohne sie ist eine Sicherung nicht zu öffnen, auch nicht
 vom Entwickler.
+
+## Lokale KI
+
+Mit `PAPERBUDDY_AI=true` versteht PaperBuddy Dokumente nach ihrer Bedeutung:
+
+- **Suche nach Bedeutung:** In der App das Funkeln-Symbol im Suchfeld antippen.
+  „Wie viel Strom haben wir verbraucht?“ findet die Jahresabrechnung der
+  Stadtwerke, auch wenn keines der Wörter darin vorkommt; englische Anfragen
+  finden deutsche Dokumente und umgekehrt. Der Treffer zeigt den passenden
+  Abschnitt.
+- **Ähnliche Dokumente** in der Detailansicht (ohne KI über gemeinsame Wörter).
+- **Zuordnung:** Bei Labels mit Zuordnung „Auto“ entscheiden die ähnlichsten
+  bereits zugeordneten Dokumente über Korrespondent, Dokumenttyp, Speicherpfad
+  und Tags. Eine Korrektur wirkt sofort, ohne neues Training. An ausgedachten
+  Dokumenten traf das mit nur einem Beispiel je Korrespondent zu 99 %, das
+  bisherige Verfahren (Naive Bayes, ohne KI weiter aktiv) zu 86 %.
+
+Das Modell ist multilingual-e5-small (MIT-Lizenz, über 90 Sprachen). Der
+Server lädt es beim ersten Start einmalig von HuggingFace (135 MB), prüft die
+Prüfsummen und liest danach alle Dokumente im Hintergrund ein (auf einem
+aktuellen Rechner rund 50–100 ms je Seite). Dokumente verlassen den Server dabei nie. Solange das Modell
+rechnet, belegt es rund 400 MB Arbeitsspeicher. Nach zwei Minuten ohne Arbeit
+gibt der Server es wieder frei. Den Fortschritt zeigt die App unter
+Einstellungen → Lokale KI.
+
+**Einschalten:**
+
+- *Docker:* in `.env` `PAPERBUDDY_AI=true`; das Modell landet in `./data/models`.
+- *Debian/LXC:* `PAPERBUDDY_AI=1 sh install.sh` (oder `PAPERBUDDY_AI=true` in
+  `/etc/paperbuddy/paperbuddy.env` und `systemctl restart paperbuddy`).
+- *Nativ:* ONNX Runtime 1.16 oder neuer installieren (macOS:
+  `brew install onnxruntime`) oder `server/tool/fetch_ai.sh` ausführen und
+  `PAPERBUDDY_ONNXRUNTIME` auf die Bibliothek setzen.
+- *Ohne Internet:* `manage ai-download <ordner>` auf einem anderen Rechner und
+  den Ordner nach `PAPERBUDDY_AI_MODELS` kopieren.
+
+Über die API (PaperBuddy-Erweiterungen): `GET /api/documents/?semantic_query=…`
+(mit allen üblichen Filtern, Treffer mit `__search_hit__`), `more_like_id` wie
+bei Paperless-ngx und `GET /api/ai/` für den Zustand.
 
 ## Andere Apps anbinden (z. B. Famio)
 
@@ -340,6 +387,7 @@ cd server && dart test
 cd packages/paperbuddy_api && dart test   # Client gegen den echten Server
 cd app && flutter test                    # App-Logik und Oberfläche gegen den echten Server
 cd app && tool/integration_tests.sh macos # echte App gegen Wegwerf-Server (Linux: xvfb-run … linux)
+server/tool/fetch_ai.sh                   # ONNX Runtime und Modell für die Tests mit echter KI
 ```
 
 Die Integrationstests bauen den Server, starten für jeden Ablauf einen

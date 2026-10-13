@@ -170,4 +170,23 @@ void main() {
     expect(log.first.address, isNull);
     expect(log.first.timestamp, isNotNull);
   });
+
+  test('Ähnliche Dokumente, KI-Status und Suche nach Bedeutung (Server ohne KI)', () async {
+    final a = await upload(admin, 'strom1.txt', 'Stadtwerke Jahresabrechnung Strom Verbrauch Abschlag Nachzahlung');
+    final b = await upload(admin, 'strom2.txt', 'Stadtwerke Jahresabrechnung Strom Verbrauch Abschlag Guthaben');
+    await upload(admin, 'arzt.txt', 'Praxis Befundbericht Blutwerte Labor Kontrolle');
+    expect([for (final d in await admin.similarDocuments(a)) d.id], [b]);
+
+    final status = await admin.aiStatus();
+    expect(status.ready, isFalse);
+    expect(status.state, 'disabled');
+
+    const filter = DocumentFilter(query: 'Stromkosten', semantic: true);
+    expect(filter.toQueryParameters(), containsPair('semantic_query', 'Stromkosten'));
+    expect(filter.toQueryParameters().containsKey('query'), isFalse);
+    await expectLater(
+      admin.documents(filter: filter),
+      throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 400)),
+    );
+  });
 }

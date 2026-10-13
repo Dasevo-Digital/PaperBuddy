@@ -27,11 +27,24 @@ Mobile ist nicht übernommen.
 - Poppler (`poppler-utils`) — GPL-2.0/GPL-3.0; als eigenständiges Programm
   aufgerufen
 - qpdf — Apache-2.0
+- ZBar (`zbar-tools`) — LGPL-2.1; Barcodes lesen, als eigenständiges Programm
+  aufgerufen
 - LibreOffice (optional, `PAPERBUDDY_OFFICE=1`) — MPL-2.0; als eigenständiges
   Programm aufgerufen
 
 Diese Programme werden bei der Installation aus den Paketquellen der
 Distribution bezogen und nicht mit dem Quellcode ausgeliefert.
+
+## Lokale KI (nur mit `PAPERBUDDY_AI`)
+
+- ONNX Runtime von Microsoft — MIT; liegt dem Docker-Image und dem
+  Server-Paket in `lib/` bei, mit Lizenz und Hinweisen zu ihren eigenen
+  Bestandteilen (`lib/LICENSE.onnxruntime`,
+  `lib/ThirdPartyNotices.onnxruntime.txt`)
+- Sprachmodell multilingual-e5-small (Microsoft, `intfloat`) — MIT; als
+  ONNX-Fassung aus dem Projekt transformers.js (`Xenova`). Es wird nicht
+  mitgeliefert: Der Server lädt die Dateien beim Einschalten von HuggingFace
+  und prüft jede gegen ihre SHA-256.
 
 ## Optionale Dienste und Container
 

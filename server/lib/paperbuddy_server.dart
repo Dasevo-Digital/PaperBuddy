@@ -23,3 +23,6 @@ export 'src/access_log.dart';
 export 'src/processing/invoice.dart';
 export 'src/processing/invoice_fields.dart';
 export 'src/processing/barcodes.dart';
+export 'src/ai/ai_service.dart';
+export 'src/ai/models.dart' show ModelStore, ModelSpec, ModelFile, findOnnxRuntime;
+export 'src/ai/embedder.dart' show TextEmbedder, Passage, normalize;

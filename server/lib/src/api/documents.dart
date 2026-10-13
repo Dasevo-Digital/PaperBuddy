@@ -5,6 +5,7 @@ import 'package:sqlite3/sqlite3.dart';
 
 import '../access.dart';
 import '../access_log.dart';
+import '../ai/ai_service.dart';
 import '../auth.dart';
 import '../db.dart';
 import '../history.dart';
@@ -29,6 +30,7 @@ class DocumentsResource {
     this.pdf,
     this.history,
     this.accessLog,
+    this.ai,
     this.onUpdated,
   });
 
@@ -41,6 +43,9 @@ class DocumentsResource {
   final PdfOperations? pdf;
   final History? history;
   final AccessLog? accessLog;
+
+  /// Lokale KI: semantische Suche, ähnliche Dokumente, Zuordnung.
+  final AiService? ai;
 
   /// Wird nach jeder Änderung an einem Dokument aufgerufen (Workflows).
   final Future<void> Function(int documentId)? onUpdated;
@@ -290,9 +295,9 @@ class DocumentsResource {
     }
   }
 
-  Response list(Request request) => _list(request, trashed: false);
+  Future<Response> list(Request request) => _list(request, trashed: false);
 
-  Response _list(Request request, {required bool trashed}) {
+  Future<Response> _list(Request request, {required bool trashed}) async {
     final user = _user(request);
     access.require(user, 'view', _model);
     final q = request.url.queryParameters;
@@ -302,6 +307,12 @@ class DocumentsResource {
     ];
     final args = <Object?>[];
     _filters(q, where, args);
+
+    final semantic = (q['semantic_query'] ?? '').trim();
+    final moreLike = asInt(q['more_like_id']);
+    if (semantic.isNotEmpty || moreLike != null) {
+      return _ranked(request, where, args, semantic: semantic, moreLike: moreLike);
+    }
 
     // Volltextsuche über FTS5.
     // `text` (API v10) sucht wie `query` in Titel und Inhalt.
@@ -350,6 +361,80 @@ class DocumentsResource {
           ),
       ];
     }, allIds: [for (final h in hits) h['id'] as int]);
+  }
+
+  /// Nach Ähnlichkeit sortiert: semantische Suche (`semantic_query`,
+  /// PaperBuddy-Erweiterung, lokale KI) oder ähnliche Dokumente
+  /// (`more_like_id` wie Paperless-ngx; ohne KI über Wortgewichte).
+  Future<Response> _ranked(
+    Request request,
+    List<String> where,
+    List<Object?> args, {
+    required String semantic,
+    int? moreLike,
+  }) async {
+    final candidates = [
+      for (final r in db.select('SELECT d.id FROM documents d WHERE ${where.join(' AND ')}', args)) r['id'] as int,
+    ];
+    final ranked = <(int, double, String)>[];
+    if (semantic.isNotEmpty) {
+      final query = await ai?.query(semantic);
+      if (query == null) {
+        throw ApiError.badRequest({
+          'semantic_query': ['Semantic search is not available (PAPERBUDDY_AI).'],
+        });
+      }
+      for (final hit in ai!.search(query, candidates)) {
+        final content = db.select('SELECT content FROM documents WHERE id = ?', [hit.id]).first['content'] as String;
+        ranked.add((hit.id, hit.score, _excerpt(content, hit.start, hit.end)));
+      }
+    } else if (candidates.contains(moreLike) ||
+        db.select('SELECT 1 FROM documents d WHERE d.id = ? AND ${where.first} AND '
+            '${access.visibleSql(_user(request), _model, 'd')}', [moreLike]).isNotEmpty) {
+      consumer.classifier.trainIfNeeded();
+      for (final (id, score) in consumer.classifier.similar(moreLike!, candidates, vectors: ai?.vectors ?? const {})) {
+        ranked.add((id, score, ''));
+      }
+    }
+    var ids = [for (final r in ranked) r.$1];
+    final ordering = request.url.queryParameters['ordering'];
+    if (ordering != null && ordering.replaceFirst('-', '') != 'score' && ids.isNotEmpty) {
+      final desc = ordering.startsWith('-');
+      final column = _orderings[ordering.replaceFirst('-', '')] ?? 'd.created';
+      ids = [
+        for (final r in db.select(
+          'SELECT d.id FROM documents d WHERE d.id IN (${List.filled(ids.length, '?').join(',')}) '
+          'ORDER BY $column ${desc ? 'DESC' : 'ASC'}, d.id DESC',
+          ids,
+        ))
+          r['id'] as int,
+      ];
+    }
+    final byId = {for (final r in ranked) r.$1: r};
+    return paginated(request, (limit, offset) {
+      return [
+        for (final (i, id) in ids.skip(offset).take(limit).indexed)
+          serialize(_row(id)!, request, searchHit: {
+            'score': byId[id]!.$2,
+            'highlights': byId[id]!.$3,
+            'note_highlights': '',
+            'rank': offset + i,
+          }),
+      ];
+    }, allIds: ids);
+  }
+
+  /// Anfang des passenden Abschnitts, höchstens 300 Zeichen.
+  static String _excerpt(String content, int start, int end) {
+    if (start >= content.length) return '';
+    final stop = end.clamp(start, content.length);
+    var text = content.substring(start, stop).replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (text.length > 300) {
+      final cut = text.lastIndexOf(' ', 300);
+      text = '${text.substring(0, cut > 200 ? cut : 300)} …';
+    }
+    // Clients lesen `highlights` als HTML.
+    return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
   }
 
   Response get(Request request) {
@@ -569,7 +654,7 @@ class DocumentsResource {
   // ---------------------------------------------------------------------------
   // Papierkorb
 
-  Response trashList(Request request) => _list(request, trashed: true);
+  Future<Response> trashList(Request request) => _list(request, trashed: true);
 
   Future<Response> trashAction(Request request) async {
     final user = _user(request);
@@ -781,7 +866,17 @@ class DocumentsResource {
     access.require(_user(request), 'view', _model);
     final row = _require(request);
     final content = row['content'] as String;
-    final m = matchContent(db, content, classifier: consumer.classifier);
+    final id = row['id'] as int;
+    consumer.classifier.trainIfNeeded();
+    final vector = ai?.vectorOf(id);
+    final m = matchContent(
+      db,
+      content,
+      classifier: consumer.classifier,
+      vector: vector,
+      vectors: vector == null ? const {} : ai!.vectors,
+      exclude: id,
+    );
     final date = findDate(content);
     return json({
       'correspondents': [?m.correspondent],

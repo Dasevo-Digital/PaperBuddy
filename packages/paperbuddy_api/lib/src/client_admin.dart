@@ -183,6 +183,18 @@ extension PaperlessAdmin on PaperlessClient {
 
   Future<void> deleteIntegrationToken(int id) => _send('DELETE', '/api/integration_tokens/$id/');
 
+  // Lokale KI -----------------------------------------------------------------
+
+  /// Zustand der lokalen KI; bei Paperless-ngx und älteren Servern aus.
+  Future<AiStatus> aiStatus() async {
+    try {
+      return AiStatus.fromJson(await _getMap('/api/ai/'));
+    } on ApiException catch (e) {
+      if (e.isNotFound) return const AiStatus();
+      rethrow;
+    }
+  }
+
   // Zwei-Faktor-Anmeldung -----------------------------------------------------
 
   /// Neuer Schlüssel; aktiv erst nach [activateTotp] mit einem passenden Code.

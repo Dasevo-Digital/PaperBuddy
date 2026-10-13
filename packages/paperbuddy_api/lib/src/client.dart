@@ -277,6 +277,17 @@ class PaperlessClient {
     return PageResult.fromJson(json, Document.fromJson);
   }
 
+  /// Die ähnlichsten Dokumente zu [id], ähnlichstes zuerst (`more_like_id`
+  /// wie Paperless-ngx; bei PaperBuddy mit lokaler KI nach Bedeutung).
+  Future<List<Document>> similarDocuments(int id, {int count = 6}) async {
+    final json = await _getMap('/api/documents/', {
+      'more_like_id': '$id',
+      'page_size': '$count',
+      'truncate_content': 'true',
+    });
+    return PageResult.fromJson(json, Document.fromJson).results;
+  }
+
   Future<Document> document(int id) async =>
       Document.fromJson(await _getMap('/api/documents/$id/'));
 

@@ -362,6 +362,23 @@ const _migrations = <String>[
     last_used TEXT
   );
   ''',
+  // 14: Vektoren der lokalen KI (semantische Suche, Zuordnung); veraltet,
+  // sobald sich Titel oder Inhalt ändern
+  '''
+  CREATE TABLE document_embeddings (
+    document_id INTEGER PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
+    model TEXT NOT NULL,
+    dimensions INTEGER NOT NULL,
+    chunks BLOB NOT NULL,
+    spans TEXT NOT NULL,
+    updated TEXT NOT NULL
+  );
+  CREATE TRIGGER document_embeddings_stale AFTER UPDATE OF title, content ON documents
+  WHEN old.title IS NOT new.title OR old.content IS NOT new.content
+  BEGIN
+    DELETE FROM document_embeddings WHERE document_id = new.id;
+  END;
+  ''',
 ];
 
 Database openDatabase(String path) {

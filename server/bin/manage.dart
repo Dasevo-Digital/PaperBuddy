@@ -7,6 +7,8 @@ import 'package:sqlite3/sqlite3.dart';
 /// Verwaltungsbefehle, angelehnt an `manage.py` von Paperless-ngx.
 Future<void> main(List<String> args) async {
   final config = Config.fromEnvironment();
+  // Ohne Datenbank: auch auf einem anderen Rechner nutzbar.
+  if (args.firstOrNull == 'ai-download') return _aiDownload(args.elementAtOrNull(1) ?? config.ai.modelsDir);
   final db = openDatabase(config.databasePath);
   final auth = AuthService(db);
   try {
@@ -113,6 +115,7 @@ Future<void> main(List<String> args) async {
   restore-backup <datei> <ordner>    Sicherung in einen leeren Ordner entpacken
   extract-invoices                   Rechnungsdaten vorhandener Dokumente in Custom Fields eintragen
   rename-files                       Dateien nach FILENAME_FORMAT/Speicherpfaden neu ablegen
+  ai-download [ordner]               Modell der lokalen KI laden und prüfen (für Server ohne Internet)
   disable-totp <benutzer>            Zwei-Faktor-Anmeldung ausschalten (Telefon verloren)''');
     }
   } on ArgumentError catch (e) {
@@ -127,6 +130,29 @@ Future<void> main(List<String> args) async {
     exitCode = 1;
   } finally {
     db.close();
+  }
+}
+
+/// Lädt das Modell der lokalen KI nach [dir] und prüft die Prüfsummen.
+Future<void> _aiDownload(String dir) async {
+  final store = ModelStore(dir);
+  const model = AiService.model;
+  stdout.writeln('${model.id} (${model.license}, ${(model.bytes / 1e6).round()} MB) nach $dir …');
+  var shown = -1;
+  try {
+    await store.download(model, progress: (done, total) {
+      final percent = done * 100 ~/ total;
+      if (percent ~/ 10 != shown ~/ 10) stdout.writeln('  $percent %');
+      shown = percent;
+    });
+    await store.verify(model);
+    stdout.writeln('Fertig. Auf dem Server: Inhalt nach PAPERBUDDY_AI_MODELS kopieren (Vorgabe <DATA_DIR>/models).');
+  } on Exception catch (e) {
+    stderr.writeln('$e');
+    exitCode = 1;
+  } on StateError catch (e) {
+    stderr.writeln(e.message);
+    exitCode = 1;
   }
 }
 

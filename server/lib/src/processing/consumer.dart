@@ -12,6 +12,8 @@ import '../db.dart';
 import '../history.dart';
 import '../storage.dart';
 import 'barcodes.dart';
+import '../ai/ai_service.dart';
+import '../ai/index.dart';
 import 'classifier.dart';
 import 'file_types.dart';
 import 'invoice.dart';
@@ -179,6 +181,9 @@ class Consumer {
 
   /// Nach dem Anlegen und nach Workflows (z. B. Dateien einsortieren).
   Future<void> Function(int documentId)? onStored;
+
+  /// Lokale KI für Zuordnung und Suche; `null` = aus.
+  AiService? ai;
 
   Future<void> _queue = Future.value();
   final _uuid = const Uuid();
@@ -431,9 +436,6 @@ class Consumer {
     if (ext == null) throw ConsumeError('Not consuming $originalName: Unsupported mime type $mime');
 
     final x = await _extract(source, mime, scratch);
-    classifier.trainIfNeeded();
-    final matched = matchContent(db, '${p.basenameWithoutExtension(originalName)}\n${x.content}',
-        classifier: classifier);
     final invoice = x.invoice;
     final created = o.created ?? invoice?.issueDate ?? findDate(x.content) ?? DateTime.now();
     var title = (o.title?.trim().isNotEmpty ?? false) ? o.title!.trim() : p.basenameWithoutExtension(originalName);
@@ -443,6 +445,17 @@ class Consumer {
       final named = [invoice.seller, invoice.number].whereType<String>().join(' ');
       if (named.isNotEmpty) title = named;
     }
+    // Mit lokaler KI: Vektoren gleich hier, für die Zuordnung und die Suche.
+    final passages = await ai?.passages(title, x.content);
+    final vector = passages == null || passages.isEmpty ? null : DocVectors.of(passages).mean;
+    classifier.trainIfNeeded();
+    final matched = matchContent(
+      db,
+      '${p.basenameWithoutExtension(originalName)}\n${x.content}',
+      classifier: classifier,
+      vector: vector,
+      vectors: vector == null ? const {} : ai!.vectors,
+    );
     // Bei E-Rechnungen ist der Verkäufer sicher: vorhandenen Korrespondenten
     // gleichen Namens zuordnen.
     final seller = invoice?.source == 'xml' ? invoice?.seller : null;
@@ -522,6 +535,7 @@ class Consumer {
       db.execute('ROLLBACK;');
       rethrow;
     }
+    if (passages != null) ai?.store(id, passages);
     return id;
   }
 

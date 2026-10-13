@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import 'ai/ai_service.dart';
 import 'backup/backup.dart';
 import 'processing/barcodes.dart';
 
@@ -38,6 +39,7 @@ class Config {
     this.accessLogDays = 90,
     this.invoiceFields = true,
     this.barcodes = const BarcodeSettings(),
+    this.ai = const AiSettings(),
   });
 
   final String host;
@@ -109,6 +111,9 @@ class Config {
 
   /// Trennblätter und ASN-Barcodes beim Verarbeiten.
   final BarcodeSettings barcodes;
+
+  /// Lokale KI: semantische Suche und Zuordnung über ähnliche Dokumente.
+  final AiSettings ai;
 
   String get databasePath => p.join(dataDir, 'paperbuddy.sqlite3');
 
@@ -193,6 +198,12 @@ class Config {
         asnPrefix: get('CONSUMER_ASN_BARCODE_PREFIX') ?? 'ASN',
         dpi: int.parse(get('CONSUMER_BARCODE_DPI') ?? '300'),
         maxPages: int.parse(get('CONSUMER_BARCODE_MAX_PAGES') ?? '0'),
+      ),
+      ai: AiSettings(
+        enabled: _bool(get('AI')),
+        modelsDir: p.absolute(get('AI_MODELS') ?? p.join(dataDir, 'models')),
+        runtime: get('ONNXRUNTIME'),
+        threads: int.parse(get('AI_THREADS') ?? '0'),
       ),
       backup: backupDir == null || passphrase == null || passphrase.isEmpty
           ? null

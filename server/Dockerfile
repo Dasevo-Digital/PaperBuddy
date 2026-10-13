@@ -12,6 +12,35 @@ RUN dart build cli -t bin/server.dart -o /out/server \
  && dart build cli -t bin/manage.dart -o /out/manage \
  && cp /out/manage/bundle/bin/manage /out/server/bundle/bin/
 
+# ONNX Runtime für die lokale KI (PAPERBUDDY_AI): das offizielle Paket von
+# Microsoft, Prüfsummen aus der Freigabe auf GitHub. Beim Anheben auch
+# server/tool/fetch_ai.sh anpassen.
+FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f AS onnxruntime
+ARG TARGETARCH
+ARG ORT_VERSION=1.28.3
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl \
+ && rm -rf /var/lib/apt/lists/*
+RUN set -eu; \
+    case "$TARGETARCH" in \
+      amd64) pkg=linux-x64; sum=db14e4863bd37893fc59729d986ab2a0d043d10b7d44da1913c4982b7e3d009c ;; \
+      arm64) pkg=linux-aarch64; sum=6c6b1ae96d7b0be9f555092857c6a4f2b0b5587a5298d732d9e52e8253038ce7 ;; \
+      *) echo "Keine ONNX Runtime für $TARGETARCH" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL -o /tmp/ort.tgz \
+      "https://github.com/microsoft/onnxruntime/releases/download/v$ORT_VERSION/onnxruntime-$pkg-$ORT_VERSION.tgz"; \
+    echo "$sum  /tmp/ort.tgz" | sha256sum -c -; \
+    tar -xzf /tmp/ort.tgz -C /tmp; \
+    cp "/tmp/onnxruntime-$pkg-$ORT_VERSION/lib/libonnxruntime.so.$ORT_VERSION" /libonnxruntime.so; \
+    cp "/tmp/onnxruntime-$pkg-$ORT_VERSION/LICENSE" /LICENSE.onnxruntime; \
+    cp "/tmp/onnxruntime-$pkg-$ORT_VERSION/ThirdPartyNotices.txt" /ThirdPartyNotices.onnxruntime.txt; \
+    rm -rf /tmp/ort.tgz "/tmp/onnxruntime-$pkg-$ORT_VERSION"
+
+# Programm samt Bibliotheken (bin/, lib/), auch für deploy/lxc/build_bundle.sh.
+FROM build AS bundle
+COPY --from=onnxruntime /libonnxruntime.so /out/server/bundle/lib/libonnxruntime.so
+COPY --from=onnxruntime /LICENSE.onnxruntime /ThirdPartyNotices.onnxruntime.txt /out/server/bundle/lib/
+
 FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
 # OFFICE=1: LibreOffice für Vorschau und Archiv-PDF von Word, Excel und
 # PowerPoint (macht das Image rund 400 MB größer; Text gibt es auch ohne).
@@ -27,7 +56,7 @@ RUN apt-get update \
  && useradd --uid 1000 --create-home paperbuddy \
  && mkdir -p /data /consume /backup && chown paperbuddy:paperbuddy /data /consume /backup
 
-COPY --from=build /out/server/bundle /opt/paperbuddy
+COPY --from=bundle /out/server/bundle /opt/paperbuddy
 ENV PATH="/opt/paperbuddy/bin:$PATH" \
     PAPERBUDDY_DATA_DIR=/data \
     PAPERBUDDY_CONSUMPTION_DIR=/consume

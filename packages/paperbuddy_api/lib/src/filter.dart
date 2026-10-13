@@ -7,6 +7,7 @@ import 'texts.dart';
 class DocumentFilter {
   const DocumentFilter({
     this.query = '',
+    this.semantic = false,
     this.tagsAll = const {},
     this.correspondents = const {},
     this.documentTypes = const {},
@@ -18,6 +19,10 @@ class DocumentFilter {
 
   /// Volltextsuche.
   final String query;
+
+  /// [query] nach Bedeutung statt nach Wörtern suchen (lokale KI von
+  /// PaperBuddy, `semantic_query`).
+  final bool semantic;
 
   /// Dokument muss alle diese Tags haben.
   final Set<int> tagsAll;
@@ -50,6 +55,7 @@ class DocumentFilter {
 
   DocumentFilter copyWith({
     String? query,
+    bool? semantic,
     Set<int>? tagsAll,
     Set<int>? correspondents,
     Set<int>? documentTypes,
@@ -59,6 +65,7 @@ class DocumentFilter {
     DocumentOrdering? ordering,
   }) => DocumentFilter(
     query: query ?? this.query,
+    semantic: semantic ?? this.semantic,
     tagsAll: tagsAll ?? this.tagsAll,
     correspondents: correspondents ?? this.correspondents,
     documentTypes: documentTypes ?? this.documentTypes,
@@ -70,7 +77,7 @@ class DocumentFilter {
 
   /// Nur die Suche behalten, alle anderen Filter zurücksetzen.
   DocumentFilter clearFilters() =>
-      DocumentFilter(query: query, ordering: ordering);
+      DocumentFilter(query: query, semantic: semantic, ordering: ordering);
 
   Map<String, String> toQueryParameters() {
     String day(DateTime d) =>
@@ -78,7 +85,7 @@ class DocumentFilter {
         '${d.day.toString().padLeft(2, '0')}';
     final q = query.trim();
     return {
-      if (q.isNotEmpty) 'query': q,
+      if (q.isNotEmpty) semantic ? 'semantic_query' : 'query': q,
       if (tagsAll.isNotEmpty) 'tags__id__all': tagsAll.join(','),
       if (correspondents.isNotEmpty)
         'correspondent__id__in': correspondents.join(','),
@@ -166,6 +173,7 @@ class DocumentFilter {
   bool operator ==(Object other) =>
       other is DocumentFilter &&
       other.query == query &&
+      other.semantic == semantic &&
       _setEq(other.tagsAll, tagsAll) &&
       _setEq(other.correspondents, correspondents) &&
       _setEq(other.documentTypes, documentTypes) &&
@@ -177,6 +185,7 @@ class DocumentFilter {
   @override
   int get hashCode => Object.hash(
     query,
+    semantic,
     Object.hashAllUnordered(tagsAll),
     Object.hashAllUnordered(correspondents),
     Object.hashAllUnordered(documentTypes),

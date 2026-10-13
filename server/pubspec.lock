@@ -65,6 +65,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
+  characters:
+    dependency: "direct main"
+    description:
+      name: characters
+      sha256: faf38497bda5ead2a8c7615f4f7939df04333478bf32e4173fcb06d428b5716b
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.1"
   cli_config:
     dependency: transitive
     description:
@@ -122,7 +130,7 @@ packages:
     source: hosted
     version: "3.0.7"
   ffi:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: ffi
       sha256: "6d7fd89431262d8f3125e81b50d3847a091d846eafcd4fdb88dd06f36d705a45"

@@ -32,6 +32,16 @@ jobs:
       # qpdf, Poppler und zbar für die Tests mit E-Rechnungen und Barcodes.
       - name: Werkzeuge
         run: sudo apt-get update && sudo apt-get install -y qpdf poppler-utils zbar-tools
+      # ONNX Runtime und Modell für die Tests der lokalen KI (rund 145 MB),
+      # zwischengespeichert, bis sich Skript oder Modellkatalog ändern.
+      - name: Lokale KI zwischenspeichern
+        uses: actions/cache@v4
+        with:
+          path: server/.dart_tool/paperbuddy_ai
+          key: paperbuddy-ai-${{ runner.os }}-${{ hashFiles('server/tool/fetch_ai.sh', 'server/lib/src/ai/models.dart') }}
+      - name: Lokale KI laden
+        working-directory: server
+        run: dart pub get && tool/fetch_ai.sh
       - name: Server
         working-directory: server
         run: |

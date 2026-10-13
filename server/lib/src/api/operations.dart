@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:shelf/shelf.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import '../ai/ai_service.dart';
 import '../auth.dart';
 import '../backup/backup.dart';
 import '../version.dart';
@@ -32,12 +33,14 @@ class OperationsResource {
     required this.metrics,
     required this.routes,
     this.backups,
+    this.ai,
   });
 
   final Database db;
   final AuthService auth;
   final Metrics metrics;
   final BackupService? backups;
+  final AiService? ai;
 
   /// Alle registrierten Routen (Methode, Pfad) für die OpenAPI-Beschreibung.
   final List<(String, String)> Function() routes;
@@ -50,6 +53,7 @@ class OperationsResource {
     '/metrics/',
     '/api/documents/{id}/access_log/',
     '/api/integration_tokens/',
+    '/api/ai/',
   ];
 
   /// Ohne Anmeldung erreichbar.
@@ -59,6 +63,15 @@ class OperationsResource {
     route('GET', '/api/health/', health);
     route('GET', '/metrics/', metricsText);
     route('GET', '/api/schema/', schema);
+    route('GET', '/api/ai/', aiStatus);
+  }
+
+  /// Zustand der lokalen KI (PaperBuddy-Erweiterung): ob semantische Suche
+  /// möglich ist; Administratoren sehen auch, wie weit das Einlesen ist.
+  Response aiStatus(Request request) {
+    final user = request.context['user'] as User;
+    final detailed = user.isSuperuser && user.scope == null;
+    return json(ai?.status(detailed: detailed) ?? {'enabled': false, 'state': AiState.disabled.name});
   }
 
   /// Angemeldeter Administrator oder `null`; `/api/health/` und `/metrics`
@@ -90,6 +103,7 @@ class OperationsResource {
         'database': database,
         'queue': database == 'ok' ? _taskCounts() : null,
         'backup': backup,
+        'ai': ai?.state.name ?? AiState.disabled.name,
       };
     }
     return json(body, status: database == 'ok' ? 200 : 503);
@@ -199,6 +213,13 @@ class OperationsResource {
       });
       metric('paperbuddy_backup_last_duration_seconds', 'gauge', 'Dauer der letzten Sicherung samt Prüfung.', {
         '': (last['seconds'] as num?) ?? 0,
+      });
+    }
+    final a = ai;
+    if (a != null && a.settings.enabled) {
+      metric('paperbuddy_ai_ready', 'gauge', 'Lokale KI bereit (semantische Suche, Zuordnung).', {'': a.ready ? 1 : 0});
+      metric('paperbuddy_ai_indexed_documents', 'gauge', 'Dokumente mit berechneten Vektoren.', {
+        '': a.ready ? a.index.count : 0,
       });
     }
     return Response.ok(out.toString(), headers: {'content-type': 'text/plain; version=0.0.4; charset=utf-8'});

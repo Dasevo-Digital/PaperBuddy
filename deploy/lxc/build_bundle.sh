@@ -6,7 +6,7 @@
 #   ARCH=arm64 deploy/lxc/build_bundle.sh [zielordner]
 #
 # Ergebnis: paperbuddy-server-<version>-linux-<arch>.tar.gz mit bin/server,
-# bin/manage, lib/ (SQLite) sowie install.sh und paperbuddy.service.
+# bin/manage, lib/ (SQLite, ONNX Runtime) sowie install.sh und paperbuddy.service.
 set -eu
 cd "$(dirname "$0")/../.."
 
@@ -23,7 +23,7 @@ name="paperbuddy-server-$version-linux-$arch"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-docker build --platform "$platform" --target build -t "paperbuddy-build:$arch" server
+docker build --platform "$platform" --target bundle -t "paperbuddy-build:$arch" server
 cid="$(docker create --platform "$platform" "paperbuddy-build:$arch")"
 docker cp "$cid:/out/server/bundle" "$work/$name"
 docker rm "$cid" >/dev/null

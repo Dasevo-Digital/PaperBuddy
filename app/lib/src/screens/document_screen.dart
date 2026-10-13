@@ -19,6 +19,7 @@ import 'document_edit_screen.dart';
 import 'document_viewer_screen.dart';
 import '../file_kinds.dart';
 import '../widgets/reminders_section.dart';
+import '../widgets/similar_documents.dart';
 import '../l10n.dart';
 
 /// Was die Detailansicht an die Liste zurückmeldet.
@@ -446,6 +447,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
         ),
         HistorySection(key: ValueKey(_doc.modified), documentId: _doc.id),
         AccessLogSection(documentId: _doc.id),
+        SimilarDocumentsSection(documentId: _doc.id),
         const SizedBox(height: 20),
         Text(tr.content, style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),

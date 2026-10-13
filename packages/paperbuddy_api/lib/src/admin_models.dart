@@ -567,3 +567,42 @@ class IntegrationToken {
     token: j['token'] as String?,
   );
 }
+
+/// Zustand der lokalen KI von PaperBuddy (`/api/ai/`).
+class AiStatus {
+  const AiStatus({
+    this.enabled = false,
+    this.state = 'disabled',
+    this.model,
+    this.progress,
+    this.indexed,
+    this.total,
+    this.error,
+  });
+
+  final bool enabled;
+
+  /// `disabled`, `unavailable`, `downloading`, `ready` oder `error`.
+  final String state;
+  final String? model;
+
+  /// Anteil des Modell-Downloads (0–1), solange geladen wird.
+  final double? progress;
+
+  /// Eingelesene und alle Dokumente (nur für Administratoren).
+  final int? indexed;
+  final int? total;
+  final String? error;
+
+  bool get ready => state == 'ready';
+
+  factory AiStatus.fromJson(Map<String, dynamic> j) => AiStatus(
+    enabled: j['enabled'] == true,
+    state: j['state'] as String? ?? 'disabled',
+    model: j['model'] as String?,
+    progress: (j['progress'] as num?)?.toDouble(),
+    indexed: _int(j['indexed']),
+    total: _int(j['total']),
+    error: j['error'] as String?,
+  );
+}

@@ -28,6 +28,8 @@ services:
       PAPERBUDDY_BACKUP_PASSPHRASE: ${PAPERBUDDY_BACKUP_PASSPHRASE:-}
       PAPERBUDDY_BACKUP_TIME: ${PAPERBUDDY_BACKUP_TIME:-03:00}
       PAPERBUDDY_BACKUP_KEEP: ${PAPERBUDDY_BACKUP_KEEP:-7}
+      # Lokale KI: semantische Suche und Zuordnung (lädt einmalig 135 MB nach ./data/models)
+      PAPERBUDDY_AI: ${PAPERBUDDY_AI:-false}
     volumes:
       - ./data:/data
       - ./consume:/consume

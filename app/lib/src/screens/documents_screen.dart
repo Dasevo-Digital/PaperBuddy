@@ -89,7 +89,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     setState(() {}); // Löschen-Knopf ein-/ausblenden
     _suggestDebounce?.cancel();
     final word = _lastWord(value);
-    if (word.length < 2) {
+    // Wortvorschläge passen nicht zur Suche nach Bedeutung.
+    if (word.length < 2 || _controller.filter.semantic) {
       if (_suggestions.isNotEmpty) setState(() => _suggestions = []);
       return;
     }
@@ -625,16 +626,28 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: ListenableBuilder(
-                listenable: _controller,
+                listenable: Listenable.merge([_controller, _state.ai]),
                 builder: (context, _) {
                   final count = _userFilter.activeFilterCount;
+                  final semantic = _controller.filter.semantic;
                   return SearchBar(
                     controller: _search,
-                    hintText: tr.fullTextSearch,
-                    leading: const Icon(LucideIcons.search),
+                    hintText: semantic ? tr.semanticSearchHint : tr.fullTextSearch,
+                    leading: Icon(semantic ? LucideIcons.sparkles : LucideIcons.search),
                     elevation: const WidgetStatePropertyAll(0),
                     onChanged: _onSearchChanged,
                     trailing: [
+                      // Suche nach Bedeutung, wenn der Server eine lokale KI hat.
+                      if (_state.ai.value.ready || semantic)
+                        IconButton(
+                          tooltip: semantic ? tr.searchByWords : tr.searchByMeaning,
+                          isSelected: semantic,
+                          icon: const Icon(LucideIcons.sparkles),
+                          onPressed: () {
+                            setState(() => _suggestions = []);
+                            _applyFilter(_controller.filter.copyWith(semantic: !semantic));
+                          },
+                        ),
                       if (_search.text.isNotEmpty)
                         IconButton(
                           tooltip: tr.clearSearch,

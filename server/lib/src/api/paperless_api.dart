@@ -7,6 +7,7 @@ import 'package:sqlite3/sqlite3.dart';
 
 import '../access.dart';
 import '../access_log.dart';
+import '../ai/ai_service.dart';
 import '../auth.dart';
 import '../backup/backup.dart';
 import '../history.dart';
@@ -53,6 +54,7 @@ class PaperlessApi {
     this.hsts = false,
     this.backups,
     this.accessLog,
+    this.ai,
     Metrics? metrics,
   }) : metrics = metrics ?? Metrics();
 
@@ -77,6 +79,9 @@ class PaperlessApi {
 
   /// Zugriffe auf Dokumente; `null` = nicht protokollieren.
   final AccessLog? accessLog;
+
+  /// Lokale KI; `null` = aus.
+  final AiService? ai;
 
   final Metrics metrics;
 
@@ -141,7 +146,8 @@ class PaperlessApi {
 
     UsersResource(db, auth, access).mount(route);
     IntegrationTokensResource(db, auth, access).mount(route);
-    OperationsResource(db: db, auth: auth, metrics: metrics, backups: backups, routes: () => _routes).mount(route);
+    OperationsResource(db: db, auth: auth, metrics: metrics, backups: backups, ai: ai, routes: () => _routes)
+        .mount(route);
     customFields.mount(route);
     SavedViewsResource(db, access).mount(route);
     DocumentsResource(
@@ -154,6 +160,7 @@ class PaperlessApi {
       pdf: pdf,
       history: history,
       accessLog: accessLog,
+      ai: ai,
       onUpdated: onDocumentUpdated,
     ).mount(route);
 

@@ -3,6 +3,20 @@
 Hier steht je Version, was sich für Nutzer und Betreiber ändert. Die
 ausführliche Fassung mit Hintergründen steht im jeweiligen Release.
 
+## Unveröffentlicht
+
+- **Lokale KI** (optional, `PAPERBUDDY_AI=true`): Suche nach Bedeutung statt
+  nach Wörtern, auch über Sprachgrenzen; Zuordnung von Korrespondent,
+  Dokumenttyp, Speicherpfad und Tags über die ähnlichsten Dokumente. Das
+  Modell multilingual-e5-small (MIT) lädt der Server einmalig (135 MB, mit
+  Prüfsummen), gerechnet wird mit ONNX Runtime auf dem eigenen Server.
+  Docker-Image und Server-Paket bringen ONNX Runtime mit; für Server ohne
+  Internet `manage ai-download`.
+- **Ähnliche Dokumente** in der Detailansicht und über `more_like_id` wie bei
+  Paperless-ngx (ohne KI über gemeinsame Wörter).
+- In der App: Umschalter „Nach Bedeutung suchen“ im Suchfeld, Zustand der
+  lokalen KI unter Einstellungen.
+
 ## 0.3.0 (11.10.2026)
 
 ### Neu in der App

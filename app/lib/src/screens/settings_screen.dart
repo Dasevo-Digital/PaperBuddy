@@ -81,6 +81,25 @@ class SettingsScreen extends StatelessWidget {
               ].join(' · '),
             ),
           ),
+          if (client.server.paperbuddyVersion != null)
+            ValueListenableBuilder<AiStatus>(
+              valueListenable: state.ai,
+              builder: (context, ai, _) => ListTile(
+                leading: const Icon(LucideIcons.sparkles),
+                title: Text(tr.localAi),
+                subtitle: Text(switch (ai.state) {
+                  'ready' when ai.indexed != null && ai.total != null =>
+                    tr.aiReadyIndexed(ai.indexed!, ai.total!),
+                  'ready' => tr.aiReady,
+                  'downloading' => tr.aiDownloading(((ai.progress ?? 0) * 100).round()),
+                  'unavailable' => tr.aiUnavailable,
+                  'error' => tr.aiError(ai.error ?? ''),
+                  _ => tr.aiDisabled,
+                }),
+                // Einlesen und Laden laufen auf dem Server weiter.
+                onTap: state.refreshAi,
+              ),
+            ),
           ValueListenableBuilder<ThemeMode>(
             valueListenable: state.themeMode,
             builder: (context, mode, _) => ListTile(

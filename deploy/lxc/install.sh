@@ -71,6 +71,9 @@ PAPERBUDDY_ADMIN_PASSWORD=$password
 # PAPERBUDDY_BACKUP_PASSPHRASE_FILE=/etc/paperbuddy/backup-passphrase
 # PAPERBUDDY_BACKUP_TIME=03:00
 # PAPERBUDDY_BACKUP_KEEP=7
+# Lokale KI: Suche nach Bedeutung, Zuordnung über ähnliche Dokumente
+# (PAPERBUDDY_AI=1 sh install.sh schaltet sie ein):
+# PAPERBUDDY_AI=true
 EOF
   printf 'Benutzer: admin\nPasswort: %s\n' "$password" > /root/paperbuddy-admin.txt
   chmod 0600 /root/paperbuddy-admin.txt
@@ -94,6 +97,14 @@ if [ "${PAPERBUDDY_BACKUP:-0}" = 1 ] && ! grep -q '^PAPERBUDDY_BACKUP_DIR=' "$en
   printf 'PAPERBUDDY_BACKUP_DIR=/var/backups/paperbuddy\nPAPERBUDDY_BACKUP_PASSPHRASE_FILE=%s\n' "$secret" >> "$env"
   echo "Sicherung eingeschaltet: täglich 03:00 nach /var/backups/paperbuddy."
   echo "Passphrase in $secret – unbedingt an einem anderen Ort aufbewahren."
+fi
+
+# PAPERBUDDY_AI=1 sh install.sh: lokale KI einschalten. Der Server lädt das
+# Modell (135 MB) beim Start nach /var/lib/paperbuddy/models und liest dann
+# alle Dokumente im Hintergrund ein.
+if [ "${PAPERBUDDY_AI:-0}" = 1 ] && ! grep -q '^PAPERBUDDY_AI=' "$env"; then
+  echo 'PAPERBUDDY_AI=true' >> "$env"
+  echo "Lokale KI eingeschaltet; das Modell wird beim Start geladen."
 fi
 
 if systemctl is-active --quiet paperbuddy; then

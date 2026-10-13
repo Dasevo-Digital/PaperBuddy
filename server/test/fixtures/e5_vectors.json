@@ -1,0 +1,45 @@
+[
+ {
+  "text": "query: Stromrechnung der Stadtwerke",
+  "head": [
+   0.04535,
+   -0.01719,
+   -0.03721,
+   -0.07609,
+   0.03139,
+   0.01188,
+   0.02771,
+   0.0915
+  ]
+ },
+ {
+  "text": "passage: Stadtwerke Musterstadt GmbH. Jahresabrechnung Strom 2025. Verbrauch 2.345 kWh, Gesamtbetrag 812,40 EUR.",
+  "head": [
+   0.01307,
+   0.01772,
+   -0.01467,
+   -0.02598,
+   0.04832,
+   0.00504,
+   0.03024,
+   0.07501
+  ]
+ },
+ {
+  "text": "passage: Praxis Dr. Weber, Befundbericht: Die Blutwerte liegen im Normbereich.",
+  "head": [
+   0.05862,
+   -0.03227,
+   -0.04324,
+   -0.07894,
+   0.03718,
+   -0.01729,
+   0.00351,
+   0.10108
+  ]
+ },
+ {
+  "cos01": 0.9203347853594307,
+  "cos02": 0.8183032148214641
+ }
+]

@@ -6,6 +6,8 @@ import 'package:paperbuddy_server/paperbuddy_server.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
 
+import 'ai_support.dart';
+
 /// Server im Speicher mit Admin `admin`/`geheim123`.
 class TestEnv {
   TestEnv._(this.dir, this.server);
@@ -13,8 +15,10 @@ class TestEnv {
   final PaperbuddyServer server;
   final tokens = <String, String>{};
 
-  static Future<TestEnv> create({Map<String, String> env = const {}}) async {
+  /// [ai]: lokale KI mit [FakeEmbedder] statt ONNX.
+  static Future<TestEnv> create({Map<String, String> env = const {}, bool ai = false}) async {
     final dir = await Directory.systemTemp.createTemp('paperbuddy-test-');
+    final db = openInMemoryDatabase();
     final server = await PaperbuddyServer.create(
       Config.fromEnvironment({
         'PAPERBUDDY_DATA_DIR': dir.path,
@@ -22,7 +26,8 @@ class TestEnv {
         'PAPERBUDDY_ADMIN_PASSWORD': 'geheim123',
         ...env,
       }),
-      database: openInMemoryDatabase(),
+      database: db,
+      ai: ai ? AiService.withEmbedder(db, FakeEmbedder()) : null,
     );
     final e = TestEnv._(dir, server);
     e.tokens['admin'] = e.server.auth.tokenFor(_admin(e));
@@ -97,6 +102,7 @@ class TestEnv {
 
   Future<void> close() async {
     server.workflows.stop();
+    await server.ai.close();
     server.db.close();
     await dir.delete(recursive: true);
   }

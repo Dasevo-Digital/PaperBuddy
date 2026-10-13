@@ -545,5 +545,17 @@
   "integrationLastUsed": "Last used {date}",
   "integrationNeverUsed": "Not used yet",
   "integrationDeleteQuestion": "Delete token?",
-  "integrationDeleteHint": "The app loses access immediately."
+  "integrationDeleteHint": "The app loses access immediately.",
+  "similarDocuments": "Similar documents",
+  "noSimilarDocuments": "No similar documents found.",
+  "searchByMeaning": "Search by meaning",
+  "searchByWords": "Search by words",
+  "semanticSearchHint": "Search by meaning, e.g. “electricity costs 2025”",
+  "localAi": "Local AI",
+  "aiReady": "Ready: search by meaning and assignment via similar documents",
+  "aiReadyIndexed": "Ready · {indexed} of {total} documents indexed",
+  "aiDownloading": "Downloading model ({percent} %)",
+  "aiDisabled": "Off – enable on the server with PAPERBUDDY_AI=true",
+  "aiUnavailable": "ONNX Runtime missing on the server",
+  "aiError": "Error: {error}"
 }

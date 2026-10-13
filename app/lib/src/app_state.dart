@@ -47,6 +47,20 @@ class AppState extends ChangeNotifier {
   Map<int, AppUser> users = {};
   Map<int, UserGroup> groups = {};
 
+  /// Lokale KI des Servers (Suche nach Bedeutung); aus bei Paperless-ngx.
+  final ai = ValueNotifier<AiStatus>(const AiStatus());
+
+  /// Fragt den Zustand der lokalen KI neu ab.
+  Future<void> refreshAi() async {
+    final c = _client;
+    if (c == null) return;
+    try {
+      ai.value = await c.aiStatus();
+    } on ApiException {
+      ai.value = const AiStatus();
+    }
+  }
+
   /// App-Sperre (Face ID, Touch ID, Fingerabdruck, Geräte-Code).
   late final lock = AppLock(
     enabled: _store.appLock,
@@ -258,6 +272,7 @@ class AppState extends ChangeNotifier {
     savedViews = [];
     users = {};
     groups = {};
+    ai.value = const AiStatus();
     status = SessionStatus.signedOut;
     notifyListeners();
     // Die bisherige Oberfläche blendet noch aus und baut dabei neu; sie
@@ -334,6 +349,7 @@ class AppState extends ChangeNotifier {
     users = {for (final x in us) x.id: x};
     groups = {for (final x in gr) x.id: x};
     notifyListeners();
+    unawaited(refreshAi());
   }
 
   void notifyDocumentsChanged() => documentsChanged.value++;
