@@ -3,19 +3,33 @@
 Hier steht je Version, was sich für Nutzer und Betreiber ändert. Die
 ausführliche Fassung mit Hintergründen steht im jeweiligen Release.
 
-## Unveröffentlicht
+## 0.4.0 (13.10.2026)
+
+### Neu in der App
+
+- **Suche nach Bedeutung:** Umschalter im Suchfeld (Funkeln-Symbol), sobald
+  der Server eine lokale KI hat. Der Treffer zeigt den passenden Abschnitt.
+- **Ähnliche Dokumente** in der Detailansicht.
+- **Einstellungen → Lokale KI** zeigt den Zustand, Administratoren auch, wie
+  viele Dokumente eingelesen sind.
+
+### Neu im Server
 
 - **Lokale KI** (optional, `PAPERBUDDY_AI=true`): Suche nach Bedeutung statt
-  nach Wörtern, auch über Sprachgrenzen; Zuordnung von Korrespondent,
-  Dokumenttyp, Speicherpfad und Tags über die ähnlichsten Dokumente. Das
-  Modell multilingual-e5-small (MIT) lädt der Server einmalig (135 MB, mit
-  Prüfsummen), gerechnet wird mit ONNX Runtime auf dem eigenen Server.
-  Docker-Image und Server-Paket bringen ONNX Runtime mit; für Server ohne
-  Internet `manage ai-download`.
-- **Ähnliche Dokumente** in der Detailansicht und über `more_like_id` wie bei
-  Paperless-ngx (ohne KI über gemeinsame Wörter).
-- In der App: Umschalter „Nach Bedeutung suchen“ im Suchfeld, Zustand der
-  lokalen KI unter Einstellungen.
+  nach Wörtern, auch über Sprachgrenzen (`semantic_query`), und Zuordnung von
+  Korrespondent, Dokumenttyp, Speicherpfad und Tags über die ähnlichsten
+  Dokumente. Das Modell multilingual-e5-small (MIT) lädt der Server einmalig
+  (135 MB, mit Prüfsummen), gerechnet wird mit ONNX Runtime auf dem eigenen
+  Server. Docker-Image und Server-Paket bringen ONNX Runtime mit; für Server
+  ohne Internet `manage ai-download`. Zustand unter `/api/ai/`.
+- **Ähnliche Dokumente** über `more_like_id` wie bei Paperless-ngx (ohne KI
+  über gemeinsame Wörter).
+
+### Sonstiges
+
+- Die CI testet die lokale KI mit dem echten Modell und nennt fehlgeschlagene
+  App-Tests mit Namen; drei Tests, die auf dem CI-Rechner sporadisch
+  fehlschlugen, warten jetzt auf das Ergebnis statt einer festen Zeit.
 
 ## 0.3.0 (11.10.2026)
 
