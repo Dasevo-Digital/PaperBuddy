@@ -8,6 +8,7 @@ import 'package:paperbuddy_server/src/ai/index.dart';
 import 'package:paperbuddy_server/src/processing/classifier.dart';
 import 'package:test/test.dart';
 
+import 'ai_support.dart';
 import 'helpers.dart';
 
 const _strom = 'Stadtwerke Musterstadt Jahresabrechnung Strom Verbrauch Kilowattstunden Abschlag Zählernummer';
@@ -118,6 +119,21 @@ void main() {
       expect(ai.status(detailed: true)['error'], contains('nicht gefunden'));
       await ai.close();
     });
+  });
+
+  test('Modell wird nach der Ruhezeit freigegeben, leere Durchgänge verschieben das nicht', () async {
+    final db = openInMemoryDatabase();
+    final embedder = FakeEmbedder();
+    final ai = AiService.withEmbedder(db, embedder, idle: const Duration(milliseconds: 150));
+    await ai.query('Strom');
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await ai.indexPending(); // nichts zu tun, wie der Durchgang jede Minute
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(embedder.closed, 1);
+    await ai.query('wieder da');
+    expect(embedder.calls, 2);
+    await ai.close();
+    db.close();
   });
 
   test('Klassifikator: Vektoren entscheiden, wo Wörter nicht helfen', () {

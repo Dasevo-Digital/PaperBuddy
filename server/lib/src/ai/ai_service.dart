@@ -48,14 +48,14 @@ class SemanticHit {
 /// Das Modell wird erst geladen, wenn es gebraucht wird, und nach zwei
 /// Minuten ohne Arbeit wieder freigegeben (rund 300 MB Arbeitsspeicher).
 class AiService {
-  AiService({required this.db, required this.settings, http.Client? client})
+  AiService({required this.db, required this.settings, http.Client? client, this.idle = const Duration(minutes: 2)})
       : index = VectorIndex(db),
         // ignore: prefer_initializing_formals
         _client = client,
         _embedderFactory = null;
 
   /// Für Tests: sofort bereit mit einem eigenen Modell.
-  AiService.withEmbedder(this.db, TextEmbedder embedder)
+  AiService.withEmbedder(this.db, TextEmbedder embedder, {this.idle = const Duration(minutes: 2)})
       : settings = const AiSettings(enabled: true),
         index = VectorIndex(db),
         _client = null,
@@ -70,7 +70,9 @@ class AiService {
   final http.Client? _client;
   final Future<TextEmbedder> Function()? _embedderFactory;
   static const model = e5Small;
-  static const _idle = Duration(minutes: 2);
+
+  /// So lange ohne Arbeit, bis das Modell freigegeben wird.
+  final Duration idle;
 
   AiState state = AiState.disabled;
   String? error;
@@ -158,7 +160,7 @@ class AiService {
       return await action(embedder);
     } finally {
       _idleTimer?.cancel();
-      _idleTimer = Timer(_idle, _release);
+      _idleTimer = Timer(idle, _release);
     }
   }
 
@@ -180,7 +182,8 @@ class AiService {
   }
 
   Future<void> _release() async {
-    if (_indexing || _embedderFactory != null) return;
+    // Mitten im Einlesen nicht; danach stellt [_index] den Zeitgeber neu.
+    if (_indexing) return;
     final e = _embedder;
     _embedder = null;
     _loaded = null;
@@ -225,8 +228,9 @@ class AiService {
       if (done > 0) _log.info('$done Dokument(e) für die Suche eingelesen (${sw.elapsed.inSeconds} s).');
     } finally {
       _indexing = false;
-      _idleTimer?.cancel();
-      _idleTimer = Timer(_idle, _release);
+      // Nur neu stellen, wenn die Freigabe während des Einlesens ausfiel.
+      // Ein Durchgang ohne Arbeit (jede Minute) darf sie nicht verschieben.
+      if (_loaded != null && !(_idleTimer?.isActive ?? false)) _idleTimer = Timer(idle, _release);
     }
   }
 

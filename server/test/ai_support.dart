@@ -18,6 +18,7 @@ class FakeEmbedder implements TextEmbedder {
   FakeEmbedder({this.wordsPerChunk = 40});
   final int wordsPerChunk;
   var calls = 0;
+  var closed = 0;
 
   @override
   String get model => 'fake';
@@ -59,5 +60,5 @@ class FakeEmbedder implements TextEmbedder {
   }
 
   @override
-  Future<void> close() async {}
+  Future<void> close() async => closed++;
 }
