@@ -43,12 +43,10 @@ void main() {
       find.widgetWithText(TextFormField, 'Passwort'),
       'falsch',
     );
-    await tester.runAsync(() async {
-      await tester.tap(find.text('Anmelden'));
-      await Future<void>.delayed(const Duration(seconds: 3));
-    });
-    await tester.pumpAndSettle();
-    expect(find.text('Benutzername oder Passwort ist falsch.'), findsOneWidget);
+    // Auf die Meldung warten: Die Passwortprüfung dauert auf dem
+    // CI-Rechner länger als eine feste Wartezeit.
+    await tester.tap(find.text('Anmelden'));
+    await waitFor(tester, find.text('Benutzername oder Passwort ist falsch.'));
 
     // Ein Dokument vorab auf dem Server anlegen.
     await tester.runAsync(() async {
@@ -197,4 +195,23 @@ Future<void> settle(
     () => Future<void>.delayed(const Duration(milliseconds: 200)),
   );
   await tester.pumpAndSettle();
+}
+
+/// Wartet in echter Zeit, bis [finder] etwas findet. Anders als
+/// `pumpAndSettle` spult das die Testzeit nicht vor: Solange ein Ladekreis
+/// läuft, liefe sonst die 30-Sekunden-Grenze des Clients ab, bevor der
+/// Server auf einem langsamen CI-Rechner geantwortet hat (#66).
+Future<void> waitFor(
+  WidgetTester tester,
+  Finder finder, {
+  Duration timeout = const Duration(seconds: 30),
+}) async {
+  final end = DateTime.now().add(timeout);
+  while (finder.evaluate().isEmpty) {
+    if (DateTime.now().isAfter(end)) fail('Nicht erschienen: $finder');
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump(const Duration(milliseconds: 16));
+  }
 }

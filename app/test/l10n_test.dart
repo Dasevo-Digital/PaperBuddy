@@ -6,7 +6,7 @@ import 'package:paperbuddy/src/format.dart';
 import 'package:paperbuddy/src/l10n.dart';
 
 import 'support.dart';
-import 'widgets_test.dart' show settle;
+import 'widgets_test.dart' show settle, waitFor;
 
 void main() {
   late TestServer server;
@@ -38,12 +38,10 @@ void main() {
     await tester.enterText(find.widgetWithText(TextFormField, 'Server address'), TestServer.address);
     await tester.enterText(find.widgetWithText(TextFormField, 'Username'), TestServer.username);
     await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'falsch');
-    await tester.runAsync(() async {
-      await tester.tap(find.text('Sign in'));
-      await Future<void>.delayed(const Duration(seconds: 2));
-    });
-    await settle(tester);
-    expect(find.text('Wrong username or password.'), findsOneWidget);
+    // Die Passwortprüfung (PBKDF2) dauert auf dem CI-Rechner deutlich länger
+    // als lokal; darum auf die Meldung warten statt einer festen Zeit.
+    await tester.tap(find.text('Sign in'));
+    await waitFor(tester, find.text('Wrong username or password.'));
 
     await tester.runAsync(() => state.login(TestServer.address, TestServer.username, TestServer.password));
     await settle(tester, const Duration(milliseconds: 600));

@@ -6,20 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:paperbuddy/src/app.dart';
 
 import 'support.dart';
-import 'widgets_test.dart' show settle;
-
-/// Wartet in echter Zeit, bis [finder] etwas findet. Anders als
-/// `pumpAndSettle` spult das die Testzeit nicht vor: Solange ein Ladekreis
-/// läuft, liefe sonst die 30-Sekunden-Grenze des Clients ab, bevor der
-/// Server (auf einem langsamen CI-Rechner) geantwortet hat.
-Future<void> waitFor(WidgetTester tester, Finder finder, {Duration timeout = const Duration(seconds: 20)}) async {
-  final end = DateTime.now().add(timeout);
-  while (finder.evaluate().isEmpty) {
-    if (DateTime.now().isAfter(end)) fail('Nicht erschienen: $finder');
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
-    await tester.pump(const Duration(milliseconds: 16));
-  }
-}
+import 'widgets_test.dart' show settle, waitFor;
 
 void main() {
   late TestServer server;
